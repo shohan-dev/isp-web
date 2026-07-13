@@ -17,6 +17,7 @@ $platformOpen = $seg1 === 'tenants'
     <span class="fa fa-angle-down pull-right"></span>
   </a>
   <ul class="treeview-menu" style="<?= $platformOpen ? 'display:block;' : 'display:none;'; ?>">
+    <?php if (function_exists('isTenantingEnabled') && isTenantingEnabled()): ?>
     <li class="<?= ($uri->getSegment(1) === 'tenants') ? 'active' : ''; ?>">
       <a href="<?= route_to('route.tenants'); ?>">
         <i class="fa fa-globe"></i> Tenant Portals
@@ -26,6 +27,7 @@ $platformOpen = $seg1 === 'tenants'
     <li class="<?= ($uri->getSegment(1) === 'tenants' && $uri->getSegment(2) === 'create') ? 'active' : ''; ?>">
       <a href="<?= route_to('route.tenants.create'); ?>"><i class="fa fa-plus-circle"></i> Create Portal</a>
     </li>
+    <?php endif; ?>
     <li class="<?= ($uri->getSegment(1) === 'admins' && $uri->getSegment(2) === '') ? 'active' : ''; ?>">
       <a href="<?= route_to('route.Admin'); ?>"><i class="fa fa-user-lock"></i> Second Admins</a>
     </li>

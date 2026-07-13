@@ -64,6 +64,20 @@ if (! function_exists('isMaintenanceMode')) {
     }
 }
 
+if (! function_exists('isTenantingEnabled')) {
+    /**
+     * Master switch for subdomain tenant portals. false (default) = every
+     * request is treated as the platform app — no tenant resolution runs.
+     */
+    function isTenantingEnabled(): bool
+    {
+        return flag(
+            'tenant_enabled',
+            filter_var(env('TENANT_ENABLED', 'false'), FILTER_VALIDATE_BOOLEAN)
+        );
+    }
+}
+
 if (! function_exists('maintenanceAllowIps')) {
     /**
      * @return list<string>

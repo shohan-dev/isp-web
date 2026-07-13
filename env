@@ -199,6 +199,15 @@
 # vendor.tenda.apiKey = ''
 
 #--------------------------------------------------------------------
+# MULTI-TENANCY (SaaS subdomain portals)
+#--------------------------------------------------------------------
+# Master switch. false (default) = every request is treated as the platform
+# app: no subdomain/slug lookup, no tenant branding, no suspended-portal
+# blocking, and the Tenant Portals admin screens (/tenants/*) are disabled.
+# Can also be flipped at runtime without a deploy via setFlag('tenant_enabled', true).
+# TENANT_ENABLED = false
+
+#--------------------------------------------------------------------
 # BACKGROUND QUEUE — `php spark queue:work` (Phase 3 / MT-2)
 #--------------------------------------------------------------------
 # Heavy external I/O (SMS blasts, router provisioning) can be offloaded to the

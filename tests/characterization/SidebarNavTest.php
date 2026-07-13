@@ -2,6 +2,7 @@
 
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
+use CodeIgniter\Test\Mock\MockCache;
 use Config\Services;
 
 /**
@@ -23,11 +24,17 @@ final class SidebarNavTest extends CIUnitTestCase
     {
         parent::setUp();
         Services::session()->destroy();
+        Services::injectMock('cache', new MockCache());
         /* 'asset' is in Config\Autoload::$helpers, so the app always has saas_js() /
            saas_css(). This suite renders the view directly, outside that boot path, so
            it has to name every helper the view touches — and sidebar.php now calls
-           saas_js() for the pre-paint sidebar-boot script. */
-        helper(['utility', 'user', 'setting', 'router', 'ticket', 'tenant', 'wallet', 'subscription', 'lookup_cache', 'asset']);
+           saas_js() for the pre-paint sidebar-boot script. 'flag' backs
+           isTenantingEnabled(), which _sidebar_platform.php gates the Tenant
+           Portals link on — the real request pipeline loads it via
+           MaintenanceFilter before the view renders, but this suite renders the
+           view directly, outside that filter pipeline. */
+        helper(['utility', 'user', 'setting', 'router', 'ticket', 'tenant', 'wallet', 'subscription', 'lookup_cache', 'asset', 'flag']);
+        clearFlag('tenant_enabled');
 
         /* sidebar.php calls SidebarPinModel::getForUser() for any logged-in user, so
            simply RENDERING the view now hits the database — which is new: the pins
@@ -109,7 +116,9 @@ final class SidebarNavTest extends CIUnitTestCase
     protected function tearDown(): void
     {
         Services::session()->destroy();
+        clearFlag('tenant_enabled');
         parent::tearDown();
+        Services::reset();
     }
 
     public function testServiceAreasGuardIsNotAlwaysTrue(): void
@@ -173,6 +182,7 @@ final class SidebarNavTest extends CIUnitTestCase
             $this->markTestSkipped('SQLite3 extension required to render sidebar views.');
         }
 
+        setFlag('tenant_enabled', true);
         $html = $this->renderSidebar('super_admin', ['status' => 'active', 'user_id' => 1]);
 
         $this->assertStringContainsString('Platform Admin', $html);
@@ -181,6 +191,19 @@ final class SidebarNavTest extends CIUnitTestCase
         $this->assertStringNotContainsString('Service Areas', $html);
         $this->assertStringNotContainsString('>Customers<', $html);
         $this->assertStringNotContainsString('Mikrotik Routers', $html);
+    }
+
+    public function testTenantPortalsLinkHiddenWhenTenantingDisabled(): void
+    {
+        if (! extension_loaded('sqlite3')) {
+            $this->markTestSkipped('SQLite3 extension required to render sidebar views.');
+        }
+
+        clearFlag('tenant_enabled'); // falls back to TENANT_ENABLED env default (false)
+        $html = $this->renderSidebar('super_admin', ['status' => 'active', 'user_id' => 1]);
+
+        $this->assertStringContainsString('Platform Admin', $html);
+        $this->assertStringNotContainsString('Tenant Portals', $html);
     }
 
     public function testSAdminSidebarShowsTenantMenuNotPlatformItems(): void
