@@ -1,0 +1,1084 @@
+/* ISP Pay BD — Unified auth gate (login right · register left · in-column slide) */
+
+.ipb-auth-gate-body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg, #f8fafc);
+}
+
+.ipb-auth-stage {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  position: relative;
+}
+
+.ipb-auth-split {
+  display: flex;
+  flex-direction: row-reverse; /* login pane on the right, brand/register on the left */
+  width: 100%;
+  height: 100%;
+}
+
+.ipb-auth-col {
+  flex: 1 1 50%;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.ipb-auth-col--left {
+  background: var(--bg, #f8fafc);
+}
+
+.ipb-auth-col--right {
+  background: var(--bg, #f8fafc);
+}
+
+.ipb-auth-col-track {
+  display: flex;
+  width: 200%;
+  height: 100%;
+  transform: translateX(0);
+  transition: transform 0.62s cubic-bezier(0.65, 0, 0.35, 1);
+  will-change: transform;
+}
+
+.ipb-auth-gate-body.is-register .ipb-auth-col-track {
+  transform: translateX(-50%);
+}
+
+.ipb-auth-pane {
+  flex: 0 0 50%;
+  width: 50%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.ipb-auth-pane--login {
+  padding: clamp(24px, 4vw, 48px);
+  background: var(--bg, #f8fafc);
+}
+
+.ipb-auth-pane--register {
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(28px, 4vw, 40px) clamp(20px, 4vw, 44px) clamp(56px, 8vh, 88px);
+  background: var(--bg, #f8fafc);
+}
+
+.ipb-auth-pane--brand {
+  padding: clamp(32px, 5vw, 64px);
+  position: relative;
+  color: #fff;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 15%, rgba(var(--primary-rgb, 247, 88, 3), 0.42), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 90% 85%, rgba(255, 255, 255, 0.07), transparent 50%),
+    linear-gradient(155deg, var(--secondary-700, #1e293b) 0%, var(--secondary-900, #0f172a) 100%);
+}
+
+.ipb-auth-pane--brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.ipb-auth-brand-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 440px;
+}
+
+.ipb-auth-pane--brand .ipb-brand-mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+  font-size: 22px;
+  box-shadow: var(--shadow-brand, 0 8px 24px rgba(var(--primary-rgb, 247, 88, 3), 0.35));
+}
+
+.ipb-auth-pane--brand h1 {
+  font-size: clamp(26px, 2.8vw, 38px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 0 0 14px;
+  line-height: 1.18;
+  color: #fff;
+}
+
+.ipb-auth-pane--brand .ipb-brand-lead {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 400px;
+  line-height: 1.65;
+  margin: 0 0 28px;
+}
+
+.ipb-auth-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ipb-auth-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.45;
+}
+
+.ipb-auth-features li i {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--primary-400, #fb923c);
+}
+
+.ipb-auth-trust {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 28px;
+}
+
+.ipb-auth-trust-item {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ipb-auth-trust-item strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin-top: 2px;
+  text-transform: none;
+}
+
+.ipb-auth-panel-inner {
+  width: 100%;
+  max-width: 420px;
+}
+
+.ipb-auth-panel-inner--wide {
+  max-width: 620px;
+}
+
+.ipb-auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color var(--dur-fast, 0.14s);
+}
+
+.ipb-auth-back:hover {
+  color: var(--primary-500);
+}
+
+.ipb-auth-reg-card {
+  width: 100%;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 22px;
+  padding: clamp(24px, 3.5vw, 32px);
+  box-shadow: var(--shadow-3, 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 40px rgba(15, 23, 42, 0.07));
+}
+
+.ipb-auth-reg-header {
+  margin-bottom: 8px;
+}
+
+.ipb-auth-reg-header .ipb-auth-logo {
+  margin-bottom: 16px;
+}
+
+.ipb-auth-reg-header .ipb-brand-logo-img--full,
+.ipb-auth-card .ipb-brand-logo-img--full {
+  max-width: min(220px, 100%);
+  max-height: 56px;
+  width: auto;
+  height: auto;
+}
+
+.ipb-auth-reg-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ipb-auth-trial-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary-600, #ea580c);
+  background: rgba(var(--primary-rgb, 247, 88, 3), 0.1);
+  border: 1px solid rgba(var(--primary-rgb, 247, 88, 3), 0.18);
+}
+
+.ipb-auth-reg-alert {
+  margin: 16px 0 4px;
+  border-radius: 12px;
+}
+
+.ipb-auth-reg-alert ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ipb-auth-reg-form {
+  margin-top: 12px;
+}
+
+.ipb-auth-reg-section {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.ipb-auth-reg-section:first-of-type {
+  padding-top: 8px;
+}
+
+.ipb-auth-reg-section--optional {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+.ipb-auth-reg-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.ipb-auth-reg-section-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2, #f1f5f9);
+  color: var(--primary-500);
+  font-size: 12px;
+}
+
+.ipb-auth-reg-optional {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+  margin-left: 4px;
+}
+
+.ipb-auth-reg-field-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.ipb-auth-package-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px dashed var(--border, #e2e8f0);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+  transition: border-color var(--dur-fast, 0.14s), background var(--dur-fast, 0.14s);
+}
+
+.ipb-auth-package-hint i {
+  margin-top: 2px;
+  color: var(--text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.ipb-auth-package-hint.is-active {
+  background: rgba(var(--primary-rgb, 247, 88, 3), 0.06);
+  border-color: rgba(var(--primary-rgb, 247, 88, 3), 0.22);
+  border-style: solid;
+}
+
+.ipb-auth-package-hint.is-active i {
+  color: var(--primary-500);
+}
+
+.ipb-auth-type-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ipb-auth-type-pill {
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+
+.ipb-auth-type-pill input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.ipb-auth-type-pill span {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  background: var(--surface, #fff);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: border-color var(--dur-fast, 0.14s), background var(--dur-fast, 0.14s), color var(--dur-fast, 0.14s), box-shadow var(--dur-fast, 0.14s);
+  user-select: none;
+}
+
+.ipb-auth-type-pill input:focus-visible + span {
+  box-shadow: var(--shadow-focus, 0 0 0 3.5px var(--focus-glow, rgba(247, 88, 3, 0.15)));
+}
+
+.ipb-auth-type-pill input:checked + span {
+  border-color: var(--primary-500);
+  background: rgba(var(--primary-rgb, 247, 88, 3), 0.08);
+  color: var(--primary-600, #ea580c);
+}
+
+.ipb-auth-reg-footer {
+  padding-top: 20px;
+}
+
+.ipb-auth-reg-footer .ipb-auth-links {
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.ipb-auth-card,
+.ipb-auth-card-wide {
+  width: 100%;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 20px;
+  padding: clamp(28px, 4vw, 36px);
+  box-shadow: var(--shadow-3, 0 4px 6px rgba(15, 23, 42, 0.04), 0 20px 48px rgba(15, 23, 42, 0.08));
+}
+
+.ipb-auth-logo {
+  margin-bottom: 24px;
+}
+
+.ipb-auth-logo:has(.ipb-brand-logo-mark) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ipb-auth-logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.ipb-auth-logo-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.ipb-auth-logo-tag {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.ipb-brand-logo-img {
+  display: block;
+}
+
+.ipb-brand-logo-img--full {
+  max-width: min(240px, 100%);
+  height: auto;
+  max-height: 64px;
+  width: auto;
+  object-fit: contain;
+}
+
+.ipb-brand-logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--border, #e2e8f0);
+  box-shadow: var(--shadow-1, 0 2px 10px rgba(15, 23, 42, 0.06));
+}
+
+.ipb-brand-logo-img--mark {
+  max-width: 40px;
+  max-height: 40px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.ipb-auth-heading {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+
+.ipb-auth-card .sub,
+.ipb-auth-card-wide .sub,
+.ipb-auth-reg-card .sub {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.ipb-auth-inline-link {
+  color: var(--primary-500);
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.ipb-auth-inline-link:hover {
+  text-decoration: underline;
+}
+
+.ipb-auth-card .form-group,
+.ipb-auth-card-wide .form-group,
+.ipb-auth-reg-card .form-group {
+  margin-bottom: 16px;
+}
+
+.ipb-auth-card .control-label,
+.ipb-auth-card-wide label,
+.ipb-auth-reg-card label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.ipb-auth-card .form-control,
+.ipb-auth-card-wide .form-control,
+.ipb-auth-card-wide select.form-control,
+.ipb-auth-reg-card .form-control,
+.ipb-auth-reg-card select.form-control {
+  width: 100%;
+  background: var(--surface, #fff);
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 16px;   /* was 14px — iOS zoom fires on the first screen every user sees (03 §7) */
+  padding: 11px 14px;
+  font-family: var(--font-sans);
+  outline: none;
+  transition: border-color var(--dur-fast, 0.14s), box-shadow var(--dur-fast, 0.14s);
+  min-height: 44px;
+}
+@media (min-width: 768px) {
+  .ipb-auth-card .form-control,
+  .ipb-auth-card-wide .form-control,
+  .ipb-auth-card-wide select.form-control,
+  .ipb-auth-reg-card .form-control,
+  .ipb-auth-reg-card select.form-control { font-size: 14px; }   /* restore density on pointer:fine */
+}
+
+.ipb-auth-card .form-control:focus,
+.ipb-auth-card-wide .form-control:focus,
+.ipb-auth-reg-card .form-control:focus {
+  border-color: var(--primary-500);
+  box-shadow: var(--shadow-focus, 0 0 0 3.5px var(--focus-glow, rgba(247, 88, 3, 0.15)));
+}
+
+.ipb-auth-card .btn-primary,
+.ipb-auth-card-wide .btn-primary,
+.ipb-auth-reg-card .btn-primary,
+.ipb-auth-card button[type="submit"],
+.ipb-auth-card-wide button[type="submit"],
+.ipb-auth-reg-card button[type="submit"] {
+  background: var(--primary-500) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 10px;
+  padding: 13px 22px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: var(--shadow-brand, 0 4px 14px rgba(247, 88, 3, 0.35));
+  transition: transform var(--dur-fast, 0.14s), background var(--dur-fast, 0.14s);
+}
+
+.ipb-auth-card .btn-primary:hover,
+.ipb-auth-card-wide .btn-primary:hover,
+.ipb-auth-reg-card .btn-primary:hover {
+  background: var(--primary-600) !important;
+  transform: translateY(-1px);
+}
+
+.ipb-auth-card-wide .btn-secondary,
+.ipb-auth-reg-card .btn-secondary {
+  background: var(--surface-2, #f1f5f9) !important;
+  color: var(--text-primary) !important;
+  border: 1.5px solid var(--border) !important;
+  border-radius: 10px;
+  padding: 13px 22px;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.ipb-auth-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ipb-auth-form-actions .btn-primary,
+.ipb-auth-form-actions .btn-secondary {
+  flex: 1 1 140px;
+}
+
+.ipb-auth-links {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border, #e2e8f0);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.ipb-auth-links a {
+  color: var(--primary-500);
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ipb-auth-links a:hover {
+  text-decoration: underline;
+}
+
+.ipb-auth-password-wrap {
+  display: flex;
+  align-items: stretch;
+}
+
+.ipb-auth-password-wrap .form-control {
+  border-radius: 10px 0 0 10px;
+  flex: 1;
+}
+
+.ipb-auth-password-wrap .ipb-pass-toggle {
+  width: 46px;
+  border: 1.5px solid var(--border);
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ipb-auth-reg-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+.ipb-auth-reg-grid .form-group--full {
+  grid-column: 1 / -1;
+}
+
+.ipb-auth-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+}
+
+.ipb-auth-check-row .form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.ipb-auth-check-row .form-check-label {
+  text-transform: none;
+  font-weight: 600;
+  font-size: 14px;
+  margin: 0;
+}
+
+.error-text {
+  color: var(--error-600, #dc2626);
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Standalone auth pages (forgot password, etc.) */
+.ipb-auth-standalone {
+  overflow: auto;
+}
+
+.ipb-auth-standalone .ipb-auth-stage {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+
+.ipb-auth-split--solo {
+  height: auto;
+  min-height: 100dvh;
+}
+
+.ipb-auth-col--solo {
+  height: auto;
+  min-height: 100dvh;
+}
+
+.ipb-auth-standalone .ipb-auth-pane {
+  width: 100%;
+  flex: none;
+  height: auto;
+  min-height: 100dvh;
+}
+
+.ipb-auth-pane--forgot {
+  align-items: center;
+  justify-content: center;
+  padding: clamp(28px, 4vw, 48px);
+  background: var(--bg, #f8fafc);
+}
+
+.ipb-auth-forgot-card {
+  position: relative;
+}
+
+.ipb-auth-forgot-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  color: #fff;
+  font-size: 18px;
+  box-shadow: var(--shadow-brand, 0 8px 20px rgba(var(--primary-rgb, 247, 88, 3), 0.28));
+}
+
+.ipb-auth-forgot-form {
+  margin-top: 22px;
+}
+
+.ipb-auth-flash {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+}
+
+.ipb-auth-flash[hidden] {
+  display: none !important;
+}
+
+.ipb-auth-flash i {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.ipb-auth-forgot-success {
+  margin-top: 24px;
+  padding: 28px 20px;
+  text-align: center;
+  border-radius: 16px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+.ipb-auth-forgot-success-mark {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--primary-rgb, 247, 88, 3), 0.1);
+  color: var(--primary-500);
+  font-size: 22px;
+}
+
+.ipb-auth-forgot-success h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.ipb-auth-forgot-success p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* Tenant-only: login + brand only (no register panes in markup) */
+.ipb-auth-gate-body[data-tenant-only="1"] .ipb-auth-col-track {
+  width: 100%;
+}
+
+.ipb-auth-gate-body[data-tenant-only="1"] .ipb-auth-pane {
+  flex: 0 0 100%;
+  width: 100%;
+}
+
+/* Reduced-motion: covered by base.css's canonical guard (05 §10) — removed
+   the local duplicate here. */
+
+@media (max-width: 1024px) {   /* was 991px — folded into the 03 §1.3 ladder */
+  .ipb-auth-reg-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ipb-auth-trust {
+    display: none;
+  }
+
+  /* The @media (min-width:768px) rule above drops inputs back to 14px assuming
+     pointer:fine ("restore density"), but 768–1024px is the tablet tier and
+     those are touch-first (iPad et al) — a sub-16px focused input triggers iOS
+     Safari's zoom-on-focus there too, same bug the 03 §7 fix targeted. Re-assert
+     the zoom-safe size for the whole tablet width, later in source order so it
+     wins over the min-width:768px rule for the 768–1024 overlap. */
+  .ipb-auth-card .form-control,
+  .ipb-auth-card-wide .form-control,
+  .ipb-auth-card-wide select.form-control,
+  .ipb-auth-reg-card .form-control,
+  .ipb-auth-reg-card select.form-control {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  /* .ipb-auth-gate-body sets overflow:hidden so the desktop split-pane can own a
+     fixed 100dvh viewport with its own internal scrolling. On a phone the panes
+     become height:auto and stack, so nothing is a scroll container any more —
+     and body's overflow:hidden propagates to the viewport, locking the page.
+     Login mode happened to fit; register mode did not: the registration panel is
+     a 33-field form far taller than a phone screen, so its lower half (Address,
+     Package, Customer type, Reference, and the "Create account" button) was
+     simply unreachable — mobile signup could not be completed. forgot.php escapes
+     this only because it also carries .ipb-auth-standalone { overflow: auto }.
+     Unlock scrolling on mobile; desktop keeps the fixed split. */
+  .ipb-auth-gate-body {
+    overflow: auto;
+  }
+
+  .ipb-auth-stage {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+
+  .ipb-auth-split {
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .ipb-auth-col {
+    flex: none;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .ipb-auth-col-track {
+    width: 100%;
+    flex-direction: column;
+    transform: none !important;
+    transition: none;
+  }
+
+  .ipb-auth-gate-body.is-register .ipb-auth-pane--login,
+  .ipb-auth-gate-body.is-register .ipb-auth-pane--brand-right {
+    display: none;
+  }
+
+  .ipb-auth-gate-body:not(.is-register) .ipb-auth-pane--brand-left,
+  .ipb-auth-gate-body:not(.is-register) .ipb-auth-pane--register {
+    display: none;
+  }
+
+  .ipb-auth-pane {
+    flex: none;
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .ipb-auth-pane--brand {
+    display: none !important;
+  }
+
+  .ipb-auth-pane--register {
+    min-height: auto;
+    align-items: stretch;
+  }
+
+  .ipb-auth-reg-card {
+    border-radius: 18px;
+  }
+
+  .ipb-auth-pane--login,
+  .ipb-auth-pane--register {
+    padding: 24px 18px 40px;
+  }
+
+  .ipb-auth-reg-title-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ipb-auth-trial-badge {
+    align-self: flex-start;
+  }
+
+  .ipb-auth-form-actions {
+    flex-direction: column;
+  }
+
+  .ipb-auth-standalone .ipb-auth-pane--brand {
+    display: none !important;
+  }
+
+  .ipb-auth-pane--forgot {
+    min-height: auto;
+    padding: 24px 18px 40px;
+  }
+
+  /* Was bare text with no padding, so its whole box (and tap area) was only
+     ~20px tall — under half the 44px minimum — on the two flows that use it:
+     registration's and forgot-password's "Back to sign in". Negative margin
+     keeps the visual position roughly where it was while the padding grows
+     the tap target. */
+  .ipb-auth-back {
+    min-height: 44px;
+    padding: 10px 4px;
+    margin: -6px -4px 12px;
+  }
+
+  /* Customer-type / add-on chips: padding 10px 18px + 14px text was ~37px tall,
+     under the 44px tap-target minimum — these are checkbox labels (input is
+     visually hidden), so the span IS the whole hit area on the registration form. */
+  .ipb-auth-type-pill span {
+    min-height: 44px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Sign-in status — the message shown in the card after you submit.
+
+   Was a Bootstrap `.alert-success` / `.alert-danger` with inline flex styles and a
+   Font Awesome glyph: a flat coloured bar, the component every 2013 admin theme
+   ships with, sitting inside an otherwise carefully built auth card. It is also
+   the LAST thing a customer sees before their dashboard, so it should read as the
+   product, not as a framework default.
+
+   Three things it now does that an alert bar does not:
+     - states the outcome as a headline ("Signed in"), with the detail underneath,
+       instead of one run-on sentence;
+     - shows the redirect as a determinate bar, because the wait is a known ~1.2s —
+       a progress bar that means something beats a spinner that means "busy";
+     - stays quiet: tinted surface + one mark, no full-bleed colour block.
+   ════════════════════════════════════════════════════════════════════════════ */
+/* display:flex beats the `hidden` attribute's UA `display: none`, and the
+   registration status ships hidden and is revealed by JS — without this it would
+   be visible on every load. (.ipb-auth-flash, which this replaced, carried the
+   same guard for the same reason.) */
+.ipb-auth-status[hidden] {
+  display: none !important;
+}
+
+.ipb-auth-status {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  overflow: hidden;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  background: var(--surface-2, #f8fafc);
+  animation: ipbAuthStatusIn var(--dur, .22s) var(--ease-out, cubic-bezier(.3,.8,.4,1)) both;
+}
+
+.ipb-auth-status-mark {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 15px;
+}
+
+.ipb-auth-status-body {
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.ipb-auth-status-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-auth-status-msg {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text-secondary, #51607a);
+}
+
+.ipb-auth-status.is-success {
+  border-color: rgba(22, 163, 74, .3);
+  background: rgba(22, 163, 74, .06);
+}
+.ipb-auth-status.is-success .ipb-auth-status-mark {
+  background: rgba(22, 163, 74, .14);
+  color: var(--success-600, #15803d);
+}
+
+.ipb-auth-status.is-error {
+  border-color: rgba(220, 38, 38, .28);
+  background: rgba(220, 38, 38, .05);
+}
+.ipb-auth-status.is-error .ipb-auth-status-mark {
+  background: rgba(220, 38, 38, .12);
+  color: var(--error-600, #b91c1c);
+}
+
+/* Determinate: the redirect is a fixed delay, so show it running out. */
+.ipb-auth-status-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(15, 23, 42, .07);
+}
+
+.ipb-auth-status-bar > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--success-500, #16a34a);
+  animation: ipbAuthProgress var(--ipb-auth-redirect, 1200ms) linear forwards;
+}
+
+@keyframes ipbAuthStatusIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ipbAuthProgress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* base.css's reduced-motion guard zeroes DURATIONS, which would leave the bar
+   permanently at width:0 — a bar that never moves reads as a hang. Pin it full. */
+@media (prefers-reduced-motion: reduce) {
+  .ipb-auth-status { animation: none; }
+  .ipb-auth-status-bar > span { animation: none; width: 100%; }
+}

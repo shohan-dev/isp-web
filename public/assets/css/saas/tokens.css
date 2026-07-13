@@ -1,0 +1,353 @@
+/* ISP Pay BD SaaS — Design tokens (from isp-pay-bd-saas-redesign.jsx) */
+/* Self-hosted — previously loaded live from Fontshare/Google Fonts CDNs with
+   no local fallback, so a blocked/unreachable CDN (corporate proxy, ad
+   blocker, region block) silently dropped the dashboard back to system
+   fonts with no error. Same font files bundled with the Flutter app
+   (ISP App/assets/fonts/), converted to woff2 for web delivery. */
+@font-face {
+  font-family: 'Satoshi';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('../../fonts/satoshi-variable.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'Satoshi';
+  font-style: italic;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('../../fonts/satoshi-variable-italic.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../fonts/ibm-plex-mono-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../../fonts/ibm-plex-mono-medium.woff2') format('woff2');
+}
+/* 08 §10 — Bengali face self-hosted (was style.css's googleapis @import,
+   the one CDN request left on the exact page the fix in 06 §4 depends on).
+   Latin-range files included so mixed Bengali/English rows don't fall
+   back to the CDN glyph coverage for ASCII characters either. */
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../fonts/noto-sans-bengali-regular.woff2') format('woff2');
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1;
+}
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../fonts/noto-sans-bengali-latin-regular.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../../fonts/noto-sans-bengali-bold.woff2') format('woff2');
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1;
+}
+@font-face {
+  font-family: 'Noto Sans Bengali';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../../fonts/noto-sans-bengali-latin-bold.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+.ipb,
+body.ipb {
+  --primary-50: #fff4ed;
+  --primary-100: #ffe6d5;
+  --primary-200: #ffc9a8;
+  --primary-300: #ffa66e;
+  --primary-400: #ff7d33;
+  --primary-500: #f75803;
+  --primary-600: #d94601;
+  --primary-700: #b43802;
+  --primary-800: #922f08;
+  --primary-900: #78290b;
+  --primary-rgb: 247, 88, 3;
+
+  --secondary-50: #e8eef8;
+  --secondary-100: #c5d4ec;
+  --secondary-200: #9bb4db;
+  --secondary-300: #6f92c8;
+  --secondary-400: #4a74b5;
+  --secondary-500: #2a5699;
+  --secondary-600: #1a3f7a;
+  --secondary-700: #001f55;
+  --secondary-800: #001640;
+  --secondary-900: #000d28;
+
+  --neutral-50: #f8fafc;
+  --neutral-100: #f1f5f9;
+  --neutral-200: #e2e8f0;
+  --neutral-300: #cbd5e1;
+  --neutral-400: #94a3b8;
+  --neutral-500: #64748b;
+  --neutral-600: #475569;
+  --neutral-700: #334155;
+  --neutral-800: #1e293b;
+  --neutral-900: #0f172a;
+
+  /* -100 (chip fill) and -300 (chip border) exist because status chips need them
+     and had no token to reach for: every "pale tint + dark ink" pill in the app —
+     row actions, KPI tones, payment/status badges — hardcoded #dcfce7/#86efac,
+     #fee2e2/#fca5a5, #dbeafe/#93c5fd instead. Hardcoded means they never flip, so
+     in dark mode they stayed pale-on-dark while their INK (also hardcoded, and
+     dark) went invisible against them. The dark values below invert the pair:
+     deep tint, light ink. */
+  --success-50: #ecfdf3;
+  --success-100: #dcfce7;
+  --success-300: #86efac;
+  --success-500: #16a34a;
+  --success-600: #15803d;
+  --success-700: #166534;
+  --warning-50: #fffbeb;
+  --warning-100: #fef3c7;
+  --warning-300: #fcd34d;
+  --warning-500: #d97706;
+  --warning-600: #b45309;
+  --warning-700: #92400e;
+  --error-50: #fef2f2;
+  --error-100: #fee2e2;
+  --error-300: #fca5a5;
+  --error-500: #dc2626;
+  --error-600: #b91c1c;
+  --error-700: #991b1b;
+  --info-50: #eff6ff;
+  --info-100: #dbeafe;
+  --info-300: #93c5fd;
+  --info-500: #2563eb;
+  --info-600: #1d4ed8;
+  --info-700: #1e40af;
+
+  /* Violet: the "copy link" row-action tone. It had no token at all, so it was
+     hardcoded in three stylesheets and stayed a pale lilac chip with dark violet
+     ink on a dark card. */
+  --violet-100: #ede9fe;
+  --violet-300: #c4b5fd;
+  --violet-600: #6d28d9;
+
+  /* Elevation ladder. These three values are the only thing separating a card
+     from the page, so they carry measured contrast ratios, not eyeballed ones:
+     bg->surface 1.13:1, surface-2->surface 1.10:1, border-on-surface 1.36:1.
+     Lightening any of them back toward #fff collapses the ladder — an earlier
+     revision sat at 1.08 / 1.05 / 1.21 and the whole dashboard read as one flat
+     white sheet.
+
+     --surface-2 measures only 1.03:1 against --bg. That is deliberate, not a
+     bug: it is only ever applied to table headers, toolbars and popovers that
+     sit on a white card, so the ratio that matters is the 1.10:1 against
+     --surface. Do not put --surface-2 directly on the page background. */
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f1f4f9;
+  --surface-hover: #f1f5f9;
+  --border: #d7dee7;
+  --border-strong: #b9c3d2;
+  --text-primary: #0f172a;
+  --text-secondary: #51607a;
+  /* 5.46:1 on surface, 4.95:1 on surface-2, 4.82:1 on bg — clears WCAG AA on all
+     three. #64748b looks close enough but fails on --bg at 4.20:1. */
+  --text-muted: #5b6a85;
+
+  --shadow-1: 0 1px 1px rgba(15, 23, 42, .06), 0 2px 4px -1px rgba(15, 23, 42, .08);
+  --shadow-2: 0 2px 4px rgba(15, 23, 42, .04), 0 10px 22px -8px rgba(15, 23, 42, .13);
+  --shadow-3: 0 8px 16px rgba(15, 23, 42, .06), 0 28px 56px -16px rgba(15, 23, 42, .22);
+  --shadow-brand: 0 1px 2px rgba(var(--primary-rgb), .15), 0 12px 24px -8px rgba(var(--primary-rgb), .35);
+  --focus-glow: rgba(var(--primary-rgb), .16);
+
+  --radius: 12px;
+  --radius-sm: 7px;
+  --radius-lg: 17px;
+  --sidebar-w: 252px;
+  --sidebar-w-collapsed: 76px;
+  --topbar-h: 60px;
+
+  /* ── Motion (02 §1) — single source of truth; theme-independent ────────── */
+  --ease-out:    cubic-bezier(.3, .8, .4, 1);    /* enter — decelerate (the house curve) */
+  --ease-in:     cubic-bezier(.4, 0, 1, .6);     /* exit  — accelerate                    */
+  --ease-spring: cubic-bezier(.22, 1.2, .36, 1); /* toast overshoot ONLY                  */
+  --dur-instant: .09s;   /* press / tap acknowledgement          */
+  --dur-fast:    .12s;   /* hover, focus ring, exits             */
+  --dur:         .18s;   /* default UI transition                */
+  --dur-slow:    .28s;   /* drawer, modal, page fade             */
+
+  /* ── Z-index ladder (02 §2) — Bootstrap-anchored, single source of truth ── */
+  --z-base:        0;      /* normal flow                                        */
+  --z-raised:      1;      /* hover lifts, card ribbons                          */
+  --z-sticky-cell: 3;      /* sticky first/last table columns                    */
+  --z-sticky-head: 4;      /* sticky table header corner cells                   */
+  --z-sticky:      20;     /* sticky section labels, sticky bulk-action bar      */
+  --z-fab:         990;    /* AI chat FAB — above content, BELOW every overlay; hidden when one opens */
+  --z-dropdown:    1000;   /* Bootstrap dropdowns & custom dropdown-like popovers (== BS dropdown) */
+  --z-topbar:      1000;   /* fixed app topbar + the shell progress/pulse strip  */
+  --z-backdrop:    1040;   /* sidebar drawer backdrop == Bootstrap modal-backdrop */
+  --z-sidebar:     1045;   /* mobile sidebar drawer — above its own backdrop     */
+  --z-modal:       1050;   /* Bootstrap modal (DO NOT CHANGE)                    */
+  --z-chat:        1052;   /* AI chat panel when open                           */
+  --z-drawer:      1055;   /* customize / theme-studio drawer                    */
+  --z-popover:     1060;   /* Bootstrap popover (DO NOT CHANGE)                  */
+  --z-tooltip:     1070;   /* Bootstrap tooltip (DO NOT CHANGE)                  */
+  --z-palette:     1080;   /* command palette                                   */
+  --z-select2:     1090;   /* Select2 dropdown — MUST clear the modal (1050)     */
+  --z-overlay:     1095;   /* full-surface AJAX / loading overlay                */
+  --z-toast:       1100;   /* toasts — always on top                            */
+
+  /* ── Breakpoint contract (02 §3) — literal px must match these in @media ── */
+  --bp-phone-sm-max: 480px;   /* ≤480  small-phone sub-tier   */
+  --bp-phone-max:    767px;   /* ≤767  phone                  */
+  --bp-tablet-min:   768px;   /* 768   tablet starts          */
+  --bp-tablet-max:  1024px;   /* ≤1024 tablet ends; SIDEBAR IS A DRAWER AT/BELOW THIS */
+  --bp-desktop-min: 1025px;   /* ≥1025 desktop                */
+
+  /* ── Spacing scale (02 §4, 4px base) ────────────────────────────────────── */
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px;  --space-6: 24px;  --space-8: 32px;  --space-10: 40px;
+
+  /* ── Type scale (02 §5) — --text-input is the iOS-zoom cure ────────────── */
+  --text-xs:   11px;   --text-sm:  12.5px;  --text-base: 13.5px;  --text-md: 15px;
+  --text-lg:   18px;   --text-xl:  22px;    --text-2xl:  26px;
+  --text-input: clamp(13.5px, 1rem, 16px);   /* focusable controls — never resolves < 16px on a phone */
+
+  /* ── Radius additions (02 §6) — existing --radius/-sm/-lg stay unchanged ── */
+  --radius-xs:   6px;    /* chips, tiny controls        */
+  --radius-md:   10px;   /* the drift target for 9/10/11px one-offs */
+  --radius-pill: 999px;  /* toggles, count badges       */
+
+  /* ── Data-viz palette (02 §7, light) — colorblind-aware, brand-orange excluded ── */
+  --data-1:#2563eb; --data-2:#b45309; --data-3:#16a34a; --data-4:#7c3aed;
+  --data-5:#0891b2; --data-6:#db2777; --data-7:#0d9488; --data-8:#475569;
+
+  /* ── FAB-clearance tokens (02 §8, mobile) ───────────────────────────────── */
+  --fab-size: 56px;
+  --fab-gap: 20px;
+  --fab-safe-inset: max(var(--fab-gap), env(safe-area-inset-bottom, 0px));
+  --fab-clearance: calc(var(--fab-size) + var(--fab-safe-inset) + 16px);  /* ≈ 92px */
+
+  /* ── Elevation additions (02 §10) — --shadow-1/2/3/brand are FINAL, untouched ── */
+  --shadow-inset: inset 0 1px 2px rgba(15, 23, 42, .07);  /* pressed / well / input-at-rest */
+  --shadow-focus: 0 0 0 3px var(--focus-glow);            /* the ONE keyboard-focus ring     */
+
+  --font-sans: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: light;
+}
+
+/* ── Density modes (02 §11) — wire up the [data-density]/[data-font-scale]/
+   [data-table-density] attributes main-layout.php already writes onto <body>.
+   Pure token remap: components never learn about density, they just re-read
+   the --space- and --text- tokens. Must come AFTER the base .ipb, body.ipb rule so the
+   attribute-qualified selectors (0,2,x) win over the base token block (0,1,1). */
+body.ipb[data-density="compact"] {
+  --space-1: 3px;   --space-2: 6px;   --space-3: 9px;   --space-4: 12px;
+  --space-5: 15px;  --space-6: 18px;  --space-8: 24px;  --space-10: 30px;
+}
+
+body.ipb[data-font-scale="sm"] {
+  --text-xs: 10px;   --text-sm: 11.5px;  --text-base: 12.5px;  --text-md: 13.5px;
+  --text-lg: 16px;   --text-xl: 20px;    --text-2xl: 23px;
+  /* --text-input is deliberately NOT remapped: it keeps its clamp(13.5px,1rem,16px)
+     floor so focusable controls never resolve < 16px and re-trigger iOS zoom. */
+}
+body.ipb[data-font-scale="lg"] {
+  --text-xs: 12.5px; --text-sm: 14px;    --text-base: 15px;    --text-md: 17px;
+  --text-lg: 20px;   --text-xl: 25px;    --text-2xl: 30px;
+}
+
+/* Table density: a dedicated cell-padding pair, independent of the global
+   density switch. Tables read these two tokens, NOT raw --space-*. */
+body.ipb {
+  --cell-pad-y: var(--space-3);
+  --cell-pad-x: var(--space-4);
+}
+body.ipb[data-table-density="compact"] {
+  --cell-pad-y: var(--space-2);
+  --cell-pad-x: var(--space-3);
+}
+
+.ipb[data-theme="dark"],
+body.ipb[data-theme="dark"] {
+  --primary-50: #2a1408;
+  --primary-100: #3d1c0a;
+  --primary-200: #5c2a0e;
+  --primary-600: #ff8a4c;
+  --primary-700: #ffab7a;
+  --secondary-500: #4a74b5;
+  --secondary-600: #6f92c8;
+  /* Dark elevation ladder. The direction inverts here: lighter = raised, so the
+     order is bg < surface < surface-2, the mirror of the light block. Measured:
+     bg->surface 1.16:1, surface->surface-2 1.10:1, border-on-surface 1.46:1. */
+  --bg: #0a0e17;
+  --surface: #171e30;
+  --surface-2: #1c263c;
+  --surface-hover: #1e2940;
+  --border: #2c3a56;
+  --border-strong: #3e4e70;
+  --text-primary: #eef2f9;
+  --text-secondary: #9aa7c2;
+  /* 5.31:1 on surface, 4.83:1 on surface-2, 6.18:1 on bg. Coupled to the surfaces
+     above — lightening --surface/-2 pushes this down, so re-measure if they move.
+     #7686a8 cleared AA against the OLD darker surfaces but only 4.13:1 against
+     the new --surface-2. */
+  --text-muted: #8492b0;
+  --shadow-1: 0 1px 1px rgba(0, 0, 0, .3), 0 2px 5px -1px rgba(0, 0, 0, .35);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, .3), 0 12px 26px -8px rgba(0, 0, 0, .5);
+  --shadow-3: 0 10px 20px rgba(0, 0, 0, .4), 0 32px 64px -16px rgba(0, 0, 0, .7);
+  --shadow-brand: 0 1px 2px rgba(var(--primary-rgb), .25), 0 14px 28px -8px rgba(var(--primary-rgb), .45);
+  --focus-glow: rgba(var(--primary-rgb), .35);
+  /* Chip fill/border inverted for dark: a deep, desaturated tint that sits ON the
+     dark card, with a border strong enough to read against it. Paired with the
+     -600 inks below (which are already light here), a status chip stays legible
+     instead of being pale-tint + dark-ink on a dark surface. */
+  --success-50: #0d2318;
+  --success-100: #14361f;
+  --success-300: #2f6b40;
+  --success-600: #4ade80;
+  --success-700: #86efac;
+  --warning-50: #2a1e08;
+  --warning-100: #3d2c0b;
+  --warning-300: #7c5a16;
+  --warning-600: #fbbf24;
+  --warning-700: #fcd34d;
+  --error-50: #2a1111;
+  --error-100: #3d1818;
+  --error-300: #7f2f2f;
+  --error-600: #f87171;
+  --error-700: #fca5a5;
+  --info-50: #0d1e33;
+  --info-100: #142c4a;
+  --info-300: #2d5386;
+  --info-600: #60a5fa;
+  --info-700: #93c5fd;
+  --violet-100: #241b3d;
+  --violet-300: #4c3a80;
+  --violet-600: #c4b5fd;
+
+  /* Data-viz dark remap (02 §7) */
+  --data-1:#60a5fa; --data-2:#fbbf24; --data-3:#4ade80; --data-4:#a78bfa;
+  --data-5:#22d3ee; --data-6:#f472b6; --data-7:#2dd4bf; --data-8:#94a3b8;
+
+  /* Elevation additions dark remap (02 §10). --shadow-focus needs NO dark
+     override: it references --focus-glow, which this block already
+     re-defines above — it re-themes for free. */
+  --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, .40);
+
+  color-scheme: dark;
+}

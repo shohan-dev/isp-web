@@ -1,0 +1,766 @@
+/**
+ * Customer details — clean profile layout (no dark health widget)
+ */
+
+.ipb-customer-details .cd-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--shadow-1);
+}
+
+.ipb-customer-details .cd-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.ipb-customer-details .cd-avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.ipb-customer-details .cd-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1.5px solid var(--border, #e6eaf0);
+}
+
+.ipb-customer-details .cd-avatar-dot {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid var(--surface, #fff);
+  background: var(--error-500, #dc2626);
+}
+
+.ipb-customer-details .cd-avatar-dot.is-online {
+  background: var(--success-500, #16a34a);
+}
+
+.ipb-customer-details .cd-hero-text h1 {
+  margin: 0;
+  font-size: clamp(18px, 2.4vw, 22px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #0f172a);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ipb-customer-details .cd-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ipb-customer-details .cd-pill.is-online {
+  background: var(--success-50, #ecfdf3);
+  color: var(--success-700, #166534);
+}
+
+.ipb-customer-details .cd-pill.is-offline {
+  background: var(--error-50, #fef2f2);
+  color: var(--error-700, #991b1b);
+}
+
+.ipb-customer-details .cd-pill.is-live {
+  background: var(--info-50, #eff6ff);
+  color: var(--info-600, #1d4ed8);
+}
+
+.ipb-customer-details .cd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ipb-customer-details .cd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e6eaf0);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #51607a);
+}
+
+.ipb-customer-details .cd-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ipb-customer-details .cd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 800;
+  font-family: var(--font-sans);
+  text-decoration: none !important;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+}
+
+.ipb-customer-details .cd-btn-primary {
+  background: var(--primary-500, #f75803);
+  color: #fff !important;
+}
+
+.ipb-customer-details .cd-btn-primary:hover {
+  background: var(--primary-600, #d94601);
+  color: #fff !important;
+}
+
+.ipb-customer-details .cd-btn-ghost {
+  background: var(--surface, #fff);
+  border-color: var(--border, #e6eaf0);
+  color: var(--text-secondary, #51607a) !important;
+}
+
+.ipb-customer-details .cd-btn-ghost:hover {
+  background: var(--surface-hover, #f1f5f9);
+  color: var(--text-primary, #0f172a) !important;
+}
+
+.ipb-customer-details .cd-btn-danger {
+  background: var(--surface);
+  border-color: #fecaca;
+  color: var(--error-500, #dc2626) !important;
+}
+
+.ipb-customer-details .cd-btn-danger:hover {
+  background: var(--error-50, #fef2f2);
+}
+
+.ipb-customer-details .cd-more {
+  position: relative;
+}
+
+.ipb-customer-details .cd-more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-dropdown);
+  min-width: 200px;
+  padding: 6px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2, 0 12px 28px rgba(15, 23, 42, 0.14));
+}
+
+.ipb-customer-details .cd-more-menu[hidden] {
+  display: none !important;
+}
+
+.ipb-customer-details .cd-more-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary, #0f172a);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  text-align: left;
+  text-decoration: none !important;
+  cursor: pointer;
+}
+
+.ipb-customer-details .cd-more-item:hover {
+  background: var(--surface-hover, #f1f5f9);
+}
+
+.ipb-customer-details .cd-more-item.is-danger {
+  color: var(--error-500, #dc2626);
+}
+
+.ipb-customer-details .cd-mac {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ipb-customer-details .cd-mac.is-bound {
+  background: var(--success-50, #ecfdf3);
+  color: var(--success-700, #166534);
+}
+
+.ipb-customer-details .cd-mac.is-unbound {
+  background: var(--primary-50, #fff7ed);
+  color: var(--primary-700, #c2410c);
+}
+
+.ipb-customer-details .cd-mac.is-loading {
+  background: var(--surface-hover);
+  color: var(--text-secondary, #64748b);
+}
+
+/* Quick facts strip */
+.ipb-customer-details .cd-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ipb-customer-details .cd-fact {
+  padding: 14px 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: 12px;
+  min-width: 0;
+}
+
+.ipb-customer-details .cd-fact span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .cd-fact strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.ipb-customer-details .cd-fact em {
+  display: block;
+  margin-top: 3px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .cd-fact.is-ok strong { color: var(--success-600, #15803d); }
+.ipb-customer-details .cd-fact.is-warn strong { color: var(--primary-700, #c2410c); }
+.ipb-customer-details .cd-fact.is-danger strong { color: var(--error-600, #b91c1c); }
+
+/* Layout grid */
+.ipb-customer-details .cd-layout {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.ipb-customer-details .cd-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.ipb-customer-details .cd-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.ipb-customer-details .cd-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+}
+
+.ipb-customer-details .cd-card-head h3 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ipb-customer-details .cd-card-head h3 i {
+  color: var(--primary-500, #f75803);
+}
+
+.ipb-customer-details .cd-card-body {
+  padding: 14px 16px 16px;
+}
+
+.ipb-customer-details .cd-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ipb-customer-details .cd-rows li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-customer-details .cd-rows li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ipb-customer-details .cd-rows li:first-child {
+  padding-top: 0;
+}
+
+.ipb-customer-details .cd-rows .k {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .cd-rows .v {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  text-align: right;
+  word-break: break-word;
+}
+
+.ipb-customer-details .cd-address {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-customer-details .cd-address h4 {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .cd-address p {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  line-height: 1.45;
+}
+
+/* Live session — light panel, not dark health widget */
+.ipb-customer-details .cd-session {
+  border: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-customer-details .cd-session-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-customer-details .cd-session-banner.is-online {
+  background: var(--success-50, #f0fdf4);
+}
+
+.ipb-customer-details .cd-session-banner.is-offline {
+  background: var(--error-50, #fef2f2);
+}
+
+.ipb-customer-details .cd-session-banner h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-customer-details .cd-session-banner p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .cd-session-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.ipb-customer-details .cd-session-metric {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+  border-right: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-customer-details .cd-session-metric:nth-child(2n) {
+  border-right: 0;
+}
+
+.ipb-customer-details .cd-session-metric:nth-last-child(-n+2) {
+  border-bottom: 0;
+}
+
+.ipb-customer-details .cd-session-metric span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .cd-session-metric strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  word-break: break-word;
+}
+
+.ipb-customer-details .cd-plan-grid,
+.ipb-customer-details .cd-info-grid,
+.ipb-customer-details .cd-bw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ipb-customer-details .cd-mini {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e6eaf0);
+  min-width: 0;
+}
+
+.ipb-customer-details .cd-mini span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .cd-mini strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  word-break: break-word;
+}
+
+.ipb-customer-details .cd-mini.is-warn strong { color: var(--primary-700, #c2410c); }
+.ipb-customer-details .cd-mini.is-ok strong { color: var(--success-600, #15803d); }
+
+.ipb-customer-details .cd-mini em {
+  display: block;
+  margin-top: 3px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .cd-traffic {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #51607a);
+}
+
+.ipb-customer-details .cd-traffic strong {
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-customer-details .cd-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0 4px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ipb-customer-details .ping-results-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-customer-details .ping-result-text {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-customer-details .ping-stats-text {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .ipb-conn-control-title {
+  margin: 14px 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-customer-details .ipb-conn-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-customer-details .ipb-conn-control-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-customer-details .ipb-offline-pill {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--error-50, #fef2f2);
+  color: var(--error-600, #b91c1c);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ipb-customer-details .small-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border, #e6eaf0);
+  background: var(--surface, #fff);
+  color: var(--text-secondary, #51607a);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ipb-customer-details .small-action-btn:hover {
+  background: var(--surface-hover, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-customer-details .historical-chart-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ipb-customer-details .material-switch {
+  display: inline-block;
+}
+
+body.ipb[data-theme="dark"] .ipb-customer-details .cd-hero,
+body.ipb.dark-mode .ipb-customer-details .cd-hero,
+body.ipb[data-theme="dark"] .ipb-customer-details .cd-fact,
+body.ipb.dark-mode .ipb-customer-details .cd-fact,
+body.ipb[data-theme="dark"] .ipb-customer-details .cd-card,
+body.ipb.dark-mode .ipb-customer-details .cd-card {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+body.ipb[data-theme="dark"] .ipb-customer-details .cd-card-head,
+body.ipb.dark-mode .ipb-customer-details .cd-card-head,
+body.ipb[data-theme="dark"] .ipb-customer-details .cd-chip,
+body.ipb.dark-mode .ipb-customer-details .cd-chip,
+body.ipb[data-theme="dark"] .ipb-customer-details .cd-mini,
+body.ipb.dark-mode .ipb-customer-details .cd-mini,
+body.ipb[data-theme="dark"] .ipb-customer-details .cd-address,
+body.ipb.dark-mode .ipb-customer-details .cd-address {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+/* 06 §8 item 7 — live-session banner kept its light var(--success-50, #f0fdf4)/var(--error-50, #fef2f2) tint in
+   dark mode while the h4/p text follows --text-primary/--text-muted (which
+   flip light in dark), so the text goes near-invisible on the still-light
+   tint. Swap the tint to the themed success/error 50, which tokens.css
+   already remaps dark under [data-theme="dark"]. */
+body.ipb[data-theme="dark"] .ipb-customer-details .cd-session-banner.is-online,
+body.ipb.dark-mode .ipb-customer-details .cd-session-banner.is-online {
+  background: var(--success-50);
+}
+
+body.ipb[data-theme="dark"] .ipb-customer-details .cd-session-banner.is-offline,
+body.ipb.dark-mode .ipb-customer-details .cd-session-banner.is-offline {
+  background: var(--error-50);
+}
+
+@media (max-width: 1100px) {
+  .ipb-customer-details .cd-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 1024px) {   /* was 991px — folded into the 03 §1.3 ladder */
+  .ipb-customer-details .cd-layout {
+    grid-template-columns: 1fr;
+  }
+
+  /* Kick / Check ping / Refresh (OLT) sat at a 32px tap target on a
+     touch-only tier — under the ~40-44px floor — with no responsive override
+     anywhere in the file. Height-only change; the row is a flex row with
+     room (card-head padding 14px), so this can't push anything into overflow. */
+  .ipb-customer-details .small-action-btn {
+    min-height: 40px;
+    padding: 0 12px;
+  }
+
+  /* Same story for the overflow-menu items (Bind/Unbind MAC, Audit logs,
+     Copy subscription link, Refresh session) — ~10px vertical padding on a
+     13px line put them close to 34px tall. Vertical-only padding bump. */
+  .ipb-customer-details .cd-more-item {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 767px) {
+  .ipb-customer-details .cd-hero {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px;
+  }
+
+  .ipb-customer-details .cd-hero-actions {
+    width: 100%;
+  }
+
+  .ipb-customer-details .cd-btn {
+    flex: 1 1 auto;
+    min-height: 42px;
+  }
+
+  .ipb-customer-details .cd-facts {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .ipb-customer-details .cd-fact {
+    padding: 12px;
+  }
+
+  .ipb-customer-details .cd-fact strong {
+    font-size: 14px;
+  }
+
+  .ipb-customer-details .cd-plan-grid,
+  .ipb-customer-details .cd-info-grid,
+  .ipb-customer-details .cd-bw-grid,
+  .ipb-customer-details .cd-session-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .ipb-customer-details .cd-session-metric {
+    border-right: 0 !important;
+  }
+
+  .ipb-customer-details .cd-session-metric:nth-last-child(-n+2) {
+    border-bottom: 1px solid var(--border, #e6eaf0);
+  }
+
+  .ipb-customer-details .cd-session-metric:last-child {
+    border-bottom: 0;
+  }
+
+  .ipb-customer-details .cd-rows li {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ipb-customer-details .cd-rows .v {
+    text-align: left;
+  }
+
+  .ipb-customer-details .cd-more-menu {
+    left: 0;
+    right: 0;
+    position: fixed;
+    top: auto;
+    bottom: 12px;
+    width: auto;
+    margin: 0 12px;
+  }
+}

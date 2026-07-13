@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 72" role="img" aria-label="PayStation">
+  <rect x="1" y="1" width="198" height="70" rx="12" fill="#ffffff" stroke="#2d3e91" stroke-width="2"/>
+  <rect x="18" y="24" width="30" height="24" rx="4" fill="none" stroke="#2d3e91" stroke-width="3"/>
+  <line x1="18" y1="32" x2="48" y2="32" stroke="#2d3e91" stroke-width="3"/>
+  <text x="58" y="33" font-family="Segoe UI, Arial, sans-serif" font-size="21" font-weight="700" fill="#2d3e91">Pay<tspan fill="#e8a13a">Station</tspan></text>
+  <text x="59" y="50" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="500" fill="#6b7280" letter-spacing="1">Payment Gateway</text>
+</svg>

@@ -1,0 +1,331 @@
+/* Premium list/form shell — safe rules only (does not fight AdminLTE/DataTables layout) */
+
+/* KPI strip (optional) */
+body.ipb section.content .ipb-pay-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 16px;
+  width: 100%;
+}
+
+body.ipb section.content .ipb-pay-stat {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(15, 23, 42, 0.04));
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+
+body.ipb section.content .ipb-pay-stat::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--primary-500, #f75803);
+}
+
+body.ipb section.content .ipb-pay-stat.tone-success::before { background: var(--success-500, #16a34a); }
+body.ipb section.content .ipb-pay-stat.tone-info::before { background: #0891b2; }
+body.ipb section.content .ipb-pay-stat.tone-warn::before { background: var(--warning-500, #d97706); }
+
+body.ipb section.content .ipb-pay-stat .stat-kicker {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 0 0 4px;
+}
+
+body.ipb section.content .ipb-pay-stat strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  line-height: 1.2;
+}
+
+body.ipb section.content .ipb-pay-stat .stat-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #51607a);
+}
+
+@media (max-width: 1100px) {
+  body.ipb section.content .ipb-pay-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  body.ipb section.content .ipb-pay-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Status pills (controller HTML + legacy labels) */
+body.ipb section.content .ipb-pay-badge,
+body.ipb section.content .label,
+body.ipb section.content .badge:not(.ipb-pay-badge) {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  border: 0;
+}
+
+body.ipb section.content .ipb-pay-badge.is-success,
+body.ipb section.content .label-success,
+body.ipb section.content .badge-success,
+body.ipb section.content .label.label-success,
+body.ipb section.content .badge.label-success {
+  background: var(--success-50, #ecfdf3);
+  color: var(--success-700, #166534);
+}
+
+body.ipb section.content .ipb-pay-badge.is-warning,
+body.ipb section.content .label-warning,
+body.ipb section.content .badge-warning,
+body.ipb section.content .label.label-warning,
+body.ipb section.content .badge.label-warning {
+  background: var(--warning-50, #fffbeb);
+  color: var(--warning-700, #92400e);
+}
+
+body.ipb section.content .ipb-pay-badge.is-danger,
+body.ipb section.content .label-danger,
+body.ipb section.content .badge-danger,
+body.ipb section.content .label.label-danger,
+body.ipb section.content .badge.label-danger {
+  background: var(--error-50, #fef2f2);
+  color: var(--error-700, #991b1b);
+}
+
+body.ipb section.content .ipb-pay-badge.is-info,
+body.ipb section.content .label-info,
+body.ipb section.content .badge-info,
+body.ipb section.content .label.label-info,
+body.ipb section.content .badge.label-info {
+  background: var(--info-50, #eff6ff);
+  color: var(--info-600, #1d4ed8);
+}
+
+body.ipb section.content .label-default,
+body.ipb section.content .badge-default,
+body.ipb section.content .label.label-default {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+}
+
+/* Row action buttons (div wrapper inside cells — never style the <td> as flex) */
+body.ipb section.content .ipb-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Row actions inherit global icon-button styles from ux.css */
+
+body.ipb section.content table .btn-xs,
+body.ipb section.content table .btn-sm {
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+body.ipb section.content td.action-icons {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Filter form used on POP payments / funding */
+body.ipb section.content .ipb-filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+}
+
+body.ipb section.content .ipb-filter-form .ipb-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  flex: 1 1 140px;
+}
+
+body.ipb section.content .ipb-filter-form .ipb-filter-field label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+body.ipb section.content .ipb-filter-form .form-control {
+  min-height: 38px;
+  border-radius: 8px;
+}
+
+body.ipb section.content .ipb-filter-form .ipb-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+  float: none;
+}
+
+/* Premium tabs (Profile / Software Settings) */
+body.ipb section.content .nav.nav-tabs {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  float: none;
+}
+
+body.ipb section.content .box-header > .nav.nav-tabs {
+  width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body.ipb section.content .box-header > .nav.nav-tabs > li {
+  float: none;
+  flex: 0 0 auto;
+}
+
+body.ipb section.content .nav.nav-tabs > li > a {
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+body.ipb section.content .nav.nav-tabs > li.active > a,
+body.ipb section.content .nav.nav-tabs > li.active > a:hover,
+body.ipb section.content .nav.nav-tabs > li.active > a:focus {
+  border: 0;
+  background: rgba(247, 88, 3, 0.1);
+  color: var(--primary-500, #f75803);
+}
+
+/* Select2 above cards */
+body.ipb .select2-container--open {
+  z-index: var(--z-select2);
+}
+
+body.ipb .select2-dropdown {
+  z-index: var(--z-select2);
+}
+
+/* Dark mode badges */
+body.ipb[data-theme="dark"] section.content .ipb-pay-stat,
+body.ipb.dark-mode section.content .ipb-pay-stat {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+body.ipb[data-theme="dark"] section.content td.action-icons a,
+body.ipb.dark-mode section.content td.action-icons a {
+  background: #1e293b;
+}
+
+/* 06 §8 item 15 — status pill tints have no dark pair; the light hexes above
+   (var(--success-50, #ecfdf3)/var(--warning-50, #fffbeb)/var(--error-50, #fef2f2)/var(--info-50, #eff6ff)) read as near-white-on-near-white once the
+   card goes dark. Re-point each state at its themed success/warning/error/info
+   50/700 pair, which tokens.css already remaps under [data-theme="dark"]. */
+body.ipb[data-theme="dark"] section.content .ipb-pay-badge.is-success,
+body.ipb.dark-mode section.content .ipb-pay-badge.is-success,
+body.ipb[data-theme="dark"] section.content .label-success,
+body.ipb.dark-mode section.content .label-success,
+body.ipb[data-theme="dark"] section.content .badge-success,
+body.ipb.dark-mode section.content .badge-success,
+body.ipb[data-theme="dark"] section.content .label.label-success,
+body.ipb.dark-mode section.content .label.label-success,
+body.ipb[data-theme="dark"] section.content .badge.label-success,
+body.ipb.dark-mode section.content .badge.label-success {
+  background: var(--success-50);
+  color: var(--success-700);
+}
+
+body.ipb[data-theme="dark"] section.content .ipb-pay-badge.is-warning,
+body.ipb.dark-mode section.content .ipb-pay-badge.is-warning,
+body.ipb[data-theme="dark"] section.content .label-warning,
+body.ipb.dark-mode section.content .label-warning,
+body.ipb[data-theme="dark"] section.content .badge-warning,
+body.ipb.dark-mode section.content .badge-warning,
+body.ipb[data-theme="dark"] section.content .label.label-warning,
+body.ipb.dark-mode section.content .label.label-warning,
+body.ipb[data-theme="dark"] section.content .badge.label-warning,
+body.ipb.dark-mode section.content .badge.label-warning {
+  background: var(--warning-50);
+  color: var(--warning-700);
+}
+
+body.ipb[data-theme="dark"] section.content .ipb-pay-badge.is-danger,
+body.ipb.dark-mode section.content .ipb-pay-badge.is-danger,
+body.ipb[data-theme="dark"] section.content .label-danger,
+body.ipb.dark-mode section.content .label-danger,
+body.ipb[data-theme="dark"] section.content .badge-danger,
+body.ipb.dark-mode section.content .badge-danger,
+body.ipb[data-theme="dark"] section.content .label.label-danger,
+body.ipb.dark-mode section.content .label.label-danger,
+body.ipb[data-theme="dark"] section.content .badge.label-danger,
+body.ipb.dark-mode section.content .badge.label-danger {
+  background: var(--error-50);
+  color: var(--error-700);
+}
+
+body.ipb[data-theme="dark"] section.content .ipb-pay-badge.is-info,
+body.ipb.dark-mode section.content .ipb-pay-badge.is-info,
+body.ipb[data-theme="dark"] section.content .label-info,
+body.ipb.dark-mode section.content .label-info,
+body.ipb[data-theme="dark"] section.content .badge-info,
+body.ipb.dark-mode section.content .badge-info,
+body.ipb[data-theme="dark"] section.content .label.label-info,
+body.ipb.dark-mode section.content .label.label-info,
+body.ipb[data-theme="dark"] section.content .badge.label-info,
+body.ipb.dark-mode section.content .badge.label-info {
+  background: var(--info-50);
+  color: var(--info-700);
+}
+
+/* 04 §3 — the default DataTables processing box, for tables that get
+   processing:true from the global default (saas.js) but are NOT toolbar-bound
+   (so they never get the components.css .is-loading dim+skeleton overlay). */
+.ipb .dataTables_processing {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
+  font-weight: 700;
+  z-index: var(--z-sticky, 5);
+}
+
+/* 06 §4 — payment KPI strip: propagate tabular-nums so live totals don't
+   jitter horizontally across redraws (already used on dashboard KPI numbers). */
+body.ipb section.content .ipb-pay-stat strong { font-variant-numeric: tabular-nums; }

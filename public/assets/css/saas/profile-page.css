@@ -1,0 +1,388 @@
+/**
+ * My Profile — identity hero + field grid.
+ *
+ * Replaces the AdminLTE `box-profile` + `list-group` + `pull-right` layout: a
+ * centred avatar with three bordered rows under it, and a second stack of bordered
+ * rows beside it. Everything was a row, so nothing had rank — the person's name,
+ * their role, and their WhatsApp number all carried the same visual weight, and an
+ * unset field read as a bare "--".
+ */
+
+.ipb-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Identity hero ───────────────────────────────────────────────────────── */
+.ipb-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(var(--primary-rgb, 247, 88, 3), .07), transparent 60%),
+    var(--surface-2);
+}
+
+.ipb-profile-avatar {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.ipb-profile-avatar img {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface);
+  border: 3px solid var(--surface);
+  box-shadow: var(--shadow-2);
+}
+
+/* Account status as a presence dot ON the avatar: it is a property of the person,
+   not another row in a list of numbers. */
+.ipb-profile-presence {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 3px solid var(--surface);
+  background: var(--text-muted);
+}
+.ipb-profile-presence.is-active { background: var(--success-500); }
+.ipb-profile-presence.is-inactive { background: var(--error-500); }
+
+.ipb-profile-ident {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ipb-profile-name {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.ipb-profile-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ipb-profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.ipb-profile-chip.is-brand {
+  border-color: var(--primary-300);
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+.ipb-profile-chip.is-success {
+  border-color: var(--success-300);
+  background: var(--success-100);
+  color: var(--success-600);
+}
+.ipb-profile-chip.is-danger {
+  border-color: var(--error-300);
+  background: var(--error-100);
+  color: var(--error-600);
+}
+
+.ipb-profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ipb-profile-meta i {
+  margin-right: 6px;
+  opacity: 0.8;
+}
+
+.ipb-profile-hero-actions {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+/* ── Field grid ──────────────────────────────────────────────────────────── */
+.ipb-profile-section + .ipb-profile-section {
+  margin-top: 4px;
+}
+
+.ipb-profile-section-title {
+  margin: 0 0 12px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ipb-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.ipb-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.ipb-field-icon {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.ipb-field-body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ipb-field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* The value is the thing being read; the label is only its key. The old layout gave
+   both the same weight and shoved the value to the far right edge of the card, so
+   the eye had to travel the full width to pair them. */
+.ipb-field-value {
+  display: block;
+  margin-top: 3px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.ipb-field-value.is-num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* An unset field said "--", which reads as "broken" rather than "you have not filled
+   this in". Say so, and stop pretending it is data. */
+.ipb-field.is-empty .ipb-field-value {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ipb-field-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+/* Read-only in the Details tab: these used to be real <input type=checkbox> that
+   did nothing when clicked — a control that lies about being interactive. */
+.ipb-field-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.ipb-field-tag.is-on {
+  border-color: var(--success-300);
+  background: var(--success-100);
+  color: var(--success-600);
+}
+
+/* ── Update forms ────────────────────────────────────────────────────────── */
+/* The two update tabs were a single column of full-width .form-group rows, so an
+   11-character mobile number got the same 1200px-wide input as the address, and
+   there was nothing to tell you what "Payment Receive Number" even meant. */
+.ipb-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ipb-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px 18px;
+}
+
+.ipb-form-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ipb-form-field.is-wide {
+  grid-column: 1 / -1;
+}
+
+.ipb-form-label {
+  margin-bottom: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.ipb-form-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* The error slot only takes space once it has something to say. */
+.ipb-form-field .error:empty {
+  display: none;
+}
+
+.ipb-form-field .error {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ipb-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+/* Checkboxes as pills: the whole pill is the label, so the hit area is the control
+   rather than a 13px box next to it. */
+.ipb-choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.ipb-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color var(--dur-fast, .14s) ease, background var(--dur-fast, .14s) ease;
+}
+
+.ipb-choice:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.ipb-choice input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--primary-500);
+  cursor: pointer;
+}
+
+.ipb-choice:has(input:checked) {
+  border-color: var(--primary-300);
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+
+.ipb-choice:has(input:focus-visible) {
+  box-shadow: var(--shadow-focus, 0 0 0 3px var(--focus-glow));
+}
+
+@media (max-width: 767px) {
+  .ipb-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ipb-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .ipb-form-actions .btn {
+    width: 100%;
+  }
+
+  .ipb-profile-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .ipb-profile-hero-actions {
+    align-self: stretch;
+  }
+
+  .ipb-profile-hero-actions .btn {
+    width: 100%;
+  }
+
+  .ipb-profile-avatar img {
+    width: 72px;
+    height: 72px;
+  }
+
+  .ipb-profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

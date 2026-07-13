@@ -1,0 +1,218 @@
+<?= $this->extend('layout/main-layout'); ?>
+
+<?= $this->section('css'); ?>
+<style>
+  .list-group-item-heading {
+    font-size: 1.6rem;
+    font-weight: bold;
+  }
+
+  .list-group-item-text {
+    font-size: 1.2rem;
+  }
+
+  .modal-header {
+    background-color: #007bff;
+    color: white;
+  }
+
+  .modal-footer .btn {
+    margin-right: 5px;
+  }
+</style>
+<?= $this->endSection('css'); ?>
+
+<?= $this->section('content'); ?>
+<div class="content-wrapper">
+  <section class="content-header">
+    <h1>Package Configuration</h1>
+    <ol class="breadcrumb">
+      <li><a href="<?= route_to('route.dashboard'); ?>"><i class="fa fa-dashboard"></i> Dashboard</a></li>
+      <li class="active">Package Configuration</li>
+    </ol>
+  </section>
+
+  <section class="content">
+    <button class="btn btn-primary" data-toggle="modal" data-target="#addPackageModal">
+      <i class="fa fa-plus"></i> Package
+    </button>
+
+    <div class="box-body">
+      <table class="table table-bordered table-striped datatable">
+        <thead class="text-nowrap">
+          <tr>
+            <th>#</th>
+            <th>Package Name</th>
+            <th>Price</th>
+            <th>Bandwidth</th>
+            <th>Package type</th>
+            <th>preview</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php if (!empty($packages) && is_array($packages)): ?>
+            <?php foreach ($packages as $index => $package): ?>
+              <tr>
+                <td><?= $index + 1 ?></td>
+                <td><?= esc($package['package_name']) ?></td>
+                <td><?= esc($package['price']) ?></td>
+                <td><?= esc($package['bandwidth']) ?></td>
+                <td><?= esc($package['package_type']) ?></td>
+                <td><?= esc($package['preview']) ?></td>
+                <td>
+                  <button class="btn btn-sm btn-primary editPackagesBtn"
+                    data-package-name="<?= esc($package['package_name']) ?>"
+                    data-package-price="<?= esc($package['price']) ?>"
+                    data-package-bandwidth="<?= esc($package['bandwidth']) ?>"
+                    data-package-package_type="<?= esc($package['package_type']) ?>"
+                    data-package-preview="<?= esc($package['preview']) ?>" data-toggle="modal">
+                    Edit
+                  </button>
+                  <button class="btn btn-sm btn-danger deletePackageBtn" data-index="<?= $index ?>">Delete</button>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <tr>
+              <td colspan="4">No packages found.</td>
+            </tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Add Package Modal -->
+    <div class="modal fade" id="addPackageModal" tabindex="-1" role="dialog" aria-labelledby="addPackageModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title" id="addPackageModalLabel">Add Package</h4>
+          </div>
+          <div class="modal-body">
+            <form id="addPackageForm">
+              <div class="form-group">
+                <label for="addPackageName">Package Name</label>
+                <input type="text" class="form-control" id="addPackageName" name="packageName" required>
+              </div>
+              <div class="form-group">
+                <label for="addPrice">Price</label>
+                <input type="text" class="form-control" id="addPrice" name="price" required>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="savePackageBtn">Save Package</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Package Modal -->
+    <div class="modal fade" id="editPackagesModal" tabindex="-1" role="dialog" aria-labelledby="editPackageModalLabel"
+      aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editPackageModalLabel">Edit Package</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="editPackageForm">
+              <div class="form-group">
+                <label for="editPackageName">Package Name</label>
+                <input type="text" id="editPackageName" class="form-control" placeholder="Enter Package Name" readonly>
+              </div>
+
+              <div class="form-group">
+                <label for="editPrice">Price</label>
+                <input type="text" id="editPrice" class="form-control" placeholder="Enter Price">
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="updatePackageBtn">Update Package</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</div>
+<?= $this->endSection('content'); ?>
+
+<?= $this->section('script'); ?>
+
+<script>
+  $(document).ready(function () {
+
+    var csrfToken = $('meta[name="csrf-token"]').attr('content');
+    var csrfHeader = $('meta[name="csrf-header"]').attr('content');
+
+    // Edit button click event
+    $('.editPackagesBtn').on('click', function () {
+      // Get the data attributes from the clicked button
+      var packageName = $(this).data('package-name');
+      var packagePrice = $(this).data('package-price');
+
+      // Check if data is being retrieved correctly
+      console.log('Package Name:', packageName);
+      console.log('Package Price:', packagePrice);
+
+      // Set the values in the form fields in the modal
+      $('#editPackageName').val(packageName);
+      $('#editPrice').val(packagePrice);
+
+      // Show the modal
+      $('#editPackagesModal').modal('show');
+    });
+
+    // Prevent form submission if any
+    // $('#editPackageForm').on('submit', function(event) {
+    //     event.preventDefault(); // Prevent form from submitting
+    // });
+
+    $('#updatePackageBtn').on('click', function () {
+      // var packageId = $('#editPackageId').val();
+      var packageName = $('#editPackageName').val();
+      var packagePrice = $('#editPrice').val();
+      var userId = <?= json_encode($userId) ?>; // Ensure the userId is properly passed
+
+
+      $.ajax({
+        url: '<?= route_to('resellers.updatePackage') ?>', // The named route for your update method
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrfToken // Include CSRF token in the headers
+        },
+        data: {
+
+          userId: userId,
+          packageName: packageName,
+          price: packagePrice,
+          // Include CSRF token in the request
+        },
+        success: function (response) {
+          if (response.status === 'success') {
+            location.reload(); // Reload the page or update the table dynamically
+          } else {
+            alert('Failed to update package');
+          }
+        },
+        error: function () {
+          alert('An error occurred');
+        }
+      });
+    });
+
+
+
+  });
+</script>
+
+<?= $this->endSection('script'); ?>

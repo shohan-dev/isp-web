@@ -1,0 +1,612 @@
+/**
+ * Customers list — fluent toolbar, calm colors, responsive
+ */
+
+.ipb-customers-page .box.box-warning {
+  border: 1px solid var(--border, #e6eaf0) !important;
+  border-top: 1px solid var(--border, #e6eaf0) !important;
+  border-radius: var(--radius-lg, 14px) !important;
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(15, 23, 42, 0.04)) !important;
+  overflow: hidden;
+  background: var(--surface, #fff) !important;
+}
+
+.ipb-customers-page .box-header.ipb-box-toolbar {
+  display: block !important;
+  float: none !important;
+  padding: 14px 16px !important;
+  border-bottom: 1px solid var(--border, #e6eaf0) !important;
+  background: var(--surface-2, #f8fafc) !important;
+}
+
+.ipb-customers-page .box-body {
+  padding: 12px 16px 16px !important;
+  background: var(--surface, #fff) !important;
+}
+
+.ipb-customers-page .ipb-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.ipb-customers-page .ipb-filter-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #e6eaf0);
+  background: var(--surface, #fff);
+  color: var(--text-secondary, #51607a);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ipb-customers-page .ipb-filter-reset:hover {
+  background: var(--surface-hover, #f1f5f9);
+  border-color: var(--border-strong, #d7dee7);
+}
+
+.ipb-customers-page .ipb-filter-count {
+  font-size: 12px;
+  background: var(--primary-50, #fff4ed);
+  color: var(--primary-600, #d94601);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ipb-customers-page #customer-filter-bar .ipb-filter-select,
+.ipb-customers-page #customer-filter-bar select.form-control {
+  min-width: 132px;
+  min-height: 38px;
+  border: 1.5px solid var(--border, #e6eaf0);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  color: var(--text-primary, #0f172a);
+  font-size: var(--text-input, 13px);   /* was 13px — iOS auto-zoom on every Area/Package/Status tap (03 §7) */
+  font-weight: 600;
+  padding: 6px 10px;
+}
+
+.ipb-customers-page #customer-filter-bar .ipb-filter-select:focus,
+.ipb-customers-page #customer-filter-bar select.form-control:focus {
+  border-color: var(--primary-500, #f75803);
+  box-shadow: var(--shadow-focus, 0 0 0 3px rgba(var(--primary-rgb, 247, 88, 3), 0.12));
+  outline: none;
+}
+
+/* Toolbar buttons — calm palette */
+.ipb-customers-page .ipb-tool-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 38px;
+  min-height: 38px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px !important;
+  border: 1.5px solid transparent !important;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none !important;
+  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ipb-customers-page .ipb-tool-btn.is-primary {
+  background: var(--primary-500, #f75803) !important;
+  border-color: var(--primary-500, #f75803) !important;
+  color: #fff !important;
+  box-shadow: var(--shadow-brand, 0 1px 2px rgba(15, 23, 42, 0.08));
+}
+.ipb-customers-page .ipb-tool-btn.is-primary:hover {
+  background: var(--primary-600, #d94601) !important;
+  color: #fff !important;
+}
+
+.ipb-customers-page .ipb-tool-btn.is-ghost {
+  background: var(--surface, #fff) !important;
+  border-color: var(--border, #e6eaf0) !important;
+  color: var(--text-secondary, #51607a) !important;
+  box-shadow: none;
+}
+.ipb-customers-page .ipb-tool-btn.is-ghost:hover {
+  background: var(--surface-hover, #f1f5f9) !important;
+  border-color: var(--border-strong, #d7dee7) !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+
+/* Overflow menu */
+.ipb-customers-page .ipb-cust-more {
+  position: relative;
+}
+.ipb-customers-page .ipb-cust-more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-dropdown);
+  min-width: 220px;
+  padding: 6px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2, 0 12px 28px rgba(15, 23, 42, 0.14));
+}
+.ipb-customers-page .ipb-cust-more-menu[hidden] {
+  display: none !important;
+}
+.ipb-customers-page .ipb-cust-more-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary, #0f172a);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  text-align: left;
+  text-decoration: none !important;
+  cursor: pointer;
+}
+.ipb-customers-page .ipb-cust-more-item:hover {
+  background: var(--surface-hover, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+}
+.ipb-customers-page .ipb-cust-more-item.is-danger {
+  color: var(--error-500, #dc2626);
+}
+.ipb-customers-page .ipb-cust-more-item i {
+  width: 16px;
+  text-align: center;
+  opacity: 0.85;
+}
+.ipb-customers-page .ipb-cust-more.is-open .ipb-cust-more-btn {
+  background: var(--surface-hover, #f1f5f9) !important;
+  border-color: var(--border-strong, #d7dee7) !important;
+}
+
+/* Column picker */
+.ipb-customers-page .ipb-col-picker { position: relative; }
+.ipb-customers-page .ipb-col-picker-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(280px, 86vw);
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2, 0 12px 28px rgba(15, 23, 42, 0.14));
+  z-index: var(--z-dropdown);
+  padding: 10px 12px 12px;
+}
+.ipb-customers-page .ipb-col-picker-panel[hidden] { display: none !important; }
+.ipb-customers-page .ipb-col-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+}
+.ipb-customers-page .ipb-col-picker-head strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+}
+.ipb-customers-page .ipb-col-picker-reset {
+  border: 0;
+  background: transparent;
+  color: var(--primary-500, #f75803);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.ipb-customers-page .ipb-col-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.ipb-customers-page .ipb-col-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+  margin: 0;
+}
+.ipb-customers-page .ipb-col-picker-item:hover {
+  background: var(--surface-hover, #f1f5f9);
+}
+.ipb-customers-page .ipb-col-picker-item.is-locked {
+  opacity: 0.55;
+  cursor: default;
+}
+.ipb-customers-page .ipb-col-picker-item input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-500, #f75803);
+}
+.ipb-customers-page .ipb-col-picker-note {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 600;
+}
+
+/* Soft row actions — keep icon color on hover (override global white) */
+body.ipb .ipb-customers-page .ipb-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+body.ipb .ipb-customers-page .ipb-row-btn,
+body.ipb .ipb-customers-page a.ipb-row-btn,
+body.ipb .ipb-customers-page button.ipb-row-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 1px solid var(--border, #e6eaf0) !important;
+  border-radius: 999px !important;
+  background: var(--surface-2, #f8fafc) !important;
+  color: var(--text-secondary, #51607a) !important;
+  text-decoration: none !important;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 13px;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+body.ipb .ipb-customers-page .ipb-row-btn.tone-info,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-info,
+body.ipb .ipb-customers-page .ipb-row-btn.tone-info:hover,
+body.ipb .ipb-customers-page .ipb-row-btn.tone-info:focus,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-info:hover,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-info:focus {
+  color: var(--info-600, #1d4ed8) !important;
+  background: var(--info-100, #dbeafe) !important;
+  border-color: var(--info-300, #93c5fd) !important;
+}
+body.ipb .ipb-customers-page .ipb-row-btn.tone-violet,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-violet,
+body.ipb .ipb-customers-page .ipb-row-btn.tone-violet:hover,
+body.ipb .ipb-customers-page .ipb-row-btn.tone-violet:focus,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-violet:hover,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-violet:focus {
+  color: var(--violet-600, #6d28d9) !important;
+  background: var(--violet-100, #ede9fe) !important;
+  border-color: var(--violet-300, #c4b5fd) !important;
+}
+body.ipb .ipb-customers-page .ipb-row-btn.tone-brand,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-brand,
+body.ipb .ipb-customers-page .ipb-row-btn.tone-brand:hover,
+body.ipb .ipb-customers-page .ipb-row-btn.tone-brand:focus,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-brand:hover,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-brand:focus {
+  color: var(--primary-700, #c2410c) !important;
+  background: var(--primary-100, #ffedd5) !important;
+  border-color: var(--primary-300, #fdba74) !important;
+}
+body.ipb .ipb-customers-page .ipb-row-btn.tone-success,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-success,
+body.ipb .ipb-customers-page .ipb-row-btn.tone-success:hover,
+body.ipb .ipb-customers-page .ipb-row-btn.tone-success:focus,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-success:hover,
+body.ipb .ipb-customers-page a.ipb-row-btn.tone-success:focus {
+  color: var(--success-600, #15803d) !important;
+  background: var(--success-100, #dcfce7) !important;
+  border-color: var(--success-300, #86efac) !important;
+}
+body.ipb .ipb-customers-page .ipb-row-btn:hover,
+body.ipb .ipb-customers-page .ipb-row-btn:focus,
+body.ipb .ipb-customers-page a.ipb-row-btn:hover,
+body.ipb .ipb-customers-page a.ipb-row-btn:focus {
+  filter: none !important;
+  opacity: 1 !important;
+  transform: translateY(-1px);
+  text-decoration: none !important;
+}
+body.ipb .ipb-customers-page .ipb-row-btn i,
+body.ipb .ipb-customers-page .ipb-row-btn:hover i,
+body.ipb .ipb-customers-page .ipb-row-btn:focus i {
+  color: inherit !important;
+}
+
+.ipb-customers-page .ipb-customers-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.ipb-customers-page .ipb-customers-table-wrap .dataTables_wrapper .dataTables_length,
+.ipb-customers-page .ipb-customers-table-wrap .dataTables_wrapper .dataTables_filter {
+  margin-bottom: 12px;
+}
+.ipb-customers-page .ipb-customers-table-wrap .dataTables_wrapper .dataTables_filter input {
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #e6eaf0);
+  min-height: 36px;
+  padding: 6px 12px;
+}
+.ipb-customers-page .ipb-customers-table-wrap table.dataTable thead th {
+  white-space: nowrap;
+}
+.ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody td {
+  vertical-align: middle !important;
+}
+/* Address is free text (the only unbounded column). Once the touch tiers put
+   every cell on one line it would otherwise claim a column wider than the rest
+   of the table put together — cap it and ellipsis the overflow. */
+.ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody td.ipb-c-address {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody tr:hover td {
+  background: var(--surface-hover, #f8fafc) !important;
+}
+
+.ipb-customers-page #action-buttons-group {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .ipb-customers-page .ipb-list-toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .ipb-customers-page #customer-filter-bar .ipb-filter-select,
+  .ipb-customers-page #customer-filter-bar select.form-control {
+    flex: 1 1 130px;
+    min-width: 120px;
+    max-width: 170px;
+    width: auto !important;
+  }
+  .ipb-customers-page .ipb-tool-label {
+    display: none;
+  }
+
+  /* Tablet is touch-first same as phone, but only the <=767 tier bumped tap
+     targets — row actions (view/copy-link/edit/recharge, tapped constantly on
+     this highest-traffic list) and the toolbar buttons were still sized at
+     the desktop 32px/38px here, under the ~40-44px guidance. Selector must
+     match the base rule's body.ipb + element-type specificity (line ~268) or
+     it silently loses the cascade — see the matching fix at <=767 below. */
+  body.ipb .ipb-customers-page .ipb-row-btn,
+  body.ipb .ipb-customers-page a.ipb-row-btn,
+  body.ipb .ipb-customers-page button.ipb-row-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .ipb-customers-page .ipb-tool-btn {
+    min-height: 40px;
+    height: 40px;
+  }
+
+  /* The 640px floor (responsive.css) is below what 10 columns need, so the
+     table just shrank to the ~740px container and wrapped every value
+     mid-word instead of scrolling. Floor it at a width the columns can
+     actually lay out in — saas.js's .is-scrollable "Swipe for more" hint
+     already advertises the horizontal scroll. */
+  .ipb-customers-page .ipb-customers-table-wrap table.dataTable {
+    min-width: 940px !important;
+  }
+
+  .ipb-customers-page .ipb-customers-table-wrap table.dataTable thead th,
+  .ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody td {
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  body.ipb .ipb-customers-page .ipb-customers-table-wrap .ipb-row-actions {
+    flex-wrap: nowrap !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .ipb-customers-page .box-header.ipb-box-toolbar {
+    padding: 12px !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .ipb-customers-page .ipb-list-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .ipb-customers-page .ipb-list-toolbar-filters,
+  .ipb-customers-page #customer-filter-bar {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    width: 100%;
+  }
+
+  .ipb-customers-page .ipb-list-toolbar-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    width: 100%;
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+  }
+
+  .ipb-customers-page .ipb-tool-btn {
+    min-width: 42px;
+    min-height: 42px;
+    height: 42px;
+  }
+
+  .ipb-customers-page .ipb-tool-btn.is-primary {
+    flex: 1 1 auto;
+  }
+
+  .ipb-customers-page .ipb-tool-label {
+    display: inline;
+  }
+
+  .ipb-customers-page #customer-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .ipb-customers-page #customer-filter-bar .ipb-filter-label {
+    width: 100%;
+  }
+
+  .ipb-customers-page #customer-filter-bar .ipb-filter-select,
+  .ipb-customers-page #customer-filter-bar select.form-control {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 0;
+    width: auto !important;
+  }
+
+  /* This used to be the plain .ipb-customers-page .ipb-row-btn selector
+     (specificity 0,2,0), which is WEAKER than the base body.ipb + element-type
+     rule above (0,3,2) — the 36px override never actually won the cascade, so
+     view/copy-link/edit/recharge stayed at the desktop 32px tap target on
+     every phone. Match the base selector shape so this actually applies, and
+     clear the ~40-44px tap-target floor while at it. */
+  body.ipb .ipb-customers-page .ipb-row-btn,
+  body.ipb .ipb-customers-page a.ipb-row-btn,
+  body.ipb .ipb-customers-page button.ipb-row-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .ipb-customers-page .ipb-col-picker-panel,
+  .ipb-customers-page .ipb-cust-more-menu {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: 12px;
+    width: auto;
+    max-height: min(70vh, 480px);
+    overflow: auto;
+  }
+
+  /* Overflow-menu rows (Send SMS/Voice, Import Excel, Delete selected, etc.)
+     sat at ~10px vertical padding on 13px text — close to 34px tall, under
+     the ~40-44px tap-target floor, on a menu that's now the primary way to
+     reach these actions on phone. Vertical-only padding bump. */
+  .ipb-customers-page .ipb-cust-more-item {
+    padding: 13px 12px;
+  }
+
+  .ipb-customers-page .ipb-col-picker-item {
+    padding: 11px 6px;
+  }
+
+  /* ── Phone: one row = one line, table scrolls sideways ──────────────────
+     responsive.css floors .table at 520px on phone, which divided the 10
+     default columns into ~37px each — far too narrow for the content, so the
+     browser broke every value character-by-character ("BAD DA BAZ ER ROA D"),
+     clipped the mobile number, and stacked the row actions into a vertical
+     strip. Give the table the width its columns actually need and let it
+     scroll inside .ipb-customers-table-wrap instead of being crushed into the
+     viewport: every cell then reads on a single line. saas.js's
+     .is-scrollable "Swipe for more →" hint already advertises the scroll. */
+  .ipb-customers-page .ipb-customers-table-wrap table.dataTable {
+    min-width: 940px !important;
+  }
+
+  .ipb-customers-page .ipb-customers-table-wrap table.dataTable thead th,
+  .ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody td {
+    white-space: nowrap !important;
+    /* Beat the global mobile break-word/anywhere rules (responsive.css) that
+       were doing the character-by-character splitting. */
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  /* Icons stay on the row's single line instead of stacking into a column. */
+  body.ipb .ipb-customers-page .ipb-customers-table-wrap .ipb-row-actions {
+    flex-wrap: nowrap !important;
+  }
+
+  /* Action column: no freeze. responsive.css pins the last cell of every phone
+     table to the right edge (position: sticky + opaque background + shadow),
+     so the icon strip floated over whatever column you were swiping past and
+     covered it. On a table that now scrolls properly, Action is just the last
+     column like any other — swipe to it. */
+  body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child,
+  body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td:last-child,
+  body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
+  body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td.ipb-c-action {
+    position: static !important;
+    right: auto !important;
+    z-index: auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
+
+body.ipb[data-theme="dark"] .ipb-customers-page .box.box-warning,
+body.ipb.dark-mode .ipb-customers-page .box.box-warning,
+body.ipb[data-theme="dark"] .ipb-customers-page .box-body,
+body.ipb.dark-mode .ipb-customers-page .box-body {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+body.ipb[data-theme="dark"] .ipb-customers-page .box-header.ipb-box-toolbar,
+body.ipb.dark-mode .ipb-customers-page .box-header.ipb-box-toolbar {
+  background: var(--surface-2) !important;
+  border-color: var(--border) !important;
+}
+
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-tool-btn.is-ghost,
+body.ipb.dark-mode .ipb-customers-page .ipb-tool-btn.is-ghost,
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-cust-more-menu,
+body.ipb.dark-mode .ipb-customers-page .ipb-cust-more-menu,
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-col-picker-panel,
+body.ipb.dark-mode .ipb-customers-page .ipb-col-picker-panel {
+  background: var(--surface-2) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}

@@ -1,0 +1,465 @@
+/**
+ * Accounting — Incomes, Expenses, Reports, OTC
+ */
+
+.ipb-acc-page .ipb-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+/* Tables: no broken badges / dates / actions */
+.ipb-acc-page table.dataTable,
+.ipb-acc-page table.table {
+  width: 100% !important;
+}
+
+.ipb-acc-page table th,
+.ipb-acc-page table td {
+  vertical-align: middle !important;
+}
+
+.ipb-acc-page .ipb-pay-badge {
+  display: inline-flex !important;
+  align-items: center;
+  white-space: nowrap !important;
+  max-width: none !important;
+  word-break: keep-all !important;
+}
+
+.ipb-acc-page td:has(.ipb-pay-badge),
+.ipb-acc-page td:has(.ipb-row-actions),
+.ipb-acc-page td.ipb-acc-status,
+.ipb-acc-page td.ipb-acc-actions,
+.ipb-acc-page td.ipb-acc-nowrap {
+  white-space: nowrap !important;
+}
+
+body.ipb .ipb-acc-page .ipb-row-actions {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+  max-width: none !important;
+}
+
+body.ipb .ipb-acc-page td.ipb-acc-actions {
+  min-width: 148px;
+  white-space: nowrap !important;
+}
+
+body.ipb .ipb-acc-page .ipb-row-actions .ipb-row-btn {
+  flex: 0 0 auto !important;
+}
+
+.ipb-acc-page .dataTables_wrapper .dataTables_length,
+.ipb-acc-page .dataTables_wrapper .dataTables_filter {
+  margin-bottom: 10px;
+}
+
+.ipb-acc-page .dataTables_wrapper .dataTables_filter input {
+  min-height: 36px;
+  border-radius: 10px !important;
+  border: 1.5px solid var(--border, #e6eaf0);
+  margin-left: 8px;
+}
+
+.ipb-acc-page .ipb-filter-label i {
+  color: var(--primary-500, #f75803);
+}
+
+.ipb-acc-page .ipb-acc-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+}
+
+.ipb-acc-page .ipb-acc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ipb-acc-page .ipb-acc-field label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-acc-page .ipb-acc-field .form-control {
+  min-height: 40px;
+  border-radius: 10px !important;
+}
+
+.ipb-acc-page .ipb-acc-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ipb-acc-page .ipb-acc-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.ipb-acc-page .ipb-acc-stat {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+  min-width: 0;
+}
+
+.ipb-acc-page .ipb-acc-stat span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-acc-page .ipb-acc-stat strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.ipb-acc-page .ipb-acc-stat em {
+  display: block;
+  margin-top: 3px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-acc-page .ipb-acc-stat.is-success strong { color: var(--success-600); }
+.ipb-acc-page .ipb-acc-stat.is-danger strong { color: var(--error-600); }
+.ipb-acc-page .ipb-acc-stat.is-warn strong { color: var(--warning-600); }
+.ipb-acc-page .ipb-acc-stat.is-info strong { color: var(--info-600); }
+
+.ipb-acc-page .ipb-acc-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 16px 14px;
+}
+
+.ipb-acc-page .ipb-acc-meta-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border, #e6eaf0);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary, #51607a);
+}
+
+.ipb-acc-page .ipb-acc-meta-item strong {
+  color: var(--text-primary, #0f172a);
+}
+
+/* Accounting modals — close top-right */
+.ipb-acc-page .modal-header,
+#incomeModal .modal-header,
+#expenseModal .modal-header,
+#incomeCategoryModal .modal-header,
+#expenseTypeModal .modal-header,
+#otcUpdateModal .modal-header,
+#incomeDetailsModal .modal-header,
+#expenseDetailsModal .modal-header {
+  position: relative !important;
+  display: block !important;
+  padding: 14px 52px 14px 18px !important;
+  background: var(--surface-2, #f8fafc) !important;
+  border-bottom: 1px solid var(--border, #e6eaf0) !important;
+  text-align: left !important;
+}
+
+.ipb-acc-page .modal-header .modal-title,
+.ipb-acc-page .modal-header h4,
+#incomeModal .modal-title,
+#expenseModal .modal-title,
+#incomeCategoryModal .modal-title,
+#expenseTypeModal .modal-title,
+#otcUpdateModal .modal-title {
+  margin: 0 !important;
+  float: none !important;
+  text-align: left !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+
+.ipb-acc-page .modal-header .close,
+#incomeModal .modal-header .close,
+#expenseModal .modal-header .close,
+#incomeCategoryModal .modal-header .close,
+#expenseTypeModal .modal-header .close,
+#otcUpdateModal .modal-header .close,
+#incomeDetailsModal .modal-header .close,
+#expenseDetailsModal .modal-header .close {
+  position: absolute !important;
+  top: 10px !important;
+  right: 12px !important;
+  left: auto !important;
+  float: none !important;
+  margin: 0 !important;
+  width: 36px !important;
+  height: 36px !important;
+  opacity: 1 !important;
+  border-radius: 10px !important;
+  color: var(--text-muted, #94a3b8) !important;
+  text-shadow: none !important;
+  line-height: 36px !important;
+}
+
+.ipb-acc-page .modal-header .close:hover,
+#incomeModal .modal-header .close:hover,
+#expenseModal .modal-header .close:hover {
+  background: var(--error-100, #fee2e2) !important;
+  color: var(--error-600, #b91c1c) !important;
+}
+
+.ipb-acc-page .modal-body .form-group label,
+#incomeModal .form-group label,
+#expenseModal .form-group label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-acc-page .modal-body .form-control,
+#incomeModal .form-control,
+#expenseModal .form-control {
+  min-height: 40px;
+  border-radius: 10px !important;
+}
+
+.ipb-acc-page .modal-footer,
+#incomeModal .modal-footer,
+#expenseModal .modal-footer,
+#incomeCategoryModal .modal-footer,
+#expenseTypeModal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: var(--surface-2, #f8fafc) !important;
+}
+
+/* Accounts report scoped */
+.ipb-acc-report .ipb-acc-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: 14px;
+  box-shadow: var(--shadow-1);
+}
+
+.ipb-acc-report .ipb-acc-panel {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: 14px;
+  box-shadow: var(--shadow-1);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.ipb-acc-report .ipb-acc-panel-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-acc-report .ipb-acc-panel-body {
+  padding: 16px;
+}
+
+.ipb-acc-report .ipb-acc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.ipb-acc-report .ipb-acc-kpi {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+}
+
+.ipb-acc-report .ipb-acc-kpi span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-acc-report .ipb-acc-kpi strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  word-break: break-word;
+}
+
+.ipb-acc-report .ipb-acc-kpi.is-success strong { color: var(--success-600, #15803d); }
+.ipb-acc-report .ipb-acc-kpi.is-danger strong { color: var(--error-600, #b91c1c); }
+.ipb-acc-report .ipb-acc-kpi.is-info strong { color: var(--info-600, #1d4ed8); }
+
+.ipb-acc-report .ipb-acc-report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.ipb-acc-report .ipb-acc-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-acc-report .ipb-acc-line:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ipb-acc-report .ipb-acc-line a,
+.ipb-acc-report .ipb-acc-line span {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #51607a);
+  text-decoration: none;
+}
+
+.ipb-acc-report .ipb-acc-line a:hover {
+  color: var(--primary-500, #f75803);
+}
+
+.ipb-acc-report .ipb-acc-line strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  white-space: nowrap;
+}
+
+.ipb-acc-report .ipb-acc-line.is-total {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border, #e6eaf0);
+}
+
+.ipb-acc-report .ipb-acc-line.is-total span {
+  color: var(--text-primary, #0f172a);
+  font-weight: 800;
+}
+
+.ipb-acc-report .ipb-acc-line.is-success strong { color: var(--success-600, #15803d); }
+.ipb-acc-report .ipb-acc-line.is-danger strong { color: var(--error-600, #b91c1c); }
+
+.ipb-acc-report .ipb-acc-panel-head i {
+  color: var(--primary-500, #f75803);
+  margin-right: 6px;
+}
+
+@media (max-width: 1024px) {   /* was 991px — folded into the 03 §1.3 ladder */
+  .ipb-acc-report .ipb-acc-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* The ID-scoped selectors above (#incomeModal, #expenseModal, etc.) out-
+     specificity components.css's sitewide "@media (max-width:1024px) .ipb
+     .modal-header .close { min-width/min-height: 40px }" touch-target floor
+     (0,3,0 tied at best, ID selectors win outright) and accounts-pages.css
+     loads after components.css, so the fixed 36px width/height above wins
+     the cascade — every accounting modal's only dismiss control silently
+     shrank back under the 40px floor on tablet/phone. Restore it here. */
+  .ipb-acc-page .modal-header .close,
+  #incomeModal .modal-header .close,
+  #expenseModal .modal-header .close,
+  #incomeCategoryModal .modal-header .close,
+  #expenseTypeModal .modal-header .close,
+  #otcUpdateModal .modal-header .close,
+  #incomeDetailsModal .modal-header .close,
+  #expenseDetailsModal .modal-header .close {
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .ipb-acc-page .ipb-acc-filters,
+  .ipb-acc-report .ipb-acc-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .ipb-acc-page .ipb-acc-stats,
+  .ipb-acc-page .ipb-acc-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .ipb-acc-page .ipb-acc-filter-actions {
+    width: 100%;
+  }
+
+  .ipb-acc-page .ipb-acc-filter-actions .btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+
+  /* .ipb-acc-line is a flex row (label + nowrap amount) with no min-width:0
+     on the label — flex items default to min-width:auto, so the longest
+     label ("Customers payment received" on the accounts-report page) can't
+     shrink and pushes the row past a phone's width. Let it wrap instead of
+     overflowing; harmless at widths where it already fits. */
+  .ipb-acc-report .ipb-acc-line {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+
+  .ipb-acc-report .ipb-acc-line a,
+  .ipb-acc-report .ipb-acc-line span {
+    min-width: 0;
+    white-space: normal;
+    word-break: break-word;
+  }
+}

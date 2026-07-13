@@ -1,0 +1,829 @@
+/**
+ * Service Area — unified tree + detail workspace (replaces the old
+ * flat all.php/allsub.php pair). Naming/structure mirrors customers-list.css.
+ *
+ * Breakpoint contract (must match tokens.css §"Breakpoint contract"):
+ *   >=1025px  desktop — two columns, tree panel fixed width
+ *   <=1024px  tablet  — tree panel becomes an off-canvas drawer (mirrors the
+ *                        app's own sidebar-collapses-to-drawer breakpoint)
+ *   <=767px   phone   — stat cards reflow to 2 columns, 44px tap targets
+ */
+
+.ipb-areas-page .box.box-warning {
+  border: 1px solid var(--border) !important;
+  border-top: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-1) !important;
+  overflow: hidden;
+  background: var(--surface) !important;
+}
+
+.ipb-areas-page .box-header.ipb-box-toolbar {
+  display: block !important;
+  float: none !important;
+  padding: var(--space-4) var(--space-4) !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: var(--surface-2) !important;
+}
+
+.ipb-areas-page .box-body {
+  padding: 0 !important;
+  background: var(--surface) !important;
+}
+
+/* ── Stat cards row ───────────────────────────────────────────────────── */
+.ipb-areas-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.ipb-areas-stats > div {
+  min-width: 0;
+}
+
+/* ── Toolbar mobile "Areas" drawer trigger — desktop hides it, the tree
+   panel is always visible inline there. Self-contained button styling
+   (this page doesn't load customers-list.css's .ipb-tool-btn). ────────── */
+.ipb-areas-drawer-trigger {
+  display: none !important;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 38px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  font-weight: 800;
+  cursor: pointer;
+}
+.ipb-areas-drawer-trigger:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.ipb-areas-drawer-trigger .ipb-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--primary-50);
+  color: var(--primary-600);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+/* ── Two-pane workspace ───────────────────────────────────────────────── */
+.ipb-areas-workspace {
+  display: flex;
+  align-items: stretch;
+  min-height: 480px;
+}
+
+.ipb-areas-tree-panel {
+  width: 340px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Off-canvas backdrop — inert/hidden on desktop, only shown (via JS .show)
+   at <=1024px behind the drawer-mode tree panel. Separate from the app's own
+   global .ipb-sidebar-backdrop so opening this drawer never fights the
+   sidebar's independent open/close state. */
+.ipb-areas-tree-backdrop {
+  display: none;
+}
+
+.ipb-areas-tree-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+/* Hidden on desktop, where the tree panel is always visible inline (not a
+   drawer). Shown only at <=1024px, where it becomes an off-canvas overlay
+   and needs the same explicit close button the New/Edit form drawers
+   already have — see the visibility toggle in the tablet/phone block below. */
+.ipb-areas-tree-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ipb-areas-tree-close:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.ipb-areas-tree-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--space-2);
+}
+
+.ipb-areas-detail-panel {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-5);
+  overflow-y: auto;
+}
+
+/* ── Tree list (disclosure pattern — plain <ul>/<li>, not role=tree) ──── */
+.ipb-area-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ipb-area-node {
+  border-radius: var(--radius);
+  margin-bottom: 2px;
+}
+
+.ipb-area-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-2);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.ipb-area-row:hover {
+  background: var(--surface-hover);
+}
+.ipb-area-node.is-selected > .ipb-area-row {
+  background: var(--primary-50);
+}
+.ipb-area-node.is-selected > .ipb-area-row .ipb-area-name {
+  color: var(--primary-600);
+}
+
+.ipb-area-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.ipb-area-toggle:hover {
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+.ipb-area-toggle[aria-expanded="true"] {
+  transform: rotate(90deg);
+}
+.ipb-area-toggle.is-spacer {
+  visibility: hidden;
+  cursor: default;
+}
+
+.ipb-area-select-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: var(--space-1) 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+
+.ipb-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--error-500);
+}
+.ipb-status-dot.is-active {
+  background: var(--success-500);
+}
+
+.ipb-area-name {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ipb-area-code-badge {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 1px var(--space-2);
+  font-family: var(--font-mono);
+}
+
+.ipb-sub-count-badge {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--primary-600);
+  background: var(--primary-50);
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+
+/* Sub-area disclosure panel under each area row */
+.ipb-subarea-panel {
+  overflow: hidden;
+  padding-left: 30px;
+}
+.ipb-subarea-panel[aria-hidden="true"] {
+  display: none;
+}
+.ipb-subarea-panel ul {
+  list-style: none;
+  margin: 2px 0 6px;
+  padding: 0;
+}
+.ipb-subarea-mini-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.ipb-subarea-mini-row:hover {
+  background: var(--surface-hover);
+}
+.ipb-subarea-mini-row .ipb-status-dot {
+  width: 6px;
+  height: 6px;
+}
+.ipb-subarea-mini-row .ipb-area-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.ipb-subarea-panel-loading,
+.ipb-subarea-panel-empty {
+  padding: 6px var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* ── Detail panel ─────────────────────────────────────────────────────── */
+.ipb-detail-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 380px;
+  color: var(--text-muted);
+}
+.ipb-detail-placeholder i {
+  font-size: 34px;
+  margin-bottom: 12px;
+  opacity: .6;
+}
+
+.ipb-detail-info-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.ipb-detail-info-main .ipb-detail-name {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.ipb-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.ipb-detail-meta .ipb-sub-count-badge {
+  /* Reset the tree-row "push right" behaviour — here it's just one chip
+     among several in a left-aligned meta row, not the last flex item. */
+  margin-left: 0;
+}
+
+.ipb-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.ipb-subarea-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+.ipb-subarea-section-head h2 {
+  font-size: var(--text-md);
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ipb-subarea-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.ipb-subarea-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.ipb-subarea-list-row:last-child {
+  border-bottom: 0;
+}
+.ipb-subarea-list-row:hover {
+  background: var(--surface-hover);
+}
+.ipb-subarea-list-row .ipb-area-name {
+  flex-shrink: 0;
+  max-width: 220px;
+}
+.ipb-subarea-list-row .ipb-row-actions {
+  margin-left: auto;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.status.active {
+  background: var(--success-50);
+  color: var(--success-600);
+}
+.status.inactive {
+  background: var(--error-50);
+  color: var(--error-600);
+}
+
+/* ── Skeleton loading state for the detail panel ─────────────────────── */
+.ipb-detail-skeleton .ipb-skeleton-text {
+  margin-bottom: 10px;
+}
+
+/* ── Drawer forms (area-create / area-edit / subarea-create / subarea-edit) ── */
+.ipb-areas-page .ipb-drawer-form .form-group {
+  margin-bottom: var(--space-4);
+}
+.ipb-areas-page .ipb-drawer-form label {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* ── Empty state scoped to the detail panel (smaller than page-level) ─── */
+.ipb-detail-panel-empty {
+  padding: 28px 16px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Tablet / phone — <=1024px: tree panel becomes an off-canvas drawer
+   (mirrors the app's own sidebar-collapses-to-drawer breakpoint, see
+   tokens.css "SIDEBAR IS A DRAWER AT/BELOW THIS" on --bp-tablet-max).
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .ipb-areas-drawer-trigger {
+    display: inline-flex !important;
+  }
+
+  .ipb-areas-workspace {
+    display: block;
+  }
+
+  .ipb-areas-tree-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(340px, 86vw);
+    z-index: var(--z-drawer);
+    transform: translateX(-100%);
+    transition: transform var(--dur-slow) var(--ease-out);
+    box-shadow: var(--shadow-3);
+    border-right: 1px solid var(--border);
+  }
+  .ipb-areas-tree-panel.is-open {
+    transform: translateX(0);
+  }
+
+  .ipb-areas-tree-close {
+    display: inline-flex;
+  }
+
+  .ipb-areas-tree-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-drawer) - 1);
+    background: rgba(15, 23, 42, 0.45);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--dur) var(--ease-out), visibility var(--dur) var(--ease-out);
+  }
+  .ipb-areas-tree-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .ipb-areas-detail-panel {
+    padding: var(--space-4);
+  }
+
+  /* Tablet reflow: 4 stat cards forced into one row get visually tight on a
+     narrow tablet — same range the tree sidebar itself becomes a drawer.
+     Phone (<=767px) refines this further to 2 columns with a tighter gap. */
+  .ipb-areas-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 44px minimum tap target through the whole touch-drawer range (this is
+     where the tree sidebar itself already becomes an off-canvas drawer),
+     not just the phone sub-tier. Scoped to this page so it doesn't bump the
+     global sidebar/drawer icon buttons. The four form drawers
+     (#drawerAreaCreate/-Edit, #drawerSubareaCreate/-Edit) are top-level
+     siblings of the page section, not descendants of the tree/detail
+     panels, so their close buttons are targeted explicitly by id. */
+  .ipb-areas-page .ipb-row-btn,
+  .ipb-areas-page .ipb-area-toggle,
+  .ipb-areas-tree-close,
+  .ipb-areas-detail-panel .ipb-icon-btn,
+  .ipb-areas-tree-panel .ipb-icon-btn,
+  #drawerAreaCreate .ipb-icon-btn,
+  #drawerAreaEdit .ipb-icon-btn,
+  #drawerSubareaCreate .ipb-icon-btn,
+  #drawerSubareaEdit .ipb-icon-btn {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  /* Native-app row density: every tappable tree row gets the same floor
+     height instead of growing/shrinking with whatever badges it happens to
+     carry — the "one consistent row height" a contacts-app list has. */
+  .ipb-areas-page .ipb-area-row {
+    min-height: 44px;
+    padding: var(--space-3); /* was --space-2 — the node card below needs clearance from its own border */
+  }
+  .ipb-areas-page .ipb-area-select-btn {
+    min-height: 44px;
+    border-radius: var(--radius-sm);
+  }
+  .ipb-areas-page .ipb-subarea-mini-row {
+    /* It's role="button" + click/keydown handlers (areas.js), not a decorative
+       nested row — needs the same 44px floor as every other tap target here. */
+    min-height: 44px;
+    margin-bottom: var(--space-1);
+    border-radius: var(--radius-sm);
+    /* Nested tint tier inside the node card below — surface-2-on-surface is
+       the same 1.10:1 pairing tokens.css already uses elsewhere. */
+    background: var(--surface-2);
+  }
+  .ipb-areas-page .ipb-subarea-mini-row:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Name is the thing being scanned; code/status are lookup detail — widen
+     that gap at touch sizes (code-badge/sub-count-badge are unchanged). */
+  .ipb-areas-page .ipb-area-row .ipb-area-name,
+  .ipb-areas-page .ipb-subarea-list-row .ipb-area-name {
+    font-size: var(--text-md);
+    font-weight: 800;
+  }
+
+  /* Touch feedback: phones don't reliably fire :hover (and can leave it
+     "stuck" after a tap), so every primary tap target gets an explicit
+     :active state instead. Kill the default grey tap-flash now that real
+     feedback replaces it. */
+  .ipb-areas-page .ipb-area-row,
+  .ipb-areas-page .ipb-subarea-mini-row,
+  .ipb-areas-page .ipb-row-btn,
+  .ipb-areas-drawer-trigger {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .ipb-areas-page .ipb-area-select-btn:active,
+  .ipb-areas-page .ipb-area-toggle:active,
+  .ipb-areas-page .ipb-subarea-mini-row:active,
+  .ipb-areas-drawer-trigger:active {
+    background: var(--surface-hover);
+  }
+  /* Row-btn (edit/delete) mirrors .btn:active's press-scale so every tap
+     target on this page shares the same press physics. */
+  .ipb-areas-page .ipb-row-btn {
+    transition: transform var(--dur-instant) var(--ease-out);
+  }
+  .ipb-areas-page .ipb-row-btn:active {
+    transform: scale(.93);
+  }
+
+  /* Sticky "Areas" section head. It's already pinned via flex (flex-shrink:0
+     sibling of the scroll region, so it never scrolls out today regardless)
+     — sticky here is defense-in-depth if that markup ever changes. The real
+     payload is the explicit background + shadow, which turns "top of the
+     list" into a floating native section header once content scrolls under it. */
+  .ipb-areas-tree-head {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    background: var(--surface-2);
+    box-shadow: var(--shadow-1);
+  }
+
+  /* Both primary toolbar actions need the 44px floor through this whole
+     touch-drawer range: the "Areas" trigger has no .btn class so it never
+     gets the global `.ipb-list-toolbar-actions .btn` rule, and that global
+     rule itself only exists at the phone tier (responsive.css, <=767px) —
+     on tablet (768-1024px) #btnNewArea is still its bare ~36px .btn height. */
+  .ipb-areas-page .ipb-areas-drawer-trigger,
+  .ipb-areas-page #btnNewArea {
+    min-height: 44px;
+  }
+
+  /* CARD-FORWARD: once the tree is a single-column off-canvas drawer (the
+     same <=1024px tier it already goes off-canvas at) each area reads as a
+     dense row with no separation. Give every node its own bordered/shadowed
+     card so the drawer reads as a scrollable card stack, not a squeezed
+     table. No overflow:hidden here — nothing inside paints past the edge,
+     and clipping would also cut the nested toggle/select-btn focus rings. */
+  .ipb-areas-page .ipb-area-node {
+    margin-bottom: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+    transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .ipb-areas-page .ipb-area-node.is-selected {
+    border-color: var(--primary-200);
+    box-shadow: var(--shadow-2);
+  }
+  .ipb-areas-page .ipb-areas-tree-scroll {
+    padding: var(--space-3); /* was --space-2 — cards need clearance from the panel/backdrop edge too */
+  }
+
+  /* Detail card had border+radius but no shadow at any width — flatter than
+     the card stack now surrounding it once the tree/sub-area rows pick up
+     elevation. Mobile-only, per the desktop-pixel-identical rule; no dark
+     override needed, --shadow-1 already flips in tokens.css. */
+  .ipb-detail-info-card {
+    box-shadow: var(--shadow-1);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Phone — <=767px
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  .ipb-areas-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  /* Scoped to this page's own stat cards, not a change to the shared
+     .ipb-stat-card component — denser internals read more like a native
+     summary row than the desktop dashboard-tile version. */
+  .ipb-areas-page .ipb-stat-card {
+    padding: var(--space-3) var(--space-4);
+  }
+  .ipb-areas-page .ipb-stat-card .ipb-stat-icon {
+    width: var(--space-8);
+    height: var(--space-8);
+  }
+  .ipb-areas-page .ipb-stat-card .ipb-stat-value {
+    font-size: var(--text-xl);
+    margin-top: var(--space-2);
+  }
+
+  .ipb-areas-page .box-header.ipb-box-toolbar {
+    padding: 12px !important;
+  }
+
+  /* Drawer trigger has no .btn class, so it misses the global two-up
+     `.ipb-list-toolbar-actions .btn` split — give it the same flex-basis
+     so it and New Area share the row evenly instead of one being auto-width. */
+  .ipb-areas-drawer-trigger {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .ipb-detail-info-card {
+    padding: var(--space-4);
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .ipb-detail-actions {
+    width: 100%;
+  }
+  .ipb-detail-actions .ipb-row-btn {
+    flex: 1;
+  }
+
+  /* Card-stack the sub-area list: the desktop "single bordered box with
+     divider lines" pattern reads as a squeezed table once it's one column —
+     each row becomes its own elevated card instead. Background/border on
+     .ipb-subarea-list-row stay the unmodified base-rule tokens (var(--surface)
+     / var(--border)), which already flip correctly in dark mode. */
+  .ipb-subarea-list {
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .ipb-subarea-list-row {
+    flex-wrap: wrap;
+    padding: var(--space-3);
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-1);
+  }
+  .ipb-subarea-list-row:last-child {
+    /* Matches the desktop base rule's own ":last-child { border-bottom: 0 }"
+       specificity (areas.css, above) so the last card in the stack keeps its
+       bottom edge instead of losing it to that rule. */
+    border-bottom: 1px solid var(--border);
+  }
+  .ipb-subarea-list-row .ipb-area-name {
+    max-width: none;
+    flex: 1 1 100%;
+  }
+
+  /* Nested tree rows get a small legibility bump at the phone sub-tier —
+     still lighter/smaller than the bumped parent .ipb-area-name (above), so
+     the name/code/status tiering holds. */
+  .ipb-areas-page .ipb-subarea-mini-row .ipb-area-name {
+    font-size: var(--text-base);
+  }
+
+  /* More breathing room once node cards are effectively full-bleed in a
+     phone-width drawer. */
+  .ipb-areas-page .ipb-area-node {
+    margin-bottom: var(--space-3);
+  }
+
+  /* 30px fixed indent eats a third of a ~310px drawer on a small phone; the
+     mini-row's own bg+radius (added <=1024px, above) already signals
+     "nested", so shrink the indent to a token here instead. Phone-scoped
+     only — desktop keeps the literal 30px from the unmodified base rule. */
+  .ipb-areas-page .ipb-subarea-panel {
+    padding-left: var(--space-4);
+  }
+
+  /* Submit CTA: .ipb-areas-page .ipb-drawer-form (above, unscoped by any
+     media query) never matches anything — the 4 drawer <aside>s are
+     siblings of .ipb-areas-page's <section>, not descendants (all.php: the
+     asides start after </section>). Target the 4 drawer ids directly
+     instead, the same pattern the 44px tap-target rule above already uses
+     for these drawers' close buttons. No new color, so no dark-mode
+     variant needed — .btn-warning theming is unchanged/shared. */
+  #drawerAreaCreate .ipb-drawer-form button[type="submit"],
+  #drawerAreaEdit .ipb-drawer-form button[type="submit"],
+  #drawerSubareaCreate .ipb-drawer-form button[type="submit"],
+  #drawerSubareaEdit .ipb-drawer-form button[type="submit"] {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  /* 44px tap targets for this page's icon-only quick actions are set once,
+     for the whole <=1024px touch-drawer range, above. */
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Small phone — <=480px (--bp-phone-sm-max). "Areas without Sub-areas" is
+   the longest stat label and wraps to 2-3 lines in the 2-up grid, stretching
+   its row-mate — same fix dashboard.css already applies to .ipb-dash-kpi /
+   .ipb-dash-mini at this exact tier (max-width:480px { 1fr }).
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .ipb-areas-stats {
+    grid-template-columns: 1fr; /* gap stays var(--space-3) from the 767px tier above */
+  }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ipb-areas-tree-panel,
+  .ipb-area-toggle,
+  .ipb-area-row,
+  .ipb-areas-page .ipb-row-btn,
+  .ipb-areas-page .ipb-area-node {
+    transition: none !important;
+  }
+}
+
+/* ── Dark mode — pure token usage above means this mostly "just works";
+   only the .status colors need no override since they already read from
+   --success-50/--error-50 which flip in tokens.css [data-theme="dark"].
+   .box.box-warning / .box-header / .box-body are already dark-themed
+   globally by overrides.css — only .ipb-areas-tree-panel is page-specific
+   and needs its own override here. ── */
+body.ipb[data-theme="dark"] .ipb-areas-tree-panel {
+  background: var(--surface);
+  border-color: var(--border);
+}
+body.ipb[data-theme="dark"] .ipb-areas-tree-head {
+  background: var(--surface-2);
+}
+
+/* Card-forward tree/detail treatment (above) only exists <=1024px, so its
+   dark overrides stay wrapped in the same query — desktop dark mode, which
+   never paints .ipb-area-node a background, is untouched. */
+@media (max-width: 1024px) {
+  body.ipb[data-theme="dark"] .ipb-areas-page .ipb-area-node {
+    /* var(--surface) would collide with .ipb-areas-tree-panel's own dark
+       override (also --surface, above) — step up one rung so the card
+       actually separates from the panel behind it. */
+    background: var(--surface-2);
+  }
+  body.ipb[data-theme="dark"] .ipb-areas-page .ipb-area-node.is-selected {
+    /* --primary-200 already remaps in dark (tokens.css) but resolves to a
+       muted brown that reads muddy as a border; --primary-700's dark remap
+       is the lighter tone, matching "lighter = raised" in the dark ladder. */
+    border-color: var(--primary-700);
+  }
+  body.ipb[data-theme="dark"] .ipb-areas-page .ipb-subarea-mini-row {
+    /* Card bg just stepped up to --surface-2, so the nested mini-row needs
+       its own further step to stay visible against it. */
+    background: var(--surface-hover);
+  }
+}

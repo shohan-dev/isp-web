@@ -1,0 +1,547 @@
+/* ISP Pay BD — AI Chat widget (FAB + panel). Uses design tokens / Theme Studio. */
+
+/* Suggestions */
+.ai-chat-suggestions {
+  display: flex !important;
+  gap: 8px !important;
+  padding: 10px 15px !important;
+  overflow-x: auto !important;
+  background: var(--surface) !important;
+  border-top: 1px solid var(--border) !important;
+  white-space: nowrap !important;
+  scrollbar-width: none !important;
+  flex-shrink: 0 !important;
+  min-height: 52px !important;
+}
+
+.ai-chat-suggestions::-webkit-scrollbar {
+  display: none;
+}
+
+.ai-suggestion-btn {
+  display: inline-block !important;
+  padding: 6px 14px !important;
+  background-color: var(--primary-50) !important;
+  border: 1px solid color-mix(in srgb, var(--primary-500) 30%, var(--border)) !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  height: auto !important;
+  color: var(--primary-600) !important;
+  cursor: pointer !important;
+  transition: border-color var(--dur, .2s), color var(--dur, .2s), background-color var(--dur, .2s), box-shadow var(--dur, .2s) !important;
+  box-shadow: var(--shadow-1) !important;
+  white-space: nowrap !important;
+  text-decoration: none !important;
+  outline: none !important;
+  margin: 0 !important;
+  font-family: var(--font-sans) !important;
+}
+
+.ai-suggestion-btn:hover,
+.ai-suggestion-btn:focus {
+  border-color: var(--primary-500) !important;
+  color: var(--primary-600) !important;
+  background-color: var(--primary-100) !important;
+  text-decoration: none !important;
+}
+
+/* Language toggle */
+.ai-lang-toggle-container {
+  display: inline-flex !important;
+  position: relative !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  border-radius: 15px !important;
+  padding: 2px !important;
+  width: 100px !important;
+  height: 28px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  gap: 2px !important;
+  overflow: hidden !important;
+}
+
+.ai-lang-toggle-container:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.ai-lang-toggle-container .lang-option {
+  flex: 1 !important;
+  text-align: center !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: rgba(255, 255, 255, 0.65) !important;
+  z-index: 2 !important;
+  transition: color var(--dur, 0.2s) ease !important;
+  line-height: 22px !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.ai-lang-toggle-container::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 2px !important;
+  left: 2px !important;
+  width: 46px !important;
+  height: 22px !important;
+  background: var(--surface) !important;
+  border-radius: 12px !important;
+  transition: transform var(--dur-slow, 0.25s) cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  z-index: 1 !important;
+  box-shadow: var(--shadow-1) !important;
+}
+
+.ai-lang-toggle-container.bn-active::before {
+  transform: translateX(48px) !important;
+}
+
+.ai-lang-toggle-container .lang-option.active {
+  color: var(--primary-600) !important;
+}
+
+/* FAB */
+.ai-chat-fab {
+  -webkit-appearance: none;
+  appearance: none;
+  position: fixed;
+  bottom: 40px;
+  right: 25px;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%);
+  border-radius: 50%;
+  box-shadow: var(--shadow-brand);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #fff !important;
+  font-size: 24px;
+  font-family: inherit;
+  padding: 0;
+  cursor: pointer;
+  z-index: var(--z-fab);
+  transition: transform var(--dur-slow, 0.3s) cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow var(--dur-slow, 0.3s);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  text-decoration: none;
+}
+
+.ai-chat-fab:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 6px 24px rgba(var(--primary-rgb), 0.45);
+  color: #fff !important;
+  text-decoration: none;
+}
+
+.ai-chat-fab:active {
+  transform: scale(0.95);
+}
+
+/* 06 §1 — the ai-pulse infinite decorative animation is DELETED, not just
+   guarded: an always-pulsing FAB fights the Network Pulse strip for "look at
+   me," and the strip now owns the shell's one ambient animation. This
+   supersedes 05 §11's interim first-visit-only gate — that gate is correct
+   only while the strip doesn't exist yet; once it ships (this commit), the
+   FAB never pulses again. */
+
+/* Panel */
+.ai-chat-container {
+  position: fixed;
+  bottom: 115px;
+  right: 25px;
+  width: 380px;
+  height: 700px;
+  max-width: calc(100vw - 50px);
+  max-height: calc(100vh - 135px);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
+  z-index: var(--z-chat);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  pointer-events: none;
+  transition: opacity var(--dur-slow, 0.3s) cubic-bezier(0.25, 0.8, 0.25, 1),
+    transform var(--dur-slow, 0.3s) cubic-bezier(0.25, 0.8, 0.25, 1);
+  font-family: var(--font-sans);
+  border: 1px solid var(--border);
+}
+
+.ai-chat-container.active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Header — navy hero (matches app chat header) */
+.ai-chat-header {
+  background: linear-gradient(135deg, var(--secondary-700) 0%, var(--secondary-900) 100%);
+  color: #fff;
+  padding: 15px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  position: relative;
+}
+
+.ai-chat-header-info {
+  display: flex;
+  align-items: center;
+}
+
+.ai-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ai-chat-avatar-container {
+  position: relative;
+  margin-right: 12px;
+}
+
+.ai-chat-avatar {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  box-shadow: var(--shadow-brand, 0 4px 12px rgba(var(--primary-rgb), 0.35));
+}
+
+.ai-chat-status {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background-color: var(--success-500);
+  border-radius: 50%;
+  border: 2px solid var(--secondary-800);
+}
+
+.ai-chat-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+.ai-chat-subtitle {
+  font-size: 11px;
+  margin: 2px 0 0 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ai-chat-close-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0.9;
+  transition: background var(--dur, 0.2s), opacity var(--dur, 0.2s);
+  padding: 0;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-chat-close-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Body */
+.ai-chat-body {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background-color: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.ai-msg {
+  max-width: 85%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-msg-text {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  word-wrap: break-word;
+  white-space: pre-line;
+}
+
+.ai-msg-bot {
+  align-self: flex-start;
+}
+
+.ai-msg-bot .ai-msg-text {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  box-shadow: var(--shadow-1);
+}
+
+.ai-msg-user {
+  align-self: flex-end;
+}
+
+.ai-msg-user .ai-msg-text {
+  background: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+  box-shadow: var(--shadow-brand, 0 4px 14px rgba(var(--primary-rgb), 0.28));
+}
+
+.ai-msg-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  align-self: flex-end;
+}
+
+.ai-msg-bot .ai-msg-time {
+  align-self: flex-start;
+}
+
+/* Typing */
+.ai-typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  border-bottom-left-radius: 4px;
+  width: 50px;
+  align-self: flex-start;
+  box-shadow: var(--shadow-1);
+}
+
+.ai-typing-indicator span {
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, var(--primary-400), var(--primary-600));
+  border-radius: 50%;
+  display: inline-block;
+  animation: ai-bounce 1.3s infinite ease-in-out;
+}
+
+.ai-typing-indicator span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.ai-typing-indicator span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes ai-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Footer */
+.ai-chat-footer {
+  border-top: 1px solid var(--border);
+  padding: 12px 15px;
+  background: var(--surface);
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.ai-chat-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.ai-chat-input-wrapper {
+  position: relative;
+  flex-grow: 1;
+}
+
+.ai-chat-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 8px 16px;
+  font-size: 16px;   /* was 13.5px — iOS zoom on the chat input (03 §7) */
+  outline: none;
+  transition: border-color var(--dur, 0.2s), box-shadow var(--dur, 0.2s);
+  box-sizing: border-box;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.ai-chat-input::placeholder {
+  color: var(--text-muted);
+}
+
+.ai-chat-input:focus {
+  border-color: var(--primary-500);
+  box-shadow: var(--shadow-focus, 0 0 0 3px var(--focus-glow));
+  background: var(--surface);
+}
+
+.ai-chat-send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-600) 100%);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-brand, 0 4px 14px rgba(var(--primary-rgb), 0.35));
+  transition: transform var(--dur, 0.2s), box-shadow var(--dur, 0.2s);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.ai-chat-send-btn:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-brand, 0 6px 18px rgba(var(--primary-rgb), 0.45));
+}
+
+.ai-chat-send-btn:active {
+  transform: scale(0.95);
+}
+
+.ai-chat-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ai-chat-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-chat-body::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 10px;
+}
+
+.ai-chat-body::-webkit-scrollbar-thumb:hover {
+  background-color: var(--neutral-400);
+}
+
+@media (max-width: 767px) {   /* was 576px — folded into the 03 §1.3 ladder (kills 576 as an edge) */
+  .ai-chat-container {
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+
+  .ai-chat-header {
+    border-radius: 0;
+  }
+
+  /* Header row is a no-wrap flex line and two of its controls have a fixed
+     px size with no flex-shrink guard: on a phone the avatar+title push
+     into the lang toggle and close button and squeeze them. The close
+     button is the ONLY way to exit this full-screen panel on mobile, so
+     letting it shrink below its already sub-44px 32px box makes the panel
+     hard to dismiss; letting the lang toggle shrink misaligns its
+     absolute-position sliding pill (::before is hardcoded to a 100px-wide
+     parent — see the rules above), so the highlight slides past the
+     shrunk container's edge. Lock both to their authored size and let the
+     title/subtitle truncate instead of forcing a squeeze/overflow. */
+  .ai-chat-header-info {
+    min-width: 0;
+  }
+
+  .ai-chat-title,
+  .ai-chat-subtitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ai-lang-toggle-container,
+  .ai-chat-close-btn {
+    flex-shrink: 0;
+  }
+
+  /* 32px close button is under the ~40-44px tap-target floor for the one
+     control that closes a full-screen mobile overlay. */
+  .ai-chat-close-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .ai-chat-footer {
+    border-radius: 0;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+
+  .ai-chat-fab {
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+/* Small-phone tier (02 §3 ladder) — the header's fixed-size controls
+   (avatar, 100px lang toggle, close button) leave very little slack for
+   the title on a ~320-360px viewport. Reclaim room from padding/margins
+   rather than the controls themselves, so the close-btn/lang-toggle
+   flex-shrink guards above never actually get tested against a starved
+   layout. */
+@media (max-width: 480px) {
+  .ai-chat-header {
+    padding: 12px 14px;
+  }
+
+  .ai-chat-avatar-container {
+    margin-right: 8px;
+  }
+
+  .ai-chat-header-actions {
+    gap: 8px;
+  }
+}
+
+/* Reduced-motion: covered by base.css's canonical guard (05 §10) — removed
+   the local duplicate here. */

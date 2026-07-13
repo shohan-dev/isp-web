@@ -1,0 +1,17 @@
+---
+description: Keep isp-core API work scoped to zapi
+alwaysApply: true
+---
+
+# isp-core API Boundary
+
+- For API feature work in `isp-core`, treat `zapi/` as the API source of truth.
+- Add or modify API routes in `zapi/config/api_routes.php`.
+- Add or modify API controllers, helpers, and utilities inside `zapi/` only.
+- Do not move API code back into `app/Controllers/api`.
+
+# Safety Rules
+
+- Do not modify non-API web features in `app/Controllers` unless the user explicitly requests it.
+- Keep existing web routes and web controllers behavior unchanged during API-only tasks.
+- If a requested API change would require touching non-API web code, ask the user before proceeding.

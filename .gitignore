@@ -1,0 +1,54 @@
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Composer
+/vendor/
+composer.phar
+
+# Environment files
+# .env is tracked for this repo (local dev template). Other env variants stay ignored.
+.env.*
+env/
+
+# CodeIgniter writable folders (runtime files)
+/writable/cache/
+/writable/debugbar/
+/writable/logs/
+/writable/session/
+/writable/uploads/
+/writable/log_api/
+/writable/log_api/**
+writable/log_api/
+writable/log_api/**
+
+
+# add the zapi log 
+zapi/log/
+
+# Public/temporary
+/public/cookies.txt
+/public/POS_PRINTER
+
+# Build / tooling
+/builds/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+node_modules/
+
+# PHPUnit
+.phpunit.result.cache
+phpunit.xml
+
+# IDEs and editors
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Misc
+*.log
+*.cache
+# PHPUnit-generated build artifacts (regenerated every run)
+/build/logs/

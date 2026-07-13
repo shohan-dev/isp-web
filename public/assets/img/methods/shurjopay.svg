@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 72" role="img" aria-label="shurjoPay">
+  <rect x="1" y="1" width="198" height="70" rx="12" fill="#ffffff" stroke="#ee6123" stroke-width="2"/>
+  <circle cx="34" cy="36" r="14" fill="none" stroke="#ee6123" stroke-width="3"/>
+  <g stroke="#ee6123" stroke-width="2.4" stroke-linecap="round">
+    <line x1="34" y1="14" x2="34" y2="8"/>
+    <line x1="34" y1="64" x2="34" y2="58"/>
+    <line x1="12" y1="36" x2="6" y2="36"/>
+    <line x1="62" y1="36" x2="56" y2="36"/>
+  </g>
+  <text x="70" y="33" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#333333">shurjo<tspan fill="#ee6123">Pay</tspan></text>
+  <text x="71" y="50" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="500" fill="#6b7280" letter-spacing="1">Secure Payment Gateway</text>
+</svg>

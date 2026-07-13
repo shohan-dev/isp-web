@@ -1,0 +1,894 @@
+/**
+ * Bandwidth Buy — Item / Category / Provider / Purchase Bill
+ */
+
+.ipb-bw-page .box.box-primary,
+.ipb-bw-page .box.box-warning {
+  border-radius: var(--radius-lg, 14px) !important;
+  overflow: hidden;
+}
+
+.ipb-bw-page .ipb-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-bw-page .ipb-filter-label i {
+  color: var(--primary-500, #f75803);
+}
+
+/* Tree table */
+.ipb-bw-page table.table > thead > tr > th {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8) !important;
+  background: var(--surface-2, #f8fafc) !important;
+  border-bottom: 1px solid var(--border, #e6eaf0) !important;
+  white-space: nowrap;
+}
+
+.ipb-bw-page tr.category-parent > td {
+  background: var(--surface-2, #f8fafc) !important;
+  font-weight: 700;
+  vertical-align: middle !important;
+}
+
+.ipb-bw-page tr.subcategory > td {
+  background: var(--surface-2, #fafbfd) !important;
+  vertical-align: middle !important;
+}
+
+.ipb-bw-page tr.category-item > td,
+.ipb-bw-page tr.subcategory-item > td {
+  vertical-align: middle !important;
+  color: var(--text-secondary, #51607a);
+}
+
+.ipb-bw-page .toggle-subcategories,
+.ipb-bw-page .toggle-items {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 8px !important;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border, #e6eaf0);
+  color: var(--primary-500, #f75803) !important;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.ipb-bw-page .toggle-subcategories:hover,
+.ipb-bw-page .toggle-items:hover {
+  background: var(--primary-50, #fff7ed);
+  border-color: var(--primary-300, #fdba74);
+}
+
+.ipb-bw-page .toggle-subcategories i,
+.ipb-bw-page .toggle-items i {
+  margin: 0 !important;
+  font-size: 13px;
+}
+
+/* Hide legacy tree dashes */
+.ipb-bw-page tr.category-item td span[style*="border-left"],
+.ipb-bw-page tr.subcategory-item td span[style*="border-left"] {
+  display: none !important;
+}
+
+.ipb-bw-page tr.category-item td .fa-angle-right,
+.ipb-bw-page tr.subcategory-item td .fa-angle-right {
+  color: var(--text-muted, #94a3b8);
+  margin-right: 8px !important;
+  margin-left: 0 !important;
+}
+
+.ipb-bw-page tr.category-item > td:nth-child(2),
+.ipb-bw-page tr.subcategory-item > td:nth-child(2) {
+  padding-left: 28px !important;
+}
+
+.ipb-bw-page tr.subcategory > td:nth-child(2) {
+  padding-left: 20px !important;
+}
+
+.ipb-bw-page tr.subcategory-item > td:nth-child(2) {
+  padding-left: 48px !important;
+}
+
+/* Provider logo */
+.ipb-bw-page .ipb-bw-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e6eaf0);
+  padding: 4px;
+}
+
+.ipb-bw-page .ipb-bw-empty {
+  text-align: center;
+  padding: 28px 16px !important;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 600;
+}
+
+/* Purchase filters */
+.ipb-bw-page .ipb-bw-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+}
+
+.ipb-bw-page .ipb-bw-filters .ipb-bw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ipb-bw-page .ipb-bw-filters label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-bw-page .ipb-bw-filters .form-control {
+  min-height: 38px;
+  border-radius: 10px !important;
+}
+
+.ipb-bw-page .ipb-bw-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  justify-content: flex-end;
+  grid-column: 1 / -1;
+}
+
+.ipb-bw-page .ipb-bw-filter-actions .btn {
+  min-height: 38px;
+}
+
+@media (max-width: 1024px) {   /* was 991px — folded into the 03 §1.3 ladder */
+  .ipb-bw-page .ipb-bw-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .ipb-bw-page .ipb-bw-filters {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .ipb-bw-page .ipb-bw-filter-actions {
+    justify-content: stretch;
+  }
+
+  .ipb-bw-page .ipb-bw-filter-actions .btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+
+  .ipb-bw-page tr.category-item > td:nth-child(2),
+  .ipb-bw-page tr.subcategory > td:nth-child(2),
+  .ipb-bw-page tr.subcategory-item > td:nth-child(2) {
+    padding-left: 12px !important;
+  }
+
+  /* Tree-table expand/collapse toggles were a flat 28px hit target at every
+     viewport — under the ~40-44px touch floor, and smaller than the 36px
+     this app already settles on for other icon-only row actions
+     (.ipb-row-btn gets 36px on phone in responsive.css). */
+  .ipb-bw-page .toggle-subcategories,
+  .ipb-bw-page .toggle-items {
+    width: 36px;
+    height: 36px;
+  }
+
+  .ipb-bw-page .toggle-subcategories i,
+  .ipb-bw-page .toggle-items i {
+    font-size: 14px;
+  }
+}
+
+body.ipb[data-theme="dark"] .ipb-bw-page tr.category-parent > td,
+body.ipb.dark-mode .ipb-bw-page tr.category-parent > td,
+body.ipb[data-theme="dark"] .ipb-bw-page .ipb-bw-filters,
+body.ipb.dark-mode .ipb-bw-page .ipb-bw-filters {
+  background: var(--surface-2) !important;
+}
+
+body.ipb[data-theme="dark"] .ipb-bw-page tr.subcategory > td,
+body.ipb.dark-mode .ipb-bw-page tr.subcategory > td {
+  background: var(--surface) !important;
+}
+
+/* Sell invoices KPI strip */
+.ipb-bw-page .ipb-bw-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+  background: var(--surface, #fff);
+}
+
+.ipb-bw-page .ipb-bw-stat {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+  min-width: 0;
+}
+
+.ipb-bw-page .ipb-bw-stat span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-bw-page .ipb-bw-stat strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.ipb-bw-page .ipb-bw-stat em {
+  display: block;
+  margin-top: 3px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-bw-page .ipb-bw-stat.is-success strong { color: var(--success-600, #15803d); }
+.ipb-bw-page .ipb-bw-stat.is-info strong { color: var(--info-600, #1d4ed8); }
+.ipb-bw-page .ipb-bw-stat.is-brand strong { color: var(--primary-700, #c2410c); }
+
+.ipb-bw-page .ipb-bw-filters.is-dates {
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+
+.ipb-bw-page .ipb-bw-filters.is-dates .ipb-bw-filter-actions {
+  grid-column: auto;
+  justify-content: flex-start;
+}
+
+.ipb-bw-page .ipb-pay-badge.is-success {
+  background: var(--success-50, #ecfdf3);
+  color: var(--success-700, #166534);
+}
+
+@media (max-width: 767px) {
+  .ipb-bw-page .ipb-bw-stats {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .ipb-bw-page .ipb-bw-filters.is-dates {
+    grid-template-columns: 1fr;
+  }
+
+  .ipb-bw-page .ipb-bw-filters.is-dates .ipb-bw-filter-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+/* New Bill modal (Purchase Bills) — purchess.php pins the dialog to
+   style="width:84%" inline, which out-specifies the view's own
+   .modal-xl { width:95% } media rule (a plain class never beats an inline
+   style), so that rule has been dead at every breakpoint. !important is
+   required to out-rank the inline style — same technique #requisitionModal
+   below already relies on. */
+@media (max-width: 1024px) {
+  #billModal .modal-dialog {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    margin: 12px auto !important;
+  }
+}
+
+@media (max-width: 767px) {
+  #billModal .modal-dialog {
+    width: calc(100vw - 12px) !important;
+    max-width: calc(100vw - 12px) !important;
+    margin: 8px auto !important;
+  }
+}
+
+/* Requisition modal (Sales invoices) */
+#requisitionModal .modal-dialog {
+  width: auto !important;
+  max-width: min(1100px, calc(100vw - 24px)) !important;
+  margin: 12px auto !important;
+}
+
+#requisitionModal .modal-content {
+  border: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-3, 0 18px 40px rgba(15, 23, 42, 0.18));
+}
+
+#requisitionModal .modal-header {
+  position: relative !important;
+  display: block !important;
+  padding: 14px 52px 14px 18px !important;
+  background: var(--surface-2, #f8fafc) !important;
+  border-bottom: 1px solid var(--border, #e6eaf0) !important;
+  color: var(--text-primary, #0f172a) !important;
+  text-align: left !important;
+}
+
+#requisitionModal .modal-header .modal-title,
+#requisitionModal .modal-header #requisitionModalLabel {
+  display: block !important;
+  float: none !important;
+  width: auto !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: left !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+
+#requisitionModal .modal-header .close,
+#requisitionModal .modal-header .modal-close {
+  position: absolute !important;
+  top: 10px !important;
+  right: 12px !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 5;
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  float: none !important;
+  opacity: 1 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: var(--text-muted, #94a3b8) !important;
+  font-size: 24px !important;
+  line-height: 36px !important;
+  text-align: center !important;
+  text-shadow: none !important;
+}
+
+#requisitionModal .modal-header .close:hover,
+#requisitionModal .modal-header .modal-close:hover {
+  background: var(--error-100, #fee2e2) !important;
+  color: var(--error-600, #b91c1c) !important;
+}
+
+#requisitionModal .modal-body {
+  padding: 16px 18px !important;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
+#requisitionModal .ipb-req-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+#requisitionModal .ipb-req-grid.is-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#requisitionModal .ipb-req-field label,
+#requisitionModal .ipb-req-section-label {
+  display: block;
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
+}
+
+#requisitionModal .ipb-req-field .form-control,
+#requisitionModal .ipb-req-meta .form-control {
+  min-height: 40px;
+  border-radius: 10px !important;
+  font-size: 13.5px;
+}
+
+#requisitionModal .ipb-req-items-wrap {
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface, #fff);
+  margin-bottom: 12px;
+}
+
+#requisitionModal .ipb-req-items-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2, #f8fafc);
+  border-bottom: 1px solid var(--border, #e6eaf0);
+}
+
+#requisitionModal .ipb-req-items-head h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+}
+
+#requisitionModal .ipb-req-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#requisitionModal #itemRowsTable {
+  margin: 0;
+  min-width: 980px;
+  table-layout: fixed;
+  width: 100%;
+}
+
+#requisitionModal #itemRowsTable > thead > tr > th {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted, #94a3b8) !important;
+  background: var(--surface-2) !important;
+  border-bottom: 1px solid var(--border, #e6eaf0) !important;
+  white-space: nowrap;
+  padding: 10px 8px !important;
+  vertical-align: middle;
+}
+
+#requisitionModal #itemRowsTable > thead > tr > th:nth-child(1) { width: 14%; }
+#requisitionModal #itemRowsTable > thead > tr > th:nth-child(2) { width: 16%; }
+#requisitionModal #itemRowsTable > thead > tr > th:nth-child(3) { width: 8%; }
+#requisitionModal #itemRowsTable > thead > tr > th:nth-child(4) { width: 8%; }
+#requisitionModal #itemRowsTable > thead > tr > th:nth-child(5) { width: 8%; }
+#requisitionModal #itemRowsTable > thead > tr > th:nth-child(6) { width: 13%; }
+#requisitionModal #itemRowsTable > thead > tr > th:nth-child(7) { width: 13%; }
+#requisitionModal #itemRowsTable > thead > tr > th:nth-child(8) { width: 10%; }
+#requisitionModal #itemRowsTable > thead > tr > th:nth-child(9) { width: 56px; }
+
+#requisitionModal #itemRowsTable > tbody > tr > td {
+  padding: 8px !important;
+  vertical-align: middle !important;
+  border-color: var(--border, #e6eaf0) !important;
+}
+
+#requisitionModal #itemRowsTable .form-control {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 36px;
+  padding: 6px 8px;
+  font-size: 13px;
+  border-radius: 8px !important;
+}
+
+#requisitionModal #itemRowsTable td:last-child {
+  text-align: center;
+}
+
+#requisitionModal .ipb-req-meta {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+#requisitionModal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+}
+
+#requisitionModal.is-view-mode #addRowBtn,
+#requisitionModal.is-view-mode .removeRowBtn {
+  display: none !important;
+}
+
+@media (max-width: 1024px) {   /* was 991px — folded into the 03 §1.3 ladder */
+  #requisitionModal .ipb-req-grid,
+  #requisitionModal .ipb-req-grid.is-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #requisitionModal .ipb-req-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  #requisitionModal .modal-dialog {
+    max-width: calc(100vw - 12px) !important;
+    margin: 8px auto !important;
+  }
+
+  #requisitionModal .modal-body {
+    padding: 12px !important;
+    max-height: calc(100vh - 120px);
+  }
+
+  #requisitionModal .ipb-req-grid,
+  #requisitionModal .ipb-req-grid.is-3 {
+    grid-template-columns: 1fr;
+  }
+
+  #requisitionModal .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  #requisitionModal .modal-footer .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+/* Sell client modal */
+#addCustomerModal.custom-modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.55);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur, 0.2s) ease, visibility var(--dur, 0.2s) ease;
+}
+
+#addCustomerModal.custom-modal.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+#addCustomerModal .modal-dialog {
+  width: min(920px, 100%);
+  max-height: min(92vh, 900px);
+  margin: 0;
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: var(--shadow-3, 0 18px 40px rgba(15, 23, 42, 0.2));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(8px);
+  transition: transform var(--dur, 0.2s) ease;
+}
+
+#addCustomerModal.custom-modal.active .modal-dialog {
+  transform: translateY(0);
+}
+
+#addCustomerModal .modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: min(92vh, 900px);
+  border: 0;
+  box-shadow: none;
+}
+
+#addCustomerModal .modal-header {
+  position: relative !important;
+  display: block !important;
+  padding: 14px 52px 14px 18px !important;
+  border-bottom: 1px solid var(--border, #e6eaf0) !important;
+  background: var(--surface-2, #f8fafc) !important;
+  text-align: left !important;
+}
+
+#addCustomerModal .modal-header h5,
+#addCustomerModal .modal-header #customerModalTitle {
+  display: block !important;
+  width: auto !important;
+  max-width: calc(100% - 8px) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  float: none !important;
+  text-align: left !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+
+#addCustomerModal .modal-close,
+#addCustomerModal #closeModalBtn {
+  position: absolute !important;
+  top: 10px !important;
+  right: 12px !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 5;
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  float: none !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: var(--text-muted, #94a3b8) !important;
+  font-size: 24px !important;
+  line-height: 36px !important;
+  text-align: center !important;
+  cursor: pointer;
+}
+
+#addCustomerModal .modal-close:hover,
+#addCustomerModal #closeModalBtn:hover {
+  background: var(--error-100, #fee2e2) !important;
+  color: var(--error-600, #b91c1c) !important;
+}
+
+#addCustomerModal .modal-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+#addCustomerModal .ipb-client-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+#addCustomerModal .ipb-client-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e6eaf0);
+  background: var(--surface);
+  color: var(--text-muted, #94a3b8);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+#addCustomerModal .ipb-client-step i {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  color: var(--text-secondary, #64748b);
+}
+
+#addCustomerModal .ipb-client-step.active {
+  border-color: var(--info-300, #93c5fd);
+  background: var(--info-50, #eff6ff);
+  color: var(--info-600, #1d4ed8);
+}
+
+#addCustomerModal .ipb-client-step.active i {
+  background: var(--info-100, #dbeafe);
+  color: var(--info-600, #1d4ed8);
+}
+
+#addCustomerModal .ipb-client-step.done {
+  border-color: var(--success-300, #86efac);
+  background: var(--success-50, #f0fdf4);
+  color: var(--success-600, #15803d);
+}
+
+#addCustomerModal .ipb-client-step.done i {
+  background: var(--success-100, #dcfce7);
+  color: var(--success-600, #15803d);
+}
+
+#addCustomerModal .ipb-client-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+#addCustomerModal .ipb-client-progress > span {
+  display: block;
+  height: 100%;
+  width: 33.33%;
+  border-radius: 999px;
+  background: var(--primary-500, #f75803);
+  transition: width var(--dur-slow, 0.25s) ease;
+}
+
+#addCustomerModal .step {
+  display: none;
+}
+
+#addCustomerModal .step.active {
+  display: block;
+}
+
+#addCustomerModal .ipb-client-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+#addCustomerModal .ipb-client-field {
+  min-width: 0;
+}
+
+#addCustomerModal .ipb-client-field.is-full {
+  grid-column: 1 / -1;
+}
+
+#addCustomerModal .ipb-client-field label {
+  display: block;
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+  line-height: 1.3;
+}
+
+#addCustomerModal .ipb-client-field .form-control,
+#addCustomerModal .ipb-client-field .form-select,
+#addCustomerModal .ipb-client-field select {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 10px !important;
+  border: 1.5px solid var(--border, #e6eaf0);
+  font-size: 13.5px;
+  padding: 8px 12px;
+}
+
+#addCustomerModal .ipb-client-field textarea.form-control {
+  min-height: 84px;
+  resize: vertical;
+}
+
+#addCustomerModal .ipb-client-field .form-control:disabled,
+#addCustomerModal .ipb-client-field select:disabled,
+#addCustomerModal .ipb-client-field textarea:disabled {
+  background: var(--surface-2);
+  /* var(--surface-2) is DARK in dark mode; #334155 is dark slate — a disabled field
+     whose value you cannot read is worse than one that looks disabled. */
+  color: var(--text-secondary, #334155);
+  opacity: 1;
+}
+
+#addCustomerModal .ipb-client-repeat {
+  display: grid;
+  gap: 8px;
+}
+
+#addCustomerModal .ipb-client-repeat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+#addCustomerModal .ipb-client-repeat-row.is-ip {
+  grid-template-columns: 1fr auto;
+}
+
+#addCustomerModal .ipb-client-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #e6eaf0);
+}
+
+#addCustomerModal .ipb-client-nav .btn {
+  min-height: 40px;
+  min-width: 110px;
+}
+
+#addCustomerModal .ipb-pass-wrap {
+  position: relative;
+}
+
+#addCustomerModal .ipb-pass-wrap .form-control {
+  padding-right: 40px;
+}
+
+#addCustomerModal .ipb-pass-toggle {
+  position: absolute;
+  right: 12px;
+  top: 34px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+#addCustomerModal.is-view-mode .ipb-pass-toggle,
+#addCustomerModal.is-view-mode .add-vlan,
+#addCustomerModal.is-view-mode .remove-vlan,
+#addCustomerModal.is-view-mode .add-ip,
+#addCustomerModal.is-view-mode .remove-ip {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  #addCustomerModal .ipb-client-steps {
+    grid-template-columns: 1fr;
+  }
+
+  #addCustomerModal .ipb-client-grid,
+  #addCustomerModal .ipb-client-repeat-row,
+  #addCustomerModal .ipb-client-repeat-row.is-ip {
+    grid-template-columns: 1fr;
+  }
+
+  #addCustomerModal .ipb-client-nav {
+    flex-direction: column-reverse;
+  }
+
+  #addCustomerModal .ipb-client-nav .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+/* 03 §7 — iOS auto-zoom cure for the requisition + client-wizard modal fields.
+   Also covers the Purchase Bills filter row and the New Bill / Add Item
+   modal fields, which inherit the same sub-16px .form-control default and
+   were missed when this rule was first written — any of these trips
+   Safari's zoom-on-focus on a phone. */
+@media (max-width: 767px) {
+  #requisitionModal .ipb-req-field .form-control,
+  #requisitionModal #itemRowsTable .form-control,
+  #addCustomerModal .ipb-client-field .form-control,
+  #addCustomerModal .ipb-client-field select,
+  .ipb-bw-page .ipb-bw-filters .form-control,
+  #billModal .form-control,
+  #addItemModal .form-control { font-size: 16px; }
+}

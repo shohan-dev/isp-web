@@ -1,0 +1,284 @@
+/**
+ * Network — Diagram + Mapping
+ */
+
+.ipb-net-page .ipb-net-toolbar {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr 0.9fr 0.9fr auto;
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+  margin-bottom: 14px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--shadow-1);
+}
+
+.ipb-net-page .ipb-net-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ipb-net-page .ipb-net-field label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-net-page .ipb-net-field .form-control {
+  min-height: 40px;
+  border-radius: 10px !important;
+}
+
+.ipb-net-page .ipb-net-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.ipb-net-page .ipb-net-actions .btn {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.ipb-net-page .ipb-net-canvas-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.ipb-net-page .ipb-net-canvas-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+}
+
+.ipb-net-page .ipb-net-canvas-head h3 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ipb-net-page .ipb-net-canvas-head h3 i {
+  color: var(--primary-500, #f75803);
+}
+
+.ipb-net-page .ipb-net-hint {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-net-page .ipb-net-hint.is-active {
+  color: var(--info-600, #1d4ed8);
+}
+
+.ipb-net-page #network {
+  height: calc(100vh - var(--topbar-h, 68px) - 220px);
+  min-height: 420px;
+  background: var(--surface-2);
+}
+
+.ipb-net-page .vis-network {
+  outline: none;
+}
+
+.ipb-net-page #map {
+  height: calc(100vh - var(--topbar-h, 68px) - 160px);
+  min-height: 480px;
+  width: 100%;
+  background: #e8eef5;
+}
+
+.ipb-net-page .ipb-net-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+}
+
+.ipb-net-page .ipb-net-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #51607a);
+}
+
+.ipb-net-page .ipb-net-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.ipb-net-page .ipb-net-dot.is-red { background: var(--error-500, #dc2626); }
+.ipb-net-page .ipb-net-dot.is-blue { background: var(--info-500, #2563eb); }
+.ipb-net-page .ipb-net-dot.is-green { background: var(--success-500, #16a34a); }
+.ipb-net-page .ipb-net-dot.is-orange { background: var(--primary-500, #f75803); }
+.ipb-net-page .ipb-net-dot.is-purple { background: #7c3aed; }
+.ipb-net-page .ipb-net-dot.is-cyan { background: #0891b2; }
+
+.ipb-net-page .ipb-net-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 320px;
+  padding: 32px 16px;
+  color: var(--text-muted, #94a3b8);
+  text-align: center;
+}
+
+.ipb-net-page .ipb-net-empty i {
+  font-size: 28px;
+  opacity: 0.7;
+}
+
+.ipb-net-page .ipb-net-empty strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-net-page .ipb-net-empty p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 320px;
+}
+
+/* Leaflet popup polish */
+.ipb-net-page .leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: var(--shadow-2, 0 12px 28px rgba(15, 23, 42, 0.14));
+  border: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-net-page .leaflet-popup-content {
+  margin: 12px 14px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-net-page .leaflet-popup-content b {
+  font-weight: 800;
+}
+
+.ipb-net-page .ipb-net-popup-meta {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+body.ipb[data-theme="dark"] .ipb-net-page .ipb-net-toolbar,
+body.ipb.dark-mode .ipb-net-page .ipb-net-toolbar,
+body.ipb[data-theme="dark"] .ipb-net-page .ipb-net-canvas-card,
+body.ipb.dark-mode .ipb-net-page .ipb-net-canvas-card {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+body.ipb[data-theme="dark"] .ipb-net-page .ipb-net-canvas-head,
+body.ipb.dark-mode .ipb-net-page .ipb-net-canvas-head {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+body.ipb[data-theme="dark"] .ipb-net-page #network,
+body.ipb.dark-mode .ipb-net-page #network {
+  background: #0a0e17;
+}
+
+@media (max-width: 1100px) {
+  .ipb-net-page .ipb-net-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ipb-net-page .ipb-net-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  .ipb-net-page .ipb-net-toolbar {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .ipb-net-page .ipb-net-actions {
+    width: 100%;
+  }
+
+  .ipb-net-page .ipb-net-actions .btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+
+  /* Parent/name/lat/lng were still capped at the 40px desktop min-height
+     while the actions row right above them was already bumped to 44px —
+     left the toolbar with two different tap-target sizes on the same
+     phone screen. */
+  .ipb-net-page .ipb-net-field .form-control {
+    min-height: 44px;
+  }
+
+  .ipb-net-page #network,
+  .ipb-net-page #map {
+    height: 56vh;
+    min-height: 320px;
+  }
+
+  /* Leaflet's own controls are the only sub-44px tap targets left on this
+     page: zoom buttons are 26px (30px even with its "leaflet-touch" bump)
+     and the popup close button is a fixed 24px with no touch variant at
+     all. Field techs work this map one-handed on phones, so mis-tapping
+     zoom +/- is a real cost. Widen hit areas only — Leaflet's own colors/
+     shadows are left alone. */
+  .ipb-net-page .leaflet-bar a,
+  .ipb-net-page .leaflet-touch .leaflet-bar a {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+
+  .ipb-net-page .leaflet-control-zoom-in,
+  .ipb-net-page .leaflet-control-zoom-out,
+  .ipb-net-page .leaflet-touch .leaflet-control-zoom-in,
+  .ipb-net-page .leaflet-touch .leaflet-control-zoom-out {
+    font-size: 22px;
+  }
+
+  .ipb-net-page .leaflet-container a.leaflet-popup-close-button {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 20px;
+  }
+}

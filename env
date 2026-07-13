@@ -1,0 +1,218 @@
+#--------------------------------------------------------------------
+# Example Environment Configuration file
+#
+# This file can be used as a starting point for your own
+# custom .env files, and contains most of the possible settings
+# available in a default install.
+#
+# By default, all of the settings are commented out. If you want
+# to override the setting, you must un-comment it by removing the '#'
+# at the beginning of the line.
+#--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
+# ENVIRONMENT
+#--------------------------------------------------------------------
+
+# CI_ENVIRONMENT = production
+
+#--------------------------------------------------------------------
+# APP
+#--------------------------------------------------------------------
+
+# app.baseURL = ''
+# If you have trouble with `.`, you could also use `_`.
+# app_baseURL = ''
+# app.forceGlobalSecureRequests = false
+# app.CSPEnabled = false
+
+#--------------------------------------------------------------------
+# DATABASE
+#--------------------------------------------------------------------
+
+# database.default.hostname = localhost
+# database.default.database = ci4
+# database.default.username = root
+# database.default.password = root
+# database.default.DBDriver = MySQLi
+# database.default.DBPrefix =
+# database.default.port = 3306
+
+# database.tests.hostname = localhost
+# database.tests.database = ci4_test
+# database.tests.username = root
+# database.tests.password = root
+# database.tests.DBDriver = MySQLi
+# database.tests.DBPrefix =
+# database.tests.port = 3306
+
+#--------------------------------------------------------------------
+# CONTENT SECURITY POLICY
+#--------------------------------------------------------------------
+
+# contentsecuritypolicy.reportOnly = false
+# contentsecuritypolicy.defaultSrc = 'none'
+# contentsecuritypolicy.scriptSrc = 'self'
+# contentsecuritypolicy.styleSrc = 'self'
+# contentsecuritypolicy.imageSrc = 'self'
+# contentsecuritypolicy.baseURI = null
+# contentsecuritypolicy.childSrc = null
+# contentsecuritypolicy.connectSrc = 'self'
+# contentsecuritypolicy.fontSrc = null
+# contentsecuritypolicy.formAction = null
+# contentsecuritypolicy.frameAncestors = null
+# contentsecuritypolicy.frameSrc = null
+# contentsecuritypolicy.mediaSrc = null
+# contentsecuritypolicy.objectSrc = null
+# contentsecuritypolicy.pluginTypes = null
+# contentsecuritypolicy.reportURI = null
+# contentsecuritypolicy.sandbox = false
+# contentsecuritypolicy.upgradeInsecureRequests = false
+# contentsecuritypolicy.styleNonceTag = '{csp-style-nonce}'
+# contentsecuritypolicy.scriptNonceTag = '{csp-script-nonce}'
+# contentsecuritypolicy.autoNonce = true
+
+#--------------------------------------------------------------------
+# COOKIE
+#--------------------------------------------------------------------
+
+# cookie.prefix = ''
+# cookie.expires = 0
+# cookie.path = '/'
+# cookie.domain = ''
+# cookie.secure = false
+# cookie.httponly = false
+# cookie.samesite = 'Lax'
+# cookie.raw = false
+
+#--------------------------------------------------------------------
+# ENCRYPTION
+#--------------------------------------------------------------------
+
+# encryption.key =
+# encryption.driver = OpenSSL
+# encryption.blockSize = 16
+# encryption.digest = SHA512
+
+#--------------------------------------------------------------------
+# HONEYPOT
+#--------------------------------------------------------------------
+
+# honeypot.hidden = 'true'
+# honeypot.label = 'Fill This Field'
+# honeypot.name = 'honeypot'
+# honeypot.template = '<label>{label}</label><input type="text" name="{name}" value=""/>'
+# honeypot.container = '<div style="display:none">{template}</div>'
+
+#--------------------------------------------------------------------
+# SECURITY
+#--------------------------------------------------------------------
+
+# security.csrfProtection = 'cookie'
+# security.tokenRandomize = false
+# security.tokenName = 'csrf_token_name'
+# security.headerName = 'X-CSRF-TOKEN'
+# security.cookieName = 'csrf_cookie_name'
+# security.expires = 7200
+# security.regenerate = true
+# security.redirect = false
+# security.samesite = 'Lax'
+
+#--------------------------------------------------------------------
+# SESSION
+#--------------------------------------------------------------------
+
+# session.driver = 'CodeIgniter\Session\Handlers\FileHandler'
+# session.cookieName = 'ci_session'
+# session.expiration = 7200
+# session.savePath = null
+# session.matchIP = false
+# session.timeToUpdate = 300
+# session.regenerateDestroy = false
+
+# Redis sessions on a MANAGED/EXTERNAL store (Upstash etc.) — TLS, single DB 0.
+# savePath is a DSN: tls:// scheme = TLS connect; auth=<token>; keep prefix= LAST.
+# Unlike the cache there is NO auto-fallback — if Redis is unreachable, sessions
+# fail, so the host MUST have phpredis >= 5.3 (OpenSSL). To REVERT to file
+# sessions you MUST do BOTH: set driver back to FileHandler AND comment out
+# session.savePath below — FileHandler runs mkdir() on savePath, so leaving the
+# tls:// DSN there makes it fatal too. Use an Upstash region close to the app
+# server (per-request RTT).
+# session.driver   = 'CodeIgniter\Session\Handlers\RedisHandler'
+# session.savePath = 'tls://YOUR-ID.upstash.io:6379?timeout=1.5&auth=YOUR_UPSTASH_TOKEN&database=0&prefix=isp_sess:'
+
+#--------------------------------------------------------------------
+# CACHE / REDIS  (dynamic — binds onto Config\Cache exactly like database.default.*)
+#--------------------------------------------------------------------
+# Local self-hosted Redis (see deploy/redis.conf):
+# cache.handler        = 'redis'
+# cache.redis.host     = '127.0.0.1'
+# cache.redis.port     = 6379
+# cache.redis.password = 'CHANGE_ME_STRONG_REDIS_PASSWORD'
+# cache.redis.database = 0
+# cache.redis.timeout  = 1.0
+#
+# Managed/external Redis (Upstash) — host gets the tls:// scheme so phpredis
+# connects over TLS; Upstash is single-DB so keep database=0 (SELECT to 1/2/3 is
+# unsupported) and rely on key prefixes (cache=ispc:, session=isp_sess:). A Redis
+# stall degrades to the file cache (Config\Cache::$backupHandler='file').
+# cache.handler        = 'redis'
+# cache.redis.host     = 'tls://YOUR-ID.upstash.io'
+# cache.redis.port     = 6379
+# cache.redis.password = 'YOUR_UPSTASH_TOKEN'
+# cache.redis.database = 0
+# cache.redis.timeout  = 1.5
+# cache.prefix         = 'ispc:'
+
+#--------------------------------------------------------------------
+# LOGGER
+#--------------------------------------------------------------------
+
+# logger.threshold = 4
+
+#--------------------------------------------------------------------
+# CURLRequest
+#--------------------------------------------------------------------
+
+# curlrequest.shareOptions = true
+
+#--------------------------------------------------------------------
+# ROUTER CONTROL — GenieACS (TR-069) NBI
+#--------------------------------------------------------------------
+# Northbound Interface base URL. The NBI has NO auth — keep it on loopback
+# (or behind an authenticated reverse proxy); never expose port 7557.
+# Leave unset to disable TR-069 (the app then uses the WebView guided fallback).
+
+# genieacs.nbiUrl = 'http://127.0.0.1:7557'
+# genieacs.taskTimeoutMs = 3000
+
+#--------------------------------------------------------------------
+# ROUTER CONTROL — Vendor cloud APIs (home CPE, per brand)
+#--------------------------------------------------------------------
+# Home routers sit on a private LAN IP unreachable from this backend, so a
+# vendor handler must use the brand's CLOUD API. Configure per brand (lowercase):
+# leave unset to disable that brand (the app then uses the WebView fallback).
+
+# vendor.tplink.apiUrl = 'https://cloud.example-tplink/api'
+# vendor.tplink.apiKey = ''
+# vendor.tenda.apiUrl = ''
+# vendor.tenda.apiKey = ''
+
+#--------------------------------------------------------------------
+# BACKGROUND QUEUE — `php spark queue:work` (Phase 3 / MT-2)
+#--------------------------------------------------------------------
+# Heavy external I/O (SMS blasts, router provisioning) can be offloaded to the
+# DB-backed job queue, drained by a `php spark queue:work` worker, instead of
+# running inline on the request. Both flags default OFF — behaviour is unchanged
+# until you turn them on AND have a worker running. Validate on staging first.
+
+# Enqueue the All-Customers SMS blast instead of sending inline. Requires the
+# per-tenant SMS gateway to resolve in CLI (no session) — verify on staging.
+# queue.smsEnabled = false
+
+# Offload the bKash webhook's MikroTik enable to the worker (persist->ACK->enqueue):
+# the webhook returns fast and the worker enables the line with retry/backoff
+# behind the router circuit breaker. OFF = the original synchronous enable runs
+# inline (unchanged). Turn ON only after a staging bKash callback confirms the
+# queued path enables a real connection.
+# queue.webhookRouterEnabled = false

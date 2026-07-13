@@ -1,0 +1,257 @@
+/* ISP Pay BD SaaS — Base */
+.ipb *,
+.ipb *::before,
+.ipb *::after { box-sizing: border-box; }
+
+/* 08 §7 — skip-link: visually hidden until keyboard-focused, then pinned
+   top-left above everything (--z-toast is the highest rung on the ladder). */
+.ipb-skip-link {
+  position: absolute;
+  top: -1000px;
+  left: 0;
+  z-index: var(--z-toast, 1100);
+  padding: 10px 18px;
+  background: var(--primary-500, #f75803);
+  color: #fff;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  border-radius: 0 0 10px 0;
+  text-decoration: none;
+}
+.ipb-skip-link:focus {
+  top: 0;
+  outline: 2px solid #fff;
+  outline-offset: -4px;
+}
+
+.ipb,
+body.ipb,
+body.ipb .wrapper,
+body.ipb .content-wrapper,
+body.ipb .content,
+body.ipb .main-header,
+body.ipb .main-sidebar,
+body.ipb .main-footer,
+body.ipb .box,
+body.ipb .btn,
+body.ipb .form-control,
+body.ipb input,
+body.ipb select,
+body.ipb textarea,
+body.ipb table,
+body.ipb .modal,
+body.ipb .dropdown-menu {
+  font-family: var(--font-sans);
+}
+
+.ipb,
+body.ipb {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+}
+
+.ipb h1, .ipb h2, .ipb h3, .ipb h4, .ipb h5, .ipb h6,
+.ipb .h1, .ipb .h2, .ipb .h3, .ipb .h4 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.ipb a:not(.btn):not(.ipb-row-btn) { color: var(--primary-500); }
+.ipb a:not(.btn):not(.ipb-row-btn):hover,
+.ipb a:not(.btn):not(.ipb-row-btn):focus {
+  color: var(--primary-600);
+  text-decoration: none;
+}
+
+/* Never let link color override button / row-action text */
+.ipb a.btn,
+.ipb a.btn:hover,
+.ipb a.btn:focus,
+.ipb a.btn:active,
+.ipb a.ipb-row-btn,
+.ipb a.ipb-row-btn:hover,
+.ipb a.ipb-row-btn:focus,
+.ipb a.ipb-row-btn:active {
+  text-decoration: none !important;
+}
+
+.ipb a.btn-primary,
+.ipb a.btn-primary:hover,
+.ipb a.btn-primary:focus,
+.ipb a.btn-warning,
+.ipb a.btn-warning:hover,
+.ipb a.btn-warning:focus,
+.ipb a.btn-success,
+.ipb a.btn-success:hover,
+.ipb a.btn-success:focus,
+.ipb a.btn-info,
+.ipb a.btn-info:hover,
+.ipb a.btn-info:focus {
+  color: #fff !important;
+}
+
+.ipb a.btn-default,
+.ipb a.btn-default:hover,
+.ipb a.btn-default:focus {
+  color: var(--text-primary) !important;
+}
+
+.ipb a.btn-danger,
+.ipb a.btn-danger:hover,
+.ipb a.btn-danger:focus {
+  color: var(--error-600, #dc2626) !important;
+}
+
+.ipb a.btn-danger:hover,
+.ipb a.btn-danger:focus {
+  color: #fff !important;
+}
+
+.ipb .mono { font-family: var(--font-mono); }
+.ipb ::selection { background: rgba(var(--primary-rgb), .22); color: var(--text-primary); }
+
+.ipb *:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* 05 §10 — THE canonical reduced-motion guard. Covers both signals (OS
+   media query + the Theme-Studio body.ipb-reduce-motion class, set at boot
+   from the saved pref). Replaces 7 scattered local guards that used to live
+   in ai-chat.css, dashboard.css, subscription-page.css, ux.css, auth.css,
+   wallet.css and a class-based one in customize.css — do not re-add a local
+   guard; this blanket rule already zeroes every transition/animation they
+   touched (each was spot-checked before deletion; none re-enabled anything). */
+@media (prefers-reduced-motion: reduce) {
+  .ipb *, .ipb *::before, .ipb *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;   /* stops infinite loops (e.g. the AI FAB pulse) */
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*) { animation: none !important; }  /* UA pseudos aren't matched by .ipb * */
+}
+body.ipb.ipb-reduce-motion *, body.ipb.ipb-reduce-motion *::before, body.ipb.ipb-reduce-motion *::after {
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .001ms !important;
+  scroll-behavior: auto !important;
+}
+
+.ipb ::-webkit-scrollbar { width: 8px; height: 8px; }
+.ipb ::-webkit-scrollbar-track { background: transparent; }
+.ipb ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; }
+
+.ipb .text-main { color: var(--text-primary) !important; }
+.ipb .text-sub { color: var(--text-secondary) !important; }
+.ipb .text-mut { color: var(--text-muted) !important; }
+.ipb .brand-text { color: var(--primary-500) !important; }
+
+/* 06 §4 — Bangla rendering: proper font stack + leading instead of the
+   deleted 80px inline-size hack. No CDN font (contract-locked); a
+   Bangla-capable system stack until 08 §10 self-hosts a real Bengali face. */
+body.ipb-lang-bn {
+  line-height: 1.75;
+  letter-spacing: .01em;
+  font-family: "Noto Sans Bengali", "Hind Siliguri", "SolaimanLipi", var(--font-sans);
+}
+body.ipb-lang-bn .sidebar-menu > li > a,
+body.ipb-lang-bn .ipb-page-header h1 { line-height: 1.5; }
+
+.ipb .fade-in { animation: ipbSlideUp var(--dur, .22s) ease both; }
+@keyframes ipbSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ipbFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ipbPop {
+  from { opacity: 0; transform: scale(.96) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes ipbShimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+@keyframes ipbSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* 05 §5(a) — View Transitions API, primary page-transition mechanism. This
+   app is a same-origin, server-rendered MPA, exactly the shape the
+   cross-document View Transitions API targets. Progressive enhancement:
+   where unsupported (older Firefox, older Safari), navigation is simply
+   instant — no polyfill, no penalty. */
+@view-transition { navigation: auto; }
+
+::view-transition-old(root) { animation: ipbVTOut var(--dur-fast, .12s) var(--ease-in, cubic-bezier(.4,0,1,.6)) both; }
+::view-transition-new(root) { animation: ipbVTIn  var(--dur, .18s)      var(--ease-out, cubic-bezier(.3,.8,.4,1)) both; }
+@keyframes ipbVTIn  { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes ipbVTOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* Persist the shell chrome across navigations so only the content cross-fades
+   — sidebar/topbar stay rock-still while the page body swaps. A named
+   element is exempt from the root cross-fade and matched old<->new by name,
+   producing a shared-element transition for free. */
+.ipb .main-sidebar { view-transition-name: ipb-sidebar; }
+.ipb .main-header  { view-transition-name: ipb-topbar;  }
+.ipb .ipb-page-header { view-transition-name: ipb-pageheader; }
+
+/* ...but naming an element does NOT freeze it. It only exempts it from the root
+   cross-fade and gives it its OWN group, whose UA default animation is still a
+   cross-fade (plus a morph if its box moved). So the sidebar was fading its old
+   snapshot out and its new one in on every navigation — with a different active
+   item and a different open section between the two, that reads as the entire
+   menu re-rendering, which is the exact opposite of "rock-still".
+   Killing the group animation makes the new snapshot replace the old one on the
+   spot: the shell looks static and only the content (root) animates.
+   .ipb-page-header keeps its default morph — its title genuinely does change. */
+::view-transition-group(ipb-sidebar),
+::view-transition-group(ipb-topbar) { animation: none; }
+::view-transition-old(ipb-sidebar),
+::view-transition-old(ipb-topbar) { animation: none; opacity: 0; }
+::view-transition-new(ipb-sidebar),
+::view-transition-new(ipb-topbar) { animation: none; opacity: 1; }
+
+@media (max-width: 1024px) {   /* was 900px — folded into the 03 §1.3 ladder */
+  .ipb .hide-mobile { display: none !important; }
+}
+@media (min-width: 1025px) {   /* was 901px — the ladder's --bp-desktop-min */
+  .ipb .hide-desktop { display: none !important; }
+}
+
+/* 08 §7 cont. — .ipb-skip-link's 10px 18px padding resolves to ~40px tall
+   (padding + ~20px line-height at the 14px base AdminLTE ships), under the
+   ~44px touch target floor. It's reachable by touch, not just Tab: iOS
+   VoiceOver / Android TalkBack swipe-navigation lands on it before the main
+   content on every page. Desktop (keyboard Tab, pointer-precise) is untouched. */
+@media (max-width: 767px) {
+  .ipb-skip-link:focus {
+    padding: 13px 18px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* 08 §3 — positive print strategy for the shell. The dedicated PDF/receipt
+   views (payments/invoice.php, payments/pos.php, reports/btrc_pdf.php,
+   customers/printer_view.php) never load base.css — they're standalone
+   documents — so this block is untouched by them. This only covers Ctrl-P on
+   a NORMAL in-app page, where the shell chrome (sidebar, topbar, the Network
+   Pulse strip, the AI FAB, toasts, the palette trigger) would otherwise print
+   too and waste ink. */
+@media print {
+  .ipb .main-sidebar, .ipb .main-header, .ipb .ipb-netpulse, .ipb .ai-chat-fab,
+  .ipb .ai-chat-container, .ipb .ipb-palette-trigger, .ipb .tata,
+  .ipb .ipb-sidebar-backdrop, .ipb .ipb-nav-progress, .ipb .ipb-topcrumbs { display: none !important; }
+  .ipb .content-wrapper, .ipb .main-footer { margin-left: 0 !important; }
+  .ipb, body.ipb { background: #fff !important; }
+  .ipb .box, .ipb .ipb-card { box-shadow: none !important; border: 1px solid #ccc; }
+  .ipb .table-responsive { overflow: visible !important; }   /* let tables paginate on paper */
+}

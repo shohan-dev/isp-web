@@ -1,0 +1,2175 @@
+/**
+ * UX polish layer — interaction, density, touch, readability
+ * Loads after overrides.css
+ */
+
+/* ── Touch targets (chrome only — not every tiny table action) ───────────── */
+body.ipb .ipb-btn:not(.btn-xs):not(.btn-sm),
+body.ipb .btn:not(.btn-xs):not(.btn-sm):not(.btn-link),
+body.ipb .pagination > li > a,
+body.ipb .pagination > li > span {
+  min-height: 40px;
+}
+
+body.ipb .ipb-icon-btn,
+body.ipb .main-header .sidebar-toggle,
+body.ipb #darkToggle,
+body.ipb .toggle-btn,
+body.ipb .ipb-palette-trigger.hide-desktop {
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+body.ipb .btn-xs,
+body.ipb .btn-sm,
+body.ipb .btn-group-xs > .btn,
+body.ipb .btn-group-sm > .btn {
+  min-height: 0;
+  min-width: 0;
+}
+
+/* 06 §3 — the page-frame rhythm: page-header -> toolbar -> content card, with
+   EXACT --space-* between each. Opt-in wrapper so any page can adopt the
+   rhythm without re-deriving it (the header's own margin-bottom is disabled
+   inside the wrapper — the flex gap owns spacing now). */
+body.ipb .ipb-page { display: flex; flex-direction: column; gap: var(--space-5, 20px); }
+body.ipb .ipb-page > .ipb-page-header { margin-bottom: 0; }
+body.ipb .ipb-page-body { display: flex; flex-direction: column; gap: var(--space-4, 16px); }
+body.ipb .ipb-page-body > .box,
+body.ipb .ipb-page-body > .ipb-card { margin-bottom: 0; }
+
+/* ── Page header: clearer hierarchy, less clutter ────────────────────────── */
+body.ipb .ipb-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  gap: 12px 16px;
+  min-height: 0;
+}
+
+body.ipb .ipb-page-header h1 {
+  font-size: 22px !important;
+  line-height: 1.2 !important;
+}
+
+body.ipb .ipb-page-header .ipb-breadcrumb,
+body.ipb .ipb-page-header .breadcrumb {
+  margin: 0 0 8px !important;
+}
+
+body.ipb .ipb-page-actions {
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+body.ipb .ipb-page-actions .btn {
+  white-space: nowrap;
+}
+
+body.ipb .ipb-page-header-main {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+/* ── KPI cards: always show CTA (hover-only is bad UX on touch) ───────────── */
+body.ipb .ipb-kpi-cta {
+  opacity: 0.85 !important;
+  transform: none !important;
+  margin-top: 12px !important;
+}
+
+body.ipb .ipb-kpi:hover .ipb-kpi-cta,
+body.ipb .ipb-kpi:focus-visible .ipb-kpi-cta {
+  opacity: 1 !important;
+}
+
+body.ipb .ipb-kpi:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+body.ipb .ipb-kpi.compact .ipb-kpi-cta {
+  font-size: 11px;
+  margin-top: 8px !important;
+}
+
+/* Nested links inside KPI cards — prevent double-tap confusion */
+body.ipb .ipb-kpi a.ipb-kpi-cta {
+  pointer-events: auto;
+  display: inline-flex;
+  text-decoration: none !important;
+}
+
+/* ── Sidebar UX ──────────────────────────────────────────────────────────── */
+body.ipb.ipb-sidebar-open,
+body.ipb.ipb-palette-open {
+  overflow: hidden;
+}
+
+body.ipb .sidebar-menu > li > a {
+  min-height: 42px;
+}
+
+body.ipb .sidebar-menu .treeview-menu > li > a {
+  min-height: 38px;
+}
+
+/* Active child: keep parent visually open and readable */
+body.ipb .sidebar-menu > li.menu-open > a:not(.active-parent-force) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+body.ipb .sidebar-menu > li.menu-open.active > a,
+body.ipb .sidebar-menu > li.active.menu-open > a {
+  background: var(--primary-500) !important;
+}
+
+/* Clear empty search state */
+body.ipb .ipb-sidebar-empty {
+  color: var(--text-secondary, #64748b);
+  font-size: 12.5px;
+  text-align: center;
+  padding: 20px 10px;
+  display: none;
+}
+
+body.ipb .ipb-sidebar-empty.show {
+  display: block;
+}
+
+/* ── Topbar: remove awkward margins, align items ─────────────────────────── */
+body.ipb .navbar-custom-menu > .nav > li {
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+}
+
+body.ipb .navbar-custom-menu > .nav > li > a,
+body.ipb .navbar-custom-menu > .nav > li > button,
+body.ipb .navbar-custom-menu > .nav > li > .toggle-btn {
+  margin: 0 !important;
+}
+
+body.ipb .navbar-custom-menu .label-danger,
+body.ipb .navbar-custom-menu .label-warning {
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0 5px !important;
+  font-size: 10px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hide empty notification badges (0) — set via JS class */
+body.ipb .navbar-custom-menu .label.is-zero {
+  display: none !important;
+}
+
+/* Dropdown menus: readable, not clipped */
+body.ipb .main-header .navbar .dropdown-menu {
+  max-height: min(70vh, 420px);
+  overflow-y: auto;
+  right: 0;
+  left: auto;
+}
+
+body.ipb .main-header .navbar .dropdown-menu .header {
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  padding: 10px 12px !important;
+}
+
+body.ipb .main-header .navbar .dropdown-menu .footer a {
+  display: block;
+  text-align: center;
+  padding: 10px;
+  font-weight: 700;
+  color: var(--primary-500) !important;
+}
+
+/* ── Tables: action column & density ─────────────────────────────────────── */
+body.ipb .table > tbody > tr > td .btn,
+body.ipb table.dataTable tbody td .btn {
+  padding: 6px 10px !important;
+  min-height: 34px;
+  font-size: 12.5px !important;
+}
+
+body.ipb .table > tbody > tr > td .btn + .btn,
+body.ipb table.dataTable tbody td .btn + .btn {
+  margin-left: 4px;
+}
+
+body.ipb .box-header .btn,
+body.ipb .box-header .pull-right .btn {
+  margin-left: 6px;
+  margin-bottom: 4px;
+}
+
+body.ipb .box-header .pull-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  float: none !important;
+  margin-top: 8px;
+}
+
+@media (min-width: 768px) {
+  body.ipb .box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  body.ipb .box-header .pull-right {
+    margin-top: 0;
+  }
+}
+
+/* DataTables toolbar spacing */
+body.ipb .dataTables_wrapper .dataTables_length,
+body.ipb .dataTables_wrapper .dataTables_filter {
+  margin-bottom: 12px;
+}
+
+body.ipb .dataTables_wrapper .dataTables_filter input {
+  margin-left: 8px;
+  min-width: 180px;
+}
+
+body.ipb .table-responsive,
+body.ipb .dataTables_wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Forms: clearer errors & spacing ─────────────────────────────────────── */
+body.ipb .form-group {
+  margin-bottom: 16px;
+}
+
+body.ipb .error,
+body.ipb .text-danger,
+body.ipb .help-block.text-danger {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+body.ipb .form-control.is-invalid,
+body.ipb .has-error .form-control {
+  border-color: var(--error-500) !important;
+}
+
+/* ── Alerts: readable, dismissible spacing ───────────────────────────────── */
+body.ipb .alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+  line-height: 1.45;
+  position: relative;
+}
+
+body.ipb .alert > .close,
+body.ipb .alert > button.close {
+  position: static;
+  margin-left: auto;
+  flex-shrink: 0;
+  opacity: 0.55;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+body.ipb .alert > .close:hover,
+body.ipb .alert > button.close:hover {
+  opacity: 1;
+}
+
+body.ipb #feedback:empty {
+  display: none;
+}
+
+/* ── Classic content-header (list/form pages) ────────────────────────────── */
+body.ipb .content-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 4px 0 16px !important;
+}
+
+body.ipb .content-header > h1 {
+  width: 100%;
+  order: 2;
+}
+
+body.ipb .content-header > .breadcrumb {
+  float: none !important;
+  position: static !important;
+  order: 1;
+  margin: 0 0 8px !important;
+  width: 100%;
+}
+
+/* Proven list pattern: header is block, toolbar inside is flex full-width */
+body.ipb .box-header.ipb-box-toolbar,
+body.ipb .box-header:has(.ipb-list-toolbar) {
+  display: block !important;
+  float: none !important;
+}
+
+body.ipb .ipb-list-toolbar {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px 16px !important;
+  width: 100% !important;
+  float: none !important;
+  min-height: 0 !important;
+}
+
+body.ipb .ipb-list-toolbar-filters {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  /* Use min-width (not flex-basis) so column/mobile layout does not reserve 280px height */
+  flex: 1 1 auto !important;
+  min-width: min(280px, 100%) !important;
+  min-height: 0 !important;
+}
+
+body.ipb .ipb-list-toolbar-actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+}
+
+body.ipb .ipb-list-toolbar-actions .btn {
+  margin: 0 !important;
+  float: none !important;
+}
+
+/* ── List toolbars / filter bars ─────────────────────────────────────────── */
+body.ipb #header-flex-row {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  width: 100%;
+}
+
+body.ipb #customer-filter-bar,
+body.ipb .customer-filter-bar {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: min(280px, 100%);
+  min-height: 0;
+}
+
+body.ipb #customer-filter-bar select,
+body.ipb .customer-filter-bar select,
+body.ipb #customer-filter-bar .form-control,
+body.ipb .box-header select:not(.select2-hidden-accessible) {
+  min-height: 38px;
+  border: 1.5px solid var(--border, #e6eaf0);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: var(--surface, #fff);
+  color: var(--text, #0f172a);
+  max-width: 100%;
+}
+
+body.ipb #action-buttons-group,
+body.ipb .action-buttons-group {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+body.ipb #action-buttons-group > a,
+body.ipb #action-buttons-group > button,
+body.ipb .action-buttons-group > a,
+body.ipb .action-buttons-group > button {
+  flex-shrink: 0;
+}
+
+body.ipb #filter-reset-btn {
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #e6eaf0);
+  background: var(--surface, #fff);
+  padding: 6px 12px;
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+body.ipb #filter-count-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-500, #f75803);
+}
+
+/* Loading spinner: never leave a blank gap when hidden */
+body.ipb #loadingSpinner[style*="display: none"],
+body.ipb #loadingSpinner[style*="display:none"] {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+  overflow: hidden;
+}
+
+/* ── Modals: safer on small screens ──────────────────────────────────────── */
+body.ipb .modal-dialog {
+  margin: 12px auto;
+  max-width: calc(100vw - 24px);
+}
+
+body.ipb .modal-body {
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+}
+
+/* ── Dashboard: reduce cognitive load ────────────────────────────────────── */
+body.ipb .ipb-dash {
+  gap: 18px;
+}
+
+body.ipb .ipb-insights-row strong {
+  color: #fff;
+}
+
+body.ipb .ipb-card-head {
+  margin-bottom: 14px;
+}
+
+/* Sticky section labels when scrolling long dashboards */
+body.ipb .ipb-section-label {
+  position: sticky;
+  top: 68px;
+  z-index: var(--z-sticky);
+  background: linear-gradient(var(--bg), var(--bg));
+  padding: 6px 0;
+}
+
+/* ── Footer: less visual weight ──────────────────────────────────────────── */
+body.ipb .main-footer {
+  font-size: 12.5px !important;
+  color: var(--text-muted) !important;
+}
+
+/* ── Loading / disabled feedback ─────────────────────────────────────────── */
+body.ipb .btn[disabled],
+body.ipb .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+body.ipb .btn .fa-spinner {
+  margin-right: 6px;
+}
+body.ipb .btn .fa-spinner.fa-spin {
+  animation-duration: 0.7s;
+}
+
+/* ── Command palette: better empty & focus ───────────────────────────────── */
+body.ipb .ipb-palette-item.active {
+  background: var(--primary-50) !important;
+  color: var(--primary-700) !important;
+}
+
+body.ipb[data-theme="dark"] .ipb-palette-item.active {
+  background: rgba(247, 88, 3, 0.18) !important;
+  color: #ffb38a !important;
+}
+
+/* ── Select2 / dropdowns above cards ─────────────────────────────────────── */
+body.ipb .select2-container--open .select2-dropdown {
+  box-shadow: var(--shadow-2, 0 12px 28px rgba(15, 23, 42, 0.12));
+}
+
+/* Tooltip readability */
+body.ipb .tooltip-inner {
+  max-width: 240px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+/*
+ * Touch / narrow shell (sidebar overlay ≤1024px — was 900px; moved so the
+ * drawer breakpoint and the tablet content band share one seam, 03 §1.3-1.4).
+ * Phone stacking + tablet grids live in responsive.css — do not force
+ * full-width columns or stacked toolbars here (breaks tablets).
+ */
+@media (max-width: 1024px) {
+  body.ipb,
+  body.ipb .wrapper,
+  body.ipb .content-wrapper {
+    overflow-x: clip;          /* was: hidden (03 §1.4) */
+    max-width: 100vw;
+  }
+
+  body.ipb .content {
+    max-width: 100%;
+  }
+
+  body.ipb .navbar-custom-menu .hidden-xs,
+  body.ipb #google_translate_element {
+    display: none !important;
+  }
+
+  body.ipb .ipb-palette-trigger.hide-mobile {
+    display: none !important;
+  }
+
+  /* Tables: swipe on tablet + phone */
+  body.ipb .content .table-responsive,
+  body.ipb .content .box-body.table-responsive,
+  body.ipb .content .dataTables_wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.ipb .content .table {
+    min-width: 640px;
+  }
+
+  body.ipb .content .table > thead > tr > th,
+  body.ipb .content .table > tbody > tr > td {
+    white-space: nowrap;
+  }
+
+  body.ipb .content .table > tbody > tr > td:not(.action-icons) {
+    white-space: normal;
+    max-width: 220px;
+  }
+
+  body.ipb .ipb-row-actions {
+    flex-wrap: wrap;
+  }
+
+  body.ipb .dataTables_wrapper .row {
+    margin: 0 !important;
+  }
+
+  body.ipb .dataTables_wrapper .dataTables_paginate .paginate_button > a,
+  body.ipb .dataTables_wrapper .dataTables_paginate .paginate_button > span {
+    min-height: 36px;
+    min-width: 36px;
+    padding: 6px 10px !important;
+  }
+
+  /* Tabs scroll on narrow widths */
+  body.ipb .content .nav.nav-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 8px;
+  }
+
+  body.ipb .content .nav.nav-tabs > li {
+    float: none;
+    flex: 0 0 auto;
+  }
+
+  body.ipb .content .nav.nav-tabs > li > a {
+    white-space: nowrap;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Reset-filters button: the id-based selector below beats components.css's
+     .ipb-filter-reset (class-only, no id) whenever list-toolbar.php renders
+     a resetId (e.g. customers/all.php). Same 38px->40px touch-target bump,
+     kept in sync with the class version in components.css. */
+  body.ipb #filter-reset-btn {
+    min-height: 40px;
+  }
+}
+
+/* Reduced-motion: transition:none is covered by base.css's canonical guard
+   (05 §10); transform:none is kept (guard zeroes durations, not magnitudes). */
+@media (prefers-reduced-motion: reduce) {
+  body.ipb .ipb-kpi:hover {
+    transform: none !important;
+  }
+}
+
+/* ── List status pills + row actions (scoped — do not restyle all text) ───── */
+body.ipb .ipb-pay-badge,
+body.ipb .label-success,
+body.ipb .label-warning,
+body.ipb .label-danger,
+body.ipb .label-info,
+body.ipb .label-default,
+body.ipb .badge.label-success,
+body.ipb .badge.label-warning,
+body.ipb .badge.label-danger,
+body.ipb .badge.label-info,
+body.ipb .badge.label-default {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  border: 0;
+}
+
+body.ipb .ipb-pay-badge.is-success,
+body.ipb .label-success,
+body.ipb .badge.label-success { background: var(--success-50, #ecfdf3) !important; color: var(--success-700, #166534) !important; }
+
+body.ipb .ipb-pay-badge.is-warning,
+body.ipb .label-warning,
+body.ipb .badge.label-warning { background: var(--warning-50, #fffbeb) !important; color: var(--warning-700, #92400e) !important; }
+
+body.ipb .ipb-pay-badge.is-danger,
+body.ipb .label-danger,
+body.ipb .badge.label-danger { background: var(--error-50, #fef2f2) !important; color: var(--error-700, #991b1b) !important; }
+
+body.ipb .ipb-pay-badge.is-info,
+body.ipb .label-info,
+body.ipb .badge.label-info { background: var(--info-50, #eff6ff) !important; color: var(--info-600, #1d4ed8) !important; }
+
+body.ipb .label-default,
+body.ipb .badge.label-default { background: var(--surface-hover) !important; color: var(--text-secondary) !important; }
+
+body.ipb .ipb-pay-badge.is-neutral { background: var(--surface-hover) !important; color: var(--text-secondary) !important; }
+
+/* Row actions: compact icon buttons (labels via title / tooltip) */
+body.ipb .ipb-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+body.ipb .ipb-row-btn,
+body.ipb a.ipb-row-btn,
+body.ipb button.ipb-row-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 !important;
+  margin: 0;
+  gap: 0;
+  border: 1px solid var(--border, #e6eaf0) !important;
+  border-radius: 999px !important;
+  background: var(--surface-2, #f8fafc) !important;
+  color: var(--text-secondary, #51607a) !important;
+  font-size: 0 !important;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none !important;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  vertical-align: middle;
+}
+
+body.ipb .ipb-row-btn i,
+body.ipb .ipb-row-btn .fa,
+body.ipb .ipb-row-btn .fas,
+body.ipb .ipb-row-btn .far,
+body.ipb .ipb-row-btn .fab,
+body.ipb .ipb-row-btn .glyphicon,
+body.ipb a.ipb-row-btn i,
+body.ipb button.ipb-row-btn i {
+  font-size: 13px !important;
+  line-height: 1 !important;
+  color: inherit !important;
+  width: auto;
+  margin: 0 !important;
+}
+
+body.ipb .ipb-row-btn .sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  font-size: 0 !important;
+}
+
+body.ipb .ipb-row-btn:hover,
+body.ipb .ipb-row-btn:focus,
+body.ipb a.ipb-row-btn:hover,
+body.ipb a.ipb-row-btn:focus,
+body.ipb button.ipb-row-btn:hover,
+body.ipb button.ipb-row-btn:focus {
+  text-decoration: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  transform: translateY(-1px);
+}
+
+body.ipb .ipb-row-btn.tone-info,
+body.ipb a.ipb-row-btn.tone-info,
+body.ipb .ipb-row-btn.tone-info:hover,
+body.ipb .ipb-row-btn.tone-info:focus {
+  color: var(--info-600, #1d4ed8) !important;
+  background: var(--info-100, #dbeafe) !important;
+  border-color: var(--info-300, #93c5fd) !important;
+}
+
+body.ipb .ipb-row-btn.tone-violet,
+body.ipb a.ipb-row-btn.tone-violet,
+body.ipb .ipb-row-btn.tone-violet:hover,
+body.ipb .ipb-row-btn.tone-violet:focus {
+  color: var(--violet-600, #6d28d9) !important;
+  background: var(--violet-100, #ede9fe) !important;
+  border-color: var(--violet-300, #c4b5fd) !important;
+}
+
+body.ipb .ipb-row-btn.tone-brand,
+body.ipb a.ipb-row-btn.tone-brand,
+body.ipb .ipb-row-btn.tone-brand:hover,
+body.ipb .ipb-row-btn.tone-brand:focus {
+  color: var(--primary-700, #c2410c) !important;
+  background: var(--primary-100, #ffedd5) !important;
+  border-color: var(--primary-300, #fdba74) !important;
+}
+
+body.ipb .ipb-row-btn.tone-success,
+body.ipb a.ipb-row-btn.tone-success,
+body.ipb .ipb-row-btn.tone-success:hover,
+body.ipb .ipb-row-btn.tone-success:focus {
+  color: var(--success-600, #15803d) !important;
+  background: var(--success-100, #dcfce7) !important;
+  border-color: var(--success-300, #86efac) !important;
+}
+
+body.ipb .ipb-row-btn.tone-slate,
+body.ipb a.ipb-row-btn.tone-slate,
+body.ipb .ipb-row-btn.tone-slate:hover,
+body.ipb .ipb-row-btn.tone-slate:focus {
+  color: var(--text-secondary, #334155) !important;
+  background: var(--surface-hover, #e2e8f0) !important;
+  border-color: var(--border-strong, #cbd5e1) !important;
+}
+
+body.ipb .ipb-row-btn.tone-danger,
+body.ipb a.ipb-row-btn.tone-danger,
+body.ipb .ipb-row-btn.tone-danger:hover,
+body.ipb .ipb-row-btn.tone-danger:focus {
+  color: var(--error-600, #b91c1c) !important;
+  background: var(--error-100, #fee2e2) !important;
+  border-color: var(--error-300, #fca5a5) !important;
+}
+
+/* Legacy table action buttons with icons → same compact icon style */
+body.ipb table td .btn-xs:has(i),
+body.ipb table td .btn-sm:has(i),
+body.ipb table td a.btn-xs:has(i),
+body.ipb table td a.btn-sm:has(i),
+body.ipb table td button.btn-xs:has(i),
+body.ipb table td button.btn-sm:has(i) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  padding: 0 !important;
+  margin: 0 3px 0 0 !important;
+  border-radius: 999px !important;
+  font-size: 0 !important;
+  line-height: 1 !important;
+  border-width: 1px !important;
+  box-shadow: none !important;
+  vertical-align: middle;
+}
+
+body.ipb table td .btn-xs:has(i) i,
+body.ipb table td .btn-sm:has(i) i,
+body.ipb table td .btn-xs:has(i) .fa,
+body.ipb table td .btn-sm:has(i) .fa,
+body.ipb table td .btn-xs:has(i) .fas,
+body.ipb table td .btn-sm:has(i) .fas,
+body.ipb table td .btn-xs:has(i) .far,
+body.ipb table td .btn-sm:has(i) .far {
+  font-size: 13px !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  color: inherit !important;
+}
+
+body.ipb table td .btn-xs.btn-primary:has(i),
+body.ipb table td .btn-sm.btn-primary:has(i),
+body.ipb table td .btn-xs.btn-info:has(i),
+body.ipb table td .btn-sm.btn-info:has(i) {
+  color: var(--info-600, #1d4ed8) !important;
+  background: var(--info-100, #dbeafe) !important;
+  border-color: var(--info-300, #93c5fd) !important;
+}
+
+body.ipb table td .btn-xs.btn-warning:has(i),
+body.ipb table td .btn-sm.btn-warning:has(i) {
+  color: var(--primary-700, #c2410c) !important;
+  background: var(--primary-100, #ffedd5) !important;
+  border-color: var(--primary-300, #fdba74) !important;
+}
+
+body.ipb table td .btn-xs.btn-success:has(i),
+body.ipb table td .btn-sm.btn-success:has(i) {
+  color: var(--success-600, #15803d) !important;
+  background: var(--success-100, #dcfce7) !important;
+  border-color: var(--success-300, #86efac) !important;
+}
+
+body.ipb table td .btn-xs.btn-danger:has(i),
+body.ipb table td .btn-sm.btn-danger:has(i) {
+  color: var(--error-600, #b91c1c) !important;
+  background: var(--error-100, #fee2e2) !important;
+  border-color: var(--error-300, #fca5a5) !important;
+}
+
+body.ipb table td .btn-xs.btn-default:has(i),
+body.ipb table td .btn-sm.btn-default:has(i) {
+  color: var(--text-secondary, #334155) !important;
+  background: var(--surface-hover, #e2e8f0) !important;
+  border-color: var(--border-strong, #cbd5e1) !important;
+}
+
+body.ipb table td .btn-xs:has(i):hover,
+body.ipb table td .btn-sm:has(i):hover,
+body.ipb table td .btn-xs:has(i):focus,
+body.ipb table td .btn-sm:has(i):focus {
+  opacity: 1 !important;
+  transform: translateY(-1px);
+}
+
+/* ── Empty-state CTAs are NOT row-action chips ────────────────────────────────
+   Everything above rewrites any icon-bearing .btn-sm/.btn-xs inside ANY <td> into
+   a 32px icon-only circle — width/height 32px, border-radius 999px, and
+   `font-size: 0`, which erases the label. That is correct for a legacy Action-
+   column button and wrong for anything else that merely happens to sit in a cell.
+
+   The loudest victim: DataTables renders `language.emptyTable` / `zeroRecords`
+   INSIDE the table's empty <td>, so every list page's empty-state call to action —
+   "Record a payment", "Add customer", "Clear filters" — was being collapsed into a
+   nameless blue circle. A dead end exactly where the user needs the way forward.
+
+   These are real, labelled buttons. Opt them back out. */
+body.ipb table td .ipb-empty .btn,
+body.ipb table td .ipb-empty a.btn,
+body.ipb table td .ipb-empty button.btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 38px !important;
+  padding: 9px 16px !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+body.ipb table td .ipb-empty .btn i,
+body.ipb table td .ipb-empty .btn .fa,
+body.ipb table td .ipb-empty .btn .fas {
+  font-size: 13px !important;
+  margin: 0 !important;
+}
+
+/* ...and give them back the brand, not the row-action chip palette (the rules
+   above force var(--info-100, #dbeafe)/var(--info-600, #1d4ed8) with !important, which is why the CTA rendered pale
+   blue on a page whose brand is orange). */
+body.ipb table td .ipb-empty .btn-primary,
+body.ipb table td .ipb-empty a.btn-primary,
+body.ipb table td .ipb-empty button.btn-primary {
+  color: #fff !important;
+  background: var(--primary-500) !important;
+  border-color: var(--primary-500) !important;
+}
+
+body.ipb table td .ipb-empty .btn-primary:hover,
+body.ipb table td .ipb-empty .btn-primary:focus {
+  background: var(--primary-600) !important;
+  border-color: var(--primary-600) !important;
+  color: #fff !important;
+}
+
+body.ipb .ipb-filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+}
+
+body.ipb .ipb-filter-form .ipb-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  flex: 1 1 140px;
+}
+
+body.ipb .ipb-filter-form .ipb-filter-field label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+body.ipb .ipb-filter-form .ipb-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+body.ipb .content .nav.nav-tabs {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+body.ipb .content .box-header > .nav.nav-tabs {
+  width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+body.ipb .content .box-header > .nav.nav-tabs > li {
+  float: none;
+  flex: 0 0 auto;
+}
+
+body.ipb .content .nav.nav-tabs > li > a {
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+body.ipb .content .nav.nav-tabs > li.active > a,
+body.ipb .content .nav.nav-tabs > li.active > a:hover,
+body.ipb .content .nav.nav-tabs > li.active > a:focus {
+  border: 0;
+  background: rgba(247, 88, 3, 0.1);
+  color: var(--primary-500, #f75803);
+}
+
+body.ipb td.action-icons {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+body.ipb td.action-icons .ipb-row-actions {
+  display: inline-flex;
+}
+
+body.ipb td.action-icons > a:not(.ipb-row-btn),
+body.ipb td.action-icons > button:not(.ipb-row-btn) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  margin: 0 3px 0 0;
+  padding: 0 !important;
+  border: 1px solid var(--info-300, #93c5fd) !important;
+  border-radius: 999px !important;
+  background: var(--info-100, #dbeafe) !important;
+  color: var(--info-600, #1d4ed8) !important;
+  font-size: 0 !important;
+  text-decoration: none !important;
+  vertical-align: middle;
+}
+
+body.ipb td.action-icons > a:not(.ipb-row-btn) i,
+body.ipb td.action-icons > button:not(.ipb-row-btn) i,
+body.ipb td.action-icons > a:not(.ipb-row-btn) .fa,
+body.ipb td.action-icons > button:not(.ipb-row-btn) .fa {
+  font-size: 13px !important;
+  color: inherit !important;
+}
+
+body.ipb td.action-icons > a:not(.ipb-row-btn):hover,
+body.ipb td.action-icons > button:not(.ipb-row-btn):hover {
+  transform: translateY(-1px);
+  color: var(--info-600, #1d4ed8) !important;
+}
+
+/* Readable page titles and table text */
+body.ipb .ipb-page-header h1,
+body.ipb .content-header > h1 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body.ipb .box-title {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal !important;
+}
+
+body.ipb .content .table > tbody > tr > td {
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+body.ipb .content .table > thead > tr > th {
+  vertical-align: middle;
+}
+
+body.ipb .content .form-group > label,
+body.ipb .content label:not(.btn) {
+  color: var(--text-primary, #0f172a);
+  font-weight: 600;
+}
+
+/* ── JSX-aligned list tables (table-wrap.surface look) ───────────────────── */
+body.ipb .content .table.table-bordered,
+body.ipb .content table.dataTable.table-bordered {
+  border: 0 !important;
+  border-collapse: collapse !important;
+  margin-bottom: 0 !important;
+}
+
+body.ipb .content .table.table-bordered > thead > tr > th,
+body.ipb .content .table.table-bordered > tbody > tr > th,
+body.ipb .content .table.table-bordered > tbody > tr > td,
+body.ipb .content .table.table-bordered > tfoot > tr > td {
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid var(--border, #e6eaf0) !important;
+}
+
+body.ipb .content .table > tbody > tr:last-child > td {
+  border-bottom: 0 !important;
+}
+
+body.ipb .content .table-striped > tbody > tr:nth-of-type(odd) > td {
+  background: transparent !important;
+}
+
+body.ipb .content .table > thead > tr > th,
+body.ipb .content table.dataTable thead th {
+  text-align: left !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--text-muted, #94a3b8) !important;
+  font-weight: 700 !important;
+  padding: 12px 16px !important;
+  background: var(--surface-2, #f8fafc) !important;
+  border-bottom: 1px solid var(--border, #e6eaf0) !important;
+  white-space: nowrap !important;
+}
+
+body.ipb .content .table > tbody > tr > td,
+body.ipb .content table.dataTable tbody td {
+  padding: 13px 16px !important;
+  color: var(--text-primary, #0f172a) !important;
+  vertical-align: middle !important;
+  background: transparent !important;
+  font-size: 13.5px !important;
+}
+
+body.ipb .content .table > tbody > tr,
+body.ipb .content table.dataTable tbody tr {
+  /* 05 §3.3 — background-color is cheap for a discrete hover (not a
+     keyframe), so this one exception to transform/opacity-only is allowed. */
+  transition: background-color var(--dur-fast, .12s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
+}
+body.ipb .content .table > tbody > tr:hover > td,
+body.ipb .content table.dataTable tbody tr:hover td {
+  background: var(--surface-hover, #f1f5f9) !important;
+}
+
+/* Flush table to card edges (JSX table-wrap inside surface card).
+   Bleed only the table wrapper via negative margin instead of zeroing the
+   box-body's own padding — the old rule matched on :has(.table-responsive)
+   anywhere inside .box-body, which also flattened the filter form and the
+   "Users list" label sitting above the table in that same box-body against
+   the card edge. */
+body.ipb .content .box > .box-body:has(.table-responsive),
+body.ipb .content .box > .box-body:has(.dataTables_wrapper),
+body.ipb .content .box > .box-body:has(> .table) {
+  padding-bottom: 0 !important;
+}
+
+body.ipb .content .box > .box-body > .table-responsive,
+body.ipb .content .box > .box-body > .dataTables_wrapper,
+body.ipb .content .box > .box-body > .table {
+  margin-left: -20px !important;
+  margin-right: -20px !important;
+  border-top: 1px solid var(--border, #e6eaf0);
+}
+
+body.ipb .content .dataTables_wrapper {
+  padding: 12px 16px 16px !important;
+}
+
+body.ipb .content .dataTables_wrapper .table-responsive,
+body.ipb .content .dataTables_wrapper > table,
+body.ipb .content .box-body > .table-responsive > table {
+  margin: 0 !important;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_length,
+body.ipb .content .dataTables_wrapper .dataTables_filter {
+  margin-bottom: 10px;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_filter input,
+body.ipb .content .dataTables_wrapper .dataTables_length select {
+  background: var(--surface, #fff) !important;
+  border: 1.5px solid var(--border, #e6eaf0) !important;
+  border-radius: 10px !important;
+  color: var(--text-primary, #0f172a) !important;
+  min-height: 36px;
+  padding: 6px 12px !important;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_info {
+  color: var(--text-muted, #94a3b8) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  padding-top: 12px !important;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_paginate {
+  padding-top: 8px !important;
+}
+
+/* Bootstrap DataTables puts .paginate_button on <li>; borders on the li
+   collapse into thin vertical “barcode” lines because children are floated. */
+body.ipb .content .dataTables_wrapper .dataTables_paginate ul.pagination,
+body.ipb .dataTables_wrapper .dataTables_paginate ul.pagination {
+  display: inline-flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button,
+body.ipb .dataTables_wrapper .dataTables_paginate li.paginate_button,
+body.ipb .pagination > li {
+  display: inline-block !important;
+  float: none !important;
+  border: 0 !important;
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button > a,
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button > span,
+body.ipb .dataTables_wrapper .dataTables_paginate li.paginate_button > a,
+body.ipb .dataTables_wrapper .dataTables_paginate li.paginate_button > span,
+body.ipb .dataTables_wrapper .dataTables_paginate a.paginate_button,
+body.ipb .dataTables_wrapper .dataTables_paginate span.paginate_button,
+body.ipb .pagination > li > a,
+body.ipb .pagination > li > span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  float: none !important;
+  min-width: 36px;
+  min-height: 36px !important;
+  padding: 6px 12px !important;
+  margin: 0 !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border, #e6eaf0) !important;
+  background: var(--surface, #fff) !important;
+  color: var(--text-primary, #0f172a) !important;
+  line-height: 1.2 !important;
+  box-shadow: none !important;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button.active > a,
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button.active > span,
+body.ipb .dataTables_wrapper .dataTables_paginate a.paginate_button.current,
+body.ipb .pagination > .active > a,
+body.ipb .pagination > .active > span {
+  background: var(--primary-500, #f75803) !important;
+  border-color: var(--primary-500, #f75803) !important;
+  color: #fff !important;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button:hover > a,
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button:hover > span,
+body.ipb .dataTables_wrapper .dataTables_paginate a.paginate_button:hover,
+body.ipb .pagination > li > a:hover,
+body.ipb .pagination > li > span:hover {
+  background: var(--surface-hover, #f1f5f9) !important;
+  border-color: var(--border-strong, #d7dee7) !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button.active:hover > a,
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button.active:hover > span,
+body.ipb .dataTables_wrapper .dataTables_paginate a.paginate_button.current:hover,
+body.ipb .pagination > .active > a:hover,
+body.ipb .pagination > .active > span:hover {
+  background: var(--primary-500, #f75803) !important;
+  border-color: var(--primary-500, #f75803) !important;
+  color: #fff !important;
+}
+
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button.disabled > a,
+body.ipb .content .dataTables_wrapper .dataTables_paginate li.paginate_button.disabled > span,
+body.ipb .dataTables_wrapper .dataTables_paginate a.paginate_button.disabled,
+body.ipb .pagination > .disabled > a,
+body.ipb .pagination > .disabled > span {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+body.ipb[data-theme="dark"] .content .table > thead > tr > th,
+body.ipb.dark-mode .content .table > thead > tr > th {
+  background: var(--surface-2) !important;
+  color: var(--text-muted) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+body.ipb[data-theme="dark"] .content .table > tbody > tr > td,
+body.ipb.dark-mode .content .table > tbody > tr > td {
+  color: #eef2f9 !important;
+  border-bottom-color: var(--border) !important;
+}
+
+body.ipb[data-theme="dark"] .content .table > tbody > tr:hover > td,
+body.ipb.dark-mode .content .table > tbody > tr:hover > td {
+  background: #1a2234 !important;
+}
+
+/* Mobile: keep table swipe, don't force nowrap on all cells */
+@media (max-width: 1024px) {   /* was 900px — folded into the 03 §1.3 ladder */
+  body.ipb .content .box > .box-body:has(> .table-responsive),
+  body.ipb .content .box > .box-body:has(> .dataTables_wrapper) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  body.ipb .content .dataTables_wrapper {
+    padding: 10px 12px 12px !important;
+  }
+
+  body.ipb .content .table > tbody > tr > td {
+    max-width: none;
+  }
+}
+
+/* ── Support tickets inbox (JSX TicketsPage parity) ─────────────────────── */
+body.ipb .ipb-ticket-inbox.card,
+body.ipb .ipb-ticket-inbox {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  /* Fill viewport below topbar + page header for a taller desktop chat view */
+  height: calc(100vh - var(--topbar-h, 68px) - 110px);
+  min-height: 620px;
+  max-height: none;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  padding: 0 !important;
+}
+body.ipb .ipb-ticket-inbox-solo {
+  grid-template-columns: 1fr;
+  height: calc(100vh - var(--topbar-h, 68px) - 110px);
+  min-height: 620px;
+}
+body.ipb .ipb-ticket-inbox-list {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+}
+body.ipb .ipb-ticket-inbox-list-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+body.ipb .ipb-ticket-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+/* Single primary action + overflow menu */
+body.ipb .ipb-ticket-new-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  border-radius: 10px;
+  text-decoration: none !important;
+}
+body.ipb .ipb-ticket-more {
+  position: relative;
+  flex: 0 0 auto;
+}
+body.ipb .ipb-ticket-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+body.ipb .ipb-ticket-more-btn:hover,
+body.ipb .ipb-ticket-more.is-open .ipb-ticket-more-btn {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+body.ipb .ipb-ticket-more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: var(--z-dropdown);
+  min-width: 180px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2);
+}
+body.ipb .ipb-ticket-more-menu[hidden] {
+  display: none !important;
+}
+body.ipb .ipb-ticket-more-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+}
+body.ipb .ipb-ticket-more-item:hover {
+  background: var(--surface-hover);
+}
+body.ipb .ipb-ticket-more-item.is-danger {
+  color: var(--error-600, #dc2626);
+}
+body.ipb .ipb-ticket-more-item i {
+  width: 16px;
+  text-align: center;
+  opacity: 0.85;
+}
+body.ipb .ipb-ticket-more-item.ipb-ticket-select-all {
+  border-bottom: 1px solid var(--border);
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 4px;
+  padding-bottom: 12px;
+}
+body.ipb .ipb-ticket-more-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--primary-500);
+  cursor: pointer;
+}
+body.ipb .ipb-ticket-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  padding: 48px 20px;
+  min-height: 220px;
+}
+body.ipb .ipb-ticket-list-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-50);
+  color: var(--primary-600);
+  font-size: 22px;
+}
+body.ipb .ipb-ticket-list-empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+body.ipb .ipb-ticket-list-empty-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 280px;
+  margin-top: -4px;
+}
+body.ipb .ipb-ticket-empty-cta {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  font-weight: 700;
+}
+body.ipb .ipb-ticket-inbox-search {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 10px;
+  min-width: 0;
+}
+body.ipb .ipb-ticket-inbox-search i {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+body.ipb .ipb-ticket-inbox-search input {
+  border: 0;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  padding: 8px 0;
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+}
+body.ipb .ipb-ticket-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 0;
+  white-space: nowrap;
+  cursor: pointer;
+}
+body.ipb .ipb-ticket-stats {
+  margin-bottom: 16px;
+}
+body.ipb .ipb-ticket-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+body.ipb .ipb-ticket-filter-tab {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--dur-fast, 0.12s) ease, color var(--dur-fast, 0.12s) ease;
+}
+body.ipb .ipb-ticket-filter-tab:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+body.ipb .ipb-ticket-filter-tab.is-active {
+  background: var(--primary-500);
+  color: #fff;
+}
+body.ipb .ipb-ticket-inbox-items {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+body.ipb .ipb-ticket-inbox-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background var(--dur-fast, 0.12s) ease;
+}
+body.ipb .ipb-ticket-inbox-item:hover {
+  background: var(--surface-hover);
+}
+body.ipb .ipb-ticket-inbox-item.is-active {
+  background: var(--surface-hover);
+  border-left-color: var(--primary-500);
+}
+body.ipb .ipb-ticket-inbox-item-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+body.ipb .ipb-ticket-inbox-check {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+body.ipb .ipb-ticket-inbox-subject {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.35;
+}
+body.ipb .ipb-ticket-unread {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--primary-500);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+body.ipb .ipb-ticket-inbox-meta {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 600;
+}
+body.ipb .ipb-ticket-inbox-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+body.ipb .ipb-ticket-inbox-pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+body.ipb .ipb-ticket-inbox-pane.is-solo {
+  min-height: 100%;
+}
+body.ipb .ipb-ticket-inbox-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 20px;
+  gap: 8px;
+}
+body.ipb .ipb-ticket-inbox-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-50);
+  color: var(--primary-600);
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+body.ipb .ipb-ticket-inbox-empty-title {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+body.ipb .ipb-ticket-inbox-empty-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 280px;
+  line-height: 1.45;
+}
+body.ipb .ipb-ticket-inbox-loading {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Thread */
+body.ipb .ipb-ticket-thread {
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface);
+}
+body.ipb .ipb-ticket-thread-head {
+  display: flex !important;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+body.ipb .ipb-ticket-back {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  min-height: 36px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+body.ipb .ipb-ticket-back:hover,
+body.ipb .ipb-ticket-back:focus {
+  border-color: var(--primary-500);
+  color: var(--primary-600);
+  outline: none;
+}
+body.ipb .ipb-ticket-inbox-solo .ipb-ticket-back {
+  display: none !important;
+}
+body.ipb .ipb-ticket-thread-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+body.ipb .ipb-ticket-thread-sub {
+  margin: 3px 0 0 !important;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+body.ipb .ipb-ticket-thread-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+body.ipb .ipb-ticket-unassigned {
+  font-style: italic;
+  color: var(--text-muted);
+}
+body.ipb .ipb-ticket-status-dd {
+  position: relative;
+  flex: 0 0 auto;
+}
+body.ipb .ipb-ticket-status-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+body.ipb .ipb-ticket-status-trigger i {
+  font-size: 9px;
+  opacity: 0.75;
+}
+body.ipb .ipb-ticket-status-trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+body.ipb .ipb-ticket-status-trigger.is-success { background: var(--success-50, #ecfdf3); color: var(--success-700, #166534); }
+body.ipb .ipb-ticket-status-trigger.is-warning { background: var(--warning-50, #fffbeb); color: var(--warning-700, #92400e); }
+body.ipb .ipb-ticket-status-trigger.is-neutral { background: var(--surface-hover); color: var(--text-secondary); }
+body.ipb .ipb-ticket-status-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-dropdown);
+  min-width: 160px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2);
+}
+body.ipb .ipb-ticket-status-menu[hidden] {
+  display: none !important;
+}
+body.ipb .ipb-ticket-status-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+}
+body.ipb .ipb-ticket-status-option:hover {
+  background: var(--surface-hover);
+}
+body.ipb .ipb-ticket-status-option .ipb-ticket-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+body.ipb .ipb-ticket-status-option.is-success .ipb-ticket-status-dot { background: var(--success-500, #16a34a); }
+body.ipb .ipb-ticket-status-option.is-warning .ipb-ticket-status-dot { background: var(--warning-500, #d97706); }
+body.ipb .ipb-ticket-status-option.is-neutral .ipb-ticket-status-dot { background: var(--text-secondary, #64748b); }
+body.ipb .ipb-ticket-status-option span:nth-child(2) {
+  flex: 1 1 auto;
+}
+body.ipb .ipb-ticket-status-option i {
+  font-size: 11px;
+  color: var(--primary-500);
+}
+body.ipb .ipb-ticket-status-option.is-selected {
+  background: var(--surface-hover);
+}
+body.ipb .ipb-ticket-thread-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+body.ipb .ipb-ticket-thread-title-row .ipb-ticket-thread-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+body.ipb .ipb-ticket-thread-title-row .ipb-ticket-more {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+body.ipb .ipb-ticket-thread-more .ipb-ticket-more-menu {
+  right: 0;
+  left: auto;
+}
+body.ipb .ipb-ticket-inbox-check input[type="checkbox"],
+body.ipb .ipb-ticket-select-all input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px;
+  margin: 0 !important;
+  opacity: 1 !important;
+  position: static !important;
+  cursor: pointer;
+  accent-color: var(--primary-500);
+  flex-shrink: 0;
+}
+body.ipb .ipb-ticket-inbox-check {
+  display: inline-flex;
+  align-items: center;
+  padding-top: 0;
+}
+body.ipb .ipb-ticket-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 20px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 !important;
+  background: var(--surface);
+}
+body.ipb .ipb-ticket-msg {
+  display: flex !important;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0 !important;
+}
+body.ipb .ipb-ticket-msg.is-mine,
+body.ipb .ipb-ticket-msg.right {
+  flex-direction: row-reverse;
+}
+body.ipb .ipb-ticket-avatar,
+body.ipb .ipb-ticket-msg .direct-chat-img {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 999px !important;
+  border: 1.5px solid var(--border);
+  flex-shrink: 0;
+  float: none !important;
+}
+body.ipb .ipb-ticket-bubble-wrap {
+  max-width: 72%;
+  min-width: 0;
+}
+body.ipb .ipb-ticket-bubble,
+body.ipb .ipb-ticket-msg .direct-chat-text {
+  float: none !important;
+  margin: 0 !important;
+  padding: 10px 14px !important;
+  border-radius: 14px !important;
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  background: var(--surface-2) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-bottom-left-radius: 4px !important;
+  word-break: break-word;
+}
+body.ipb .ipb-ticket-msg.is-mine .ipb-ticket-bubble,
+body.ipb .ipb-ticket-msg.right .direct-chat-text {
+  background: var(--primary-500) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  border-bottom-left-radius: 14px !important;
+  border-bottom-right-radius: 4px !important;
+}
+body.ipb .ipb-ticket-msg-meta {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 600;
+}
+body.ipb .ipb-ticket-msg.is-mine .ipb-ticket-msg-meta {
+  text-align: right;
+}
+body.ipb .ipb-ticket-empty {
+  text-align: center;
+  padding: 40px 16px;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+body.ipb .ipb-ticket-composer {
+  padding: 16px !important;
+  border-top: 1px solid var(--border);
+  background: var(--surface) !important;
+  flex-shrink: 0;
+}
+body.ipb .ipb-ticket-composer-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+body.ipb .ipb-ticket-composer-row .form-control {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-radius: 10px !important;
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
+  padding: 10px 14px !important;
+  height: auto !important;
+}
+body.ipb .ipb-ticket-composer-row .btn {
+  flex-shrink: 0;
+}
+body.ipb .ipb-ticket-composer-note {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+body.ipb .ipb-ticket-composer-note.is-danger {
+  color: var(--error-600);
+}
+body.ipb .ipb-ticket-msg .direct-chat-info {
+  display: none !important;
+}
+body.ipb .ipb-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+body.ipb .ipb-page-actions .btn-default,
+body.ipb .ipb-ticket-inbox-list-actions .btn-default,
+body.ipb .ipb-ticket-thread-badges .btn-default {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-strong) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
+}
+body.ipb .ipb-page-actions .btn-default:hover,
+body.ipb .ipb-ticket-inbox-list-actions .btn-default:hover,
+body.ipb .ipb-ticket-thread-badges .btn-default:hover {
+  background: var(--surface-hover) !important;
+  border-color: var(--primary-500) !important;
+  color: var(--primary-600) !important;
+}
+
+/* ── Profile (JSX ProfilePage parity) ───────────────────────────────────── */
+body.ipb .box-profile {
+  padding: 8px 4px 4px !important;
+}
+body.ipb .box-profile .profile-user-img {
+  width: 96px !important;
+  height: 96px !important;
+  border: 3px solid var(--border) !important;
+  box-shadow: var(--shadow-1);
+  margin-bottom: 12px !important;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+body.ipb .box-profile .profile-username,
+body.ipb .box-profile > .text-muted,
+body.ipb .box-profile > p.text-muted {
+  text-align: center;
+}
+body.ipb .box-profile .profile-username {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary) !important;
+  margin: 0 0 10px !important;
+}
+body.ipb .box-profile .list-group-unbordered {
+  text-align: left;
+  padding: 0 16px;
+}
+body.ipb .box-profile .list-group-item {
+  border-color: var(--border) !important;
+  background: transparent !important;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  padding: 12px 0 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+body.ipb .box-profile .list-group-item b {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+body.ipb .box-profile .list-group-item .pull-right {
+  font-weight: 700;
+  color: var(--text-primary);
+  float: none !important;
+  display: block;
+  width: 100%;
+  margin-top: 0;
+  text-align: left;
+}
+
+/* Premium nav tabs (profile, settings, forms) */
+body.ipb .nav-tabs {
+  border-bottom: 1px solid var(--border) !important;
+}
+body.ipb .nav-tabs > li > a {
+  border: none !important;
+  border-radius: 10px 10px 0 0 !important;
+  color: var(--text-secondary) !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  padding: 10px 14px !important;
+  background: transparent !important;
+}
+body.ipb .nav-tabs > li.active > a,
+body.ipb .nav-tabs > li.active > a:hover,
+body.ipb .nav-tabs > li.active > a:focus {
+  color: var(--primary-600) !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 2.5px solid var(--primary-500) !important;
+  margin-bottom: -1px;
+}
+body.ipb .nav-tabs > li > a:hover {
+  background: var(--surface-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Phone-only ticket composer stack (tablet keeps row layout via responsive.css) */
+@media (max-width: 767px) {
+  body.ipb .ipb-ticket-bubble-wrap {
+    max-width: 88%;
+  }
+  body.ipb .ipb-ticket-composer-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ── Legacy AdminLTE info-box → premium KPI surface ─────────────────────── */
+body.ipb .info-box {
+  display: flex !important;
+  align-items: stretch;
+  min-height: 92px;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius, 12px) !important;
+  box-shadow: var(--shadow-1) !important;
+  margin-bottom: 16px !important;
+  overflow: hidden;
+}
+body.ipb .info-box-icon {
+  width: 72px !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 22px !important;
+  background: var(--primary-50) !important;
+  color: var(--primary-600) !important;
+  border-radius: 0 !important;
+}
+body.ipb .info-box-content {
+  padding: 14px 16px !important;
+  margin: 0 !important;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+body.ipb .info-box-text {
+  display: block;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted) !important;
+}
+body.ipb .info-box-number {
+  display: block;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary) !important;
+  margin-top: 4px;
+  line-height: 1.15;
+}
+body.ipb .info-box .progress-description {
+  display: block;
+  font-size: 12px !important;
+  color: var(--text-secondary) !important;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Hotspot activity log */
+body.ipb .ipb-hotspot-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+body.ipb .ipb-hotspot-log li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+body.ipb .ipb-hotspot-log li:last-child {
+  border-bottom: none;
+}
+body.ipb .ipb-hotspot-log-time {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+body.ipb .ipb-hotspot-log-msg {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+body.ipb .ipb-hotspot-log li.is-ok .ipb-hotspot-log-msg {
+  color: var(--success-600);
+}
+body.ipb .ipb-hotspot-log li.is-err .ipb-hotspot-log-msg {
+  color: var(--error-600);
+}

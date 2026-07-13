@@ -1,0 +1,1135 @@
+/* ISP Pay BD SaaS — Components */
+
+/* Buttons */
+.ipb .ipb-btn,
+.ipb .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  /* 05 §3.1/§2 — was "transition: all .14s ease" (animated layout props too);
+     explicit transform/opacity-friendly properties on the motion ladder. */
+  transition: background var(--dur-fast, .12s) var(--ease-out, cubic-bezier(.3,.8,.4,1)),
+              color      var(--dur-fast, .12s) var(--ease-out, cubic-bezier(.3,.8,.4,1)),
+              transform  var(--dur-instant, .09s) var(--ease-out, cubic-bezier(.3,.8,.4,1)),
+              box-shadow var(--dur-fast, .12s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  padding: 9px 16px;
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+.ipb .btn:active, .ipb .ipb-btn:active { transform: scale(.97); }
+.ipb .btn:disabled, .ipb .ipb-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ipb .btn-sm { padding: 6px 12px; font-size: 12.5px; }
+.ipb .btn-lg { padding: 12px 22px; font-size: 15px; }
+.ipb .btn-block { width: 100%; display: inline-flex; }
+
+.ipb .btn-primary,
+.ipb .ipb-btn-primary,
+.ipb .btn-warning {
+  background: var(--primary-500) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: var(--shadow-brand);
+}
+.ipb .btn-primary:hover,
+.ipb .btn-warning:hover {
+  background: var(--primary-600) !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+.ipb .btn-secondary,
+.ipb .ipb-btn-secondary {
+  background: var(--secondary-700) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+.ipb .btn-default,
+.ipb .ipb-btn-outline {
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-strong) !important;
+}
+.ipb .btn-default:hover { background: var(--surface-hover) !important; }
+.ipb .btn-danger,
+.ipb .ipb-btn-danger {
+  background: var(--error-50) !important;
+  color: var(--error-600) !important;
+  border-color: transparent !important;
+}
+.ipb .btn-danger:hover {
+  background: var(--error-500) !important;
+  color: #fff !important;
+}
+.ipb .btn-success {
+  background: var(--success-500) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+.ipb .btn-info {
+  background: var(--info-500) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.ipb .ipb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--dur-fast, .12s) var(--ease-out, cubic-bezier(.3,.8,.4,1)),
+              color      var(--dur-fast, .12s) var(--ease-out, cubic-bezier(.3,.8,.4,1)),
+              border-color var(--dur-fast, .12s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
+  flex-shrink: 0;
+  padding: 0;
+}
+.ipb .ipb-icon-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* Cards */
+.ipb .ipb-card,
+.ipb .box {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-1) !important;
+  margin-bottom: 20px;
+  overflow: visible;
+}
+.ipb .box.box-warning,
+.ipb .box.box-primary,
+.ipb .box.box-success,
+.ipb .box.box-info,
+.ipb .box.box-danger {
+  border-top: none !important;
+}
+.ipb .box-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 16px 20px !important;
+  color: var(--text-primary) !important;
+}
+.ipb .box-header .box-title,
+.ipb .box-title {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary) !important;
+}
+.ipb .box-body {
+  padding: 18px 20px !important;
+  background: transparent !important;
+  color: var(--text-primary);
+}
+.ipb .box-footer {
+  background: var(--surface-2) !important;
+  border-top: 1px solid var(--border) !important;
+  padding: 14px 20px !important;
+}
+
+/* Page header */
+.ipb .ipb-page-header,
+.ipb .content-header {
+  background: transparent !important;
+  padding: 4px 0 12px !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+}
+.ipb .content-header > h1,
+.ipb .ipb-page-header h1 {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary) !important;
+  margin: 0 !important;
+  letter-spacing: -0.02em;
+  line-height: 1.2 !important;
+}
+.ipb .content-header > h1 > small,
+.ipb .ipb-page-header h1 > small {
+  color: var(--text-muted) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  display: inline-block;
+  margin-left: 6px;
+}
+
+/* Modern breadcrumb (page-header component) */
+.ipb .ipb-breadcrumb {
+  margin: 0 0 8px !important;
+}
+.ipb .ipb-breadcrumb ol {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+.ipb .ipb-breadcrumb li {
+  display: inline-flex !important;
+  align-items: center;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  line-height: 1.3;
+}
+.ipb .ipb-breadcrumb li:not(:last-child)::after {
+  content: "" !important;
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 10px;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(-45deg);
+  opacity: 0.55;
+  float: none !important;
+}
+.ipb .ipb-breadcrumb a {
+  color: var(--text-secondary) !important;
+  text-decoration: none !important;
+  font-weight: 600 !important;
+}
+.ipb .ipb-breadcrumb a:hover {
+  color: var(--primary-500) !important;
+}
+.ipb .ipb-breadcrumb li[aria-current="page"] span,
+.ipb .ipb-breadcrumb li:last-child span {
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* Classic AdminLTE breadcrumb (content-header) */
+.ipb .content-header .breadcrumb,
+.ipb .ipb-page-header .breadcrumb {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  background: transparent !important;
+  margin: 0 0 8px !important;
+  padding: 0 !important;
+  float: none !important;
+  position: static !important;
+  right: auto !important;
+  top: auto !important;
+  font-size: 12.5px !important;
+  list-style: none !important;
+}
+.ipb .content-header .breadcrumb > li,
+.ipb .ipb-page-header .breadcrumb > li {
+  display: inline-flex !important;
+  align-items: center;
+  float: none !important;
+  color: var(--text-muted) !important;
+  font-weight: 600 !important;
+}
+.ipb .content-header .breadcrumb > li + li:before,
+.ipb .ipb-page-header .breadcrumb > li + li:before {
+  content: "" !important;
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 10px 0 2px;
+  padding: 0 !important;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(-45deg);
+  opacity: 0.55;
+  color: transparent !important;
+}
+.ipb .content-header .breadcrumb > li > a,
+.ipb .content-header .breadcrumb > .active,
+.ipb .ipb-page-header .breadcrumb > li > a,
+.ipb .ipb-page-header .breadcrumb > .active {
+  color: var(--text-secondary) !important;
+  font-weight: 600 !important;
+  padding: 0 !important;
+}
+.ipb .content-header .breadcrumb > .active,
+.ipb .ipb-page-header .breadcrumb > .active {
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+}
+.ipb .content-header .breadcrumb > li > a:hover,
+.ipb .ipb-page-header .breadcrumb > li > a:hover {
+  color: var(--primary-500) !important;
+}
+.ipb .content-header .breadcrumb > li > a > .fa,
+.ipb .content-header .breadcrumb > li > a > .fas {
+  margin-right: 5px;
+  opacity: 0.7;
+}
+
+.ipb .ipb-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ipb .ipb-page-header-main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.ipb .ipb-page-header .ipb-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* List page toolbar (filter + actions on one row) */
+.ipb .ipb-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  width: 100%;
+}
+.ipb .ipb-list-toolbar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  min-width: 0;
+}
+.ipb .ipb-list-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.ipb .ipb-list-toolbar-actions .btn {
+  margin: 0 !important;
+  white-space: nowrap;
+}
+.ipb .ipb-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: var(--text-secondary) !important;
+  white-space: nowrap;
+}
+.ipb .ipb-filter-select,
+.ipb .ipb-list-toolbar .form-control {
+  display: inline-block;
+  width: auto !important;
+  min-width: 150px;
+  max-width: 100%;
+  min-height: 38px !important;
+  margin: 0 !important;
+}
+/* Free-text filters carry longer placeholders ("Search by name or code…")
+   than the 150px baseline (sized for short select options) can show without
+   clipping the trailing text. */
+.ipb .ipb-list-toolbar .ipb-filter-text {
+  min-width: 240px;
+}
+/* Desktop: a <select> is auto-sized to its widest <option>, and area/package
+   names run long — so the filter group's max-content width exceeded the toolbar
+   and pushed the actions group onto its own row, while the selects shrank back
+   to min-width and left a dead gap at the right of the filter row. Cap the
+   controls (the 768-1024px tier already does) and let them absorb the slack so
+   both groups share one row. */
+@media (min-width: 1025px) {
+  .ipb .ipb-list-toolbar .ipb-filter-select,
+  .ipb .ipb-list-toolbar .ipb-filter-date {
+    flex: 1 1 auto;
+    max-width: 180px;
+  }
+  .ipb .ipb-list-toolbar .ipb-filter-text {
+    flex: 1 1 auto;
+    max-width: 280px;
+  }
+  /* Stay flush right even on the rows where the groups still have to wrap. */
+  .ipb .ipb-list-toolbar-actions {
+    margin-left: auto;
+  }
+}
+.ipb .box-header .ipb-list-toolbar {
+  width: 100%;
+}
+
+/* Forms */
+.ipb .form-control,
+.ipb .select2-container--default .select2-selection--single,
+.ipb .select2-container--default .select2-selection--multiple {
+  background: var(--surface) !important;
+  border: 1.5px solid var(--border) !important;
+  border-radius: 10px !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 13.5px !important;
+  min-height: 40px;
+  box-shadow: none !important;
+  /* 05 §3.5 — focus-ring bloom: make the existing ring grow in, not snap */
+  transition: border-color var(--dur-fast, .12s) var(--ease-out, cubic-bezier(.3,.8,.4,1)),
+              box-shadow   var(--dur-fast, .12s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
+}
+.ipb .form-control:focus {
+  border-color: var(--primary-500) !important;
+  box-shadow: var(--shadow-focus, 0 0 0 3.5px var(--focus-glow)) !important;
+}
+.ipb .control-label,
+.ipb label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: .02em;
+}
+.ipb .form-group { margin-bottom: 16px; }
+.ipb .help-block,
+.ipb .error,
+.ipb .text-danger { color: var(--error-600) !important; font-size: 12px; }
+
+/* Tables */
+.ipb .table-wrap,
+.ipb .box-body > .table-responsive,
+.ipb .dataTables_wrapper {
+  border-radius: var(--radius);
+}
+.ipb table.table,
+.ipb .table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  background: transparent !important;
+  color: var(--text-primary) !important;
+}
+.ipb .table > thead > tr > th,
+.ipb table.dataTable thead th {
+  text-align: left;
+  font-size: 11px !important;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted) !important;
+  font-weight: 700 !important;
+  padding: 12px 16px !important;
+  background: var(--surface-2) !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-top: none !important;
+  white-space: nowrap;
+}
+.ipb .table > tbody > tr > td,
+.ipb table.dataTable tbody td {
+  padding: 13px 16px !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-top: none !important;
+  color: var(--text-primary) !important;
+  vertical-align: middle !important;
+  background: transparent !important;
+}
+.ipb .table-striped > tbody > tr:nth-of-type(odd) { background: transparent !important; }
+.ipb .table-hover > tbody > tr:hover > td,
+.ipb table.dataTable tbody tr:hover td {
+  background: var(--surface-hover) !important;
+}
+.ipb .dataTables_filter input,
+.ipb .dataTables_length select {
+  background: var(--surface) !important;
+  border: 1.5px solid var(--border) !important;
+  border-radius: 10px !important;
+  color: var(--text-primary) !important;
+  padding: 6px 10px !important;
+}
+.ipb .dataTables_info,
+.ipb .dataTables_paginate { color: var(--text-muted) !important; }
+.ipb .pagination > li {
+  border: 0 !important;
+  background: transparent !important;
+  float: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.ipb .pagination > li > a,
+.ipb .pagination > li > span {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-primary) !important;
+  border-radius: 8px !important;
+  margin: 0 !important;
+  float: none !important;
+}
+.ipb .pagination > .active > a,
+.ipb .pagination > .active > span {
+  background: var(--primary-500) !important;
+  border-color: var(--primary-500) !important;
+  color: #fff !important;
+}
+
+/* Badges / labels */
+.ipb .label,
+.ipb .badge,
+.ipb .ipb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+/* 05 §3.6 — badge/chip entrance: add class="ipb-enter" when injecting a
+   fresh badge (e.g. a new "Unpaid" chip after an ajax status change) */
+.ipb .badge.ipb-enter, .ipb .label.ipb-enter { animation: ipbPop var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1)) both; }
+.ipb .label-success,
+.ipb .badge-success,
+.ipb .bg-green { background: var(--success-50) !important; color: var(--success-600) !important; }
+.ipb .label-warning,
+.ipb .badge-warning,
+.ipb .bg-yellow { background: var(--warning-50) !important; color: var(--warning-600) !important; }
+.ipb .label-danger,
+.ipb .badge-danger,
+.ipb .bg-red { background: var(--error-50) !important; color: var(--error-600) !important; }
+.ipb .label-info,
+.ipb .badge-info,
+.ipb .bg-aqua,
+.ipb .bg-blue { background: var(--info-50) !important; color: var(--info-600) !important; }
+.ipb .label-default,
+.ipb .badge-neutral { background: var(--neutral-100) !important; color: var(--neutral-600) !important; }
+.ipb .ipb-badge-brand { background: var(--primary-50); color: var(--primary-600); }
+.ipb .ipb-badge-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* Tabs */
+.ipb .nav-tabs {
+  border-bottom: 1px solid var(--border) !important;
+  gap: 4px;
+}
+.ipb .nav-tabs > li > a {
+  border: none !important;
+  border-bottom: 2.5px solid transparent !important;
+  color: var(--text-muted) !important;
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: 11px 16px !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.ipb .nav-tabs > li.active > a,
+.ipb .nav-tabs > li.active > a:hover,
+.ipb .nav-tabs > li.active > a:focus,
+.ipb .nav-tabs > li > a:hover {
+  border: none !important;
+  border-bottom: 2.5px solid var(--primary-500) !important;
+  color: var(--primary-500) !important;
+  background: transparent !important;
+}
+
+/* Modals */
+.ipb .modal-content {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow-3) !important;
+  color: var(--text-primary);
+}
+.ipb .modal-header {
+  border-bottom: 1px solid var(--border) !important;
+  padding: 18px 22px !important;
+}
+.ipb .modal-title { font-weight: 800; color: var(--text-primary) !important; }
+.ipb .modal-body { padding: 22px !important; }
+.ipb .modal-footer {
+  border-top: 1px solid var(--border) !important;
+  padding: 16px 22px !important;
+  background: transparent !important;
+}
+.ipb .modal-header .close { color: var(--text-muted); opacity: 1; text-shadow: none; }
+/* Touch targets (<=1024px): Bootstrap's bare "x" is a ~21px glyph with no
+   padding/hit-box (font-size 21px, line-height 1, float:right) and is the
+   ONLY dismiss control on every .modal-header across 40+ views. Pad the hit
+   area to the 40px floor and pull it back with a negative margin (into the
+   header's own 18/22px padding) so the visual glyph stays anchored to the
+   corner instead of drifting inward. */
+@media (max-width: 1024px) {
+  .ipb .modal-header .close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    margin: -9px -12px -9px 8px;
+    padding: 0;
+  }
+}
+
+/* Stat / small-box → KPI cards */
+.ipb .small-box {
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-1) !important;
+  border: 1px solid var(--border) !important;
+  overflow: hidden;
+  position: relative;
+  color: var(--text-primary) !important;
+  background: var(--surface) !important;
+}
+.ipb .small-box > .inner { padding: 18px !important; }
+.ipb .small-box > .inner > h3 {
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  color: var(--text-primary) !important;
+  margin: 0 0 6px !important;
+}
+.ipb .small-box > .inner > p {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+}
+.ipb .small-box .icon {
+  color: var(--primary-500) !important;
+  opacity: .2;
+}
+.ipb .small-box > .small-box-footer {
+  background: var(--surface-2) !important;
+  color: var(--primary-500) !important;
+  font-weight: 700;
+  border-top: 1px solid var(--border);
+}
+.ipb .small-box.bg-green,
+.ipb .small-box.bg-red,
+.ipb .small-box.bg-yellow,
+.ipb .small-box.bg-aqua,
+.ipb .small-box.bg-blue,
+.ipb .small-box.bg-maroon,
+.ipb .small-box.bg-teal,
+.ipb .small-box.bg-purple {
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Stat card component */
+.ipb .ipb-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  /* 05 §3.2 — box-shadow dropped from this list: keyframing box-shadow paints
+     on every frame. The lifted-shadow crossfade now lives on ::after below
+     (a discrete opacity fade is compositor-only). transform stays here. */
+  transition: transform var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1)),
+              border-color var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
+}
+/* Card hover lift: cross-fade a pseudo-element's opacity instead of keyframing
+   box-shadow directly (compositor-only, 05 §3.2). Shares the pattern with
+   .ipb-card/.box below; .ipb-stat-card's OWN ::before (the top tone bar,
+   06 §1) is untouched — this uses ::after so the two never collide. */
+.ipb .ipb-card,
+.ipb .box,
+.ipb .ipb-stat-card { position: relative; }
+.ipb .ipb-card::after,
+.ipb .box::after,
+.ipb .ipb-stat-card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  box-shadow: var(--shadow-3); opacity: 0; pointer-events: none;
+  transition: opacity var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
+}
+.ipb .ipb-card:hover::after,
+.ipb .box:hover::after,
+.ipb .ipb-stat-card:hover::after { opacity: 1; }
+/* 06 §1 — flattened from a gradient to a solid tone bar: with the Network
+   Pulse strip now travelling under the topbar, a second decorative gradient
+   on every card was noise. Same information (tone), zero gradient. */
+.ipb .ipb-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent, var(--primary-500));
+}
+.ipb .ipb-stat-card:hover {
+  transform: translateY(-2px);
+  /* box-shadow lift now comes from the ::after crossfade above (05 §3.2) */
+}
+.ipb .ipb-stat-card .ipb-stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-50);
+  color: var(--primary-600);
+  font-size: 18px;
+}
+.ipb .ipb-stat-card .ipb-stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  margin-top: 14px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.ipb .ipb-stat-card .ipb-stat-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 5px;
+}
+.ipb .ipb-stat-card.tone-success .ipb-stat-icon { background: var(--success-50); color: var(--success-600); }
+.ipb .ipb-stat-card.tone-success { --accent: var(--success-500); }
+.ipb .ipb-stat-card.tone-warning .ipb-stat-icon { background: var(--warning-50); color: var(--warning-600); }
+.ipb .ipb-stat-card.tone-warning { --accent: var(--warning-500); }
+.ipb .ipb-stat-card.tone-error .ipb-stat-icon { background: var(--error-50); color: var(--error-600); }
+.ipb .ipb-stat-card.tone-error { --accent: var(--error-500); }
+.ipb .ipb-stat-card.tone-info .ipb-stat-icon { background: var(--info-50); color: var(--info-600); }
+.ipb .ipb-stat-card.tone-info { --accent: var(--info-500); }
+.ipb .ipb-stat-card.tone-navy .ipb-stat-icon { background: var(--secondary-100); color: var(--secondary-700); }
+.ipb .ipb-stat-card.tone-navy { --accent: var(--secondary-500); }
+
+/* Empty / skeleton */
+.ipb .ipb-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+}
+.ipb .ipb-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 14px;
+}
+.ipb .ipb-empty-title {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.ipb .ipb-empty-sub { font-size: 13px; color: var(--text-muted); }
+.ipb .ipb-empty-action { margin-top: 16px; }
+
+/* Shared brand spinner — DataTables processing, AJAX overlays, inline "please wait" states.
+   Sizes via modifier; color/motion via tokens so it stays on-brand and theme-aware everywhere. */
+.ipb .ipb-spinner {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--border, #e2e8f0);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: ipbSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+.ipb .ipb-spinner--sm { width: 16px; height: 16px; border-width: 2px; }
+.ipb .ipb-spinner--lg { width: 44px; height: 44px; border-width: 4px; }
+
+/* Full-surface loading overlay — fixed (viewport) by default; add .is-inline for a
+   positioned ancestor (card/table wrap) instead of the whole screen. Toggle via the
+   .is-visible class (not display:none/show()) so the flex centering always applies. */
+.ipb .ipb-loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  background: rgba(248, 250, 252, 0.82);
+  backdrop-filter: blur(4px);
+  z-index: var(--z-overlay);
+}
+.ipb .ipb-loading-overlay.is-inline { position: absolute; }
+.ipb .ipb-loading-overlay.is-visible { display: flex; animation: ipbFade var(--dur-fast, 0.15s) ease both; }
+body.ipb[data-theme="dark"] .ipb-loading-overlay { background: rgba(10, 16, 30, 0.82); }
+.ipb .ipb-loading-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.ipb .ipb-loading-overlay-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* DataTables global empty / loading (saas.js defaults) */
+.ipb .ipb-dt-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  animation: ipbFade var(--dur-fast, 0.15s) ease both;
+}
+.ipb .ipb-dt-empty.ipb-empty {
+  padding: 28px 16px;
+}
+.ipb .ipb-date-range {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ipb .ipb-date-range-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.ipb .ipb-filter-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ipb .ipb-filter-reset:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.ipb .ipb-filter-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--primary-50, #fff4ed);
+  color: var(--primary-700, #c2410c);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* Touch targets (<=1024px): the toolbar's select/reset controls share the
+   desktop-only 38px compact row height (components.css .ipb-filter-select /
+   .ipb-list-toolbar .form-control above, both !important) — under the ~40px
+   tap-target floor on a touch screen. Bump on tablet/phone only; desktop
+   density (38px) is untouched. Needs !important to beat the base rule's own
+   !important at equal specificity. */
+@media (max-width: 1024px) {
+  .ipb .ipb-filter-select,
+  .ipb .ipb-list-toolbar .form-control,
+  .ipb .ipb-filter-reset,
+  .ipb .ipb-filter-count {
+    min-height: 40px !important;
+  }
+}
+.ipb .ipb-stat-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-500);
+  text-decoration: none;
+}
+.ipb .ipb-stat-link:hover { color: var(--primary-600); }
+.ipb .ipb-stat-footer {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.ipb .ipb-skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-hover) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: ipbShimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+
+/* ── Skeletons (04 §3) ────────────────────────────────────────────────────
+   Extends .ipb-skeleton above (shimmer; @keyframes ipbShimmer in base.css).
+   Theme-aware: the gradient uses --surface-2/--surface-hover, both of which
+   flip in the dark block, so no dark override is needed. Every skeleton
+   mirrors the real box so the swap causes zero CLS. */
+
+/* text bar — sits on the current line box, so it never changes a cell's height */
+.ipb .ipb-skeleton-text {
+  display: block;
+  height: .82em;
+  margin: .18em 0;
+  border-radius: 6px;
+}
+.ipb .ipb-skeleton-text.is-sm { width: 40%; }
+.ipb .ipb-skeleton-text.is-lg { height: 1.1em; }
+
+/* a skeleton table row is just real <tr><td> with a bar inside -> identical height */
+.ipb .ipb-skeleton-row > td { vertical-align: middle; }
+
+/* list-item / card skeleton */
+.ipb .ipb-skeleton-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* KPI skeleton — mirrors the .ipb-stat-card frame so the KPI grid does not
+   reflow. Measure your rendered .ipb-stat-card and adjust min-height if it drifts. */
+.ipb .ipb-skeleton-kpi {
+  min-height: 118px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+.ipb .ipb-skeleton-kpi .sk-value { height: 26px; width: 55%; }
+.ipb .ipb-skeleton-kpi .sk-label { height: 12px; width: 75%; }
+
+/* chart skeleton — reserve the chart's exact height so ApexCharts mounts into
+   the same box (no jump when the axis frame appears). Set --sk-chart-h per chart. */
+.ipb .ipb-skeleton-chart {
+  height: var(--sk-chart-h, 300px);
+  border-radius: var(--radius);
+}
+
+/* Table busy state — dim the current rows + a centred spinner, timed by JS
+   (list-filters.js). Sits ON TOP of whatever DataTables paints, so the
+   400ms-minimum can hold even after the real rows have already repainted underneath. */
+.ipb .dataTables_wrapper.is-loading,
+.ipb .table-responsive.is-loading,
+.ipb .box-body.is-loading { position: relative; }
+.ipb .is-loading > table > tbody,
+.ipb .is-loading .dataTables_scrollBody tbody {
+  opacity: .35;
+  pointer-events: none;
+  transition: opacity var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
+}
+.ipb .is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 34px; height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: ipbSpin .7s linear infinite;
+  z-index: var(--z-sticky, 5);
+}
+/* when our overlay is up, suppress DataTables' own centred box so they don't double */
+.ipb .is-loading .dataTables_processing { display: none !important; }
+
+/* Reduced motion: base.css already freezes the shimmer, but a frozen gradient
+   reads as a stray diagonal — flatten it to a flat tint so it looks intentional. */
+@media (prefers-reduced-motion: reduce) {
+  .ipb .ipb-skeleton { animation: none; background: var(--surface-2); }
+}
+
+/* Button/form loading state (04 §7a) — the label stays in the DOM (so
+   aria-busy readers still find it) but is made transparent; the spinner
+   rides in ::after. min-width is captured by JS before hiding the label so
+   the button doesn't collapse. */
+.ipb .btn.is-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+  cursor: progress;
+}
+.ipb .btn.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 16px; height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255, 255, 255, .55);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: ipbSpin .7s linear infinite;
+}
+/* light/ghost buttons: brand-tint the ring instead of white */
+.ipb .btn-default.is-loading::after,
+.ipb .btn-light.is-loading::after,
+.ipb .ipb-btn-ghost.is-loading::after {
+  border-color: var(--border);
+  border-top-color: var(--primary-500);
+}
+
+/* Empty/error state error tone (04 §8) */
+.ipb .ipb-empty.is-error .ipb-empty-icon { color: var(--error-600); }
+.ipb .ipb-empty.is-error .ipb-empty-title { color: var(--error-700); }
+
+/* Alerts */
+.ipb .alert {
+  border-radius: 10px !important;
+  border: 1px solid var(--border) !important;
+  font-weight: 600;
+}
+.ipb .alert-success { background: var(--success-50) !important; color: var(--success-700) !important; }
+.ipb .alert-danger { background: var(--error-50) !important; color: var(--error-700) !important; }
+.ipb .alert-warning { background: var(--warning-50) !important; color: var(--warning-700) !important; }
+.ipb .alert-info { background: var(--info-50) !important; color: var(--info-700) !important; }
+
+/* Select2 dropdown */
+.ipb .select2-dropdown {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  color: var(--text-primary) !important;
+}
+.ipb .select2-container--default .select2-results__option {
+  color: var(--text-primary, #0f172a) !important;
+}
+
+.ipb .select2-container--default .select2-results__option[aria-selected="true"],
+.ipb .select2-container--default .select2-results__option[aria-selected="true"]:hover,
+.ipb .select2-container--default .select2-results__option--highlighted,
+.ipb .select2-container--default .select2-results__option--highlighted[aria-selected],
+.ipb .select2-container--default .select2-results__option--highlighted[aria-selected="true"],
+.ipb .select2-container--default .select2-results__option--highlighted[aria-selected="true"]:hover {
+  background: var(--primary-500) !important;
+  color: #fff !important;
+}
+
+/* Command palette */
+.ipb .ipb-palette-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 12, 20, .55);
+  backdrop-filter: blur(2px);
+  z-index: var(--z-palette);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  animation: ipbFade var(--dur-fast, .15s) ease;   /* 05 §6.3 retokenized (was .15s) */
+}
+.ipb .ipb-palette-overlay.open { display: flex; }
+.ipb .ipb-palette {
+  width: min(560px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+  animation: ipbPop var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1));   /* 05 §6.3 retokenized */
+}
+.ipb .ipb-palette-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.ipb .ipb-palette-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+.ipb .ipb-palette-list {
+  max-height: 52vh;
+  overflow-y: auto;
+  padding: 8px;
+}
+.ipb .ipb-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.ipb .ipb-palette-item.active,
+.ipb .ipb-palette-item:hover { background: var(--surface-hover); }
+.ipb .ipb-palette-item .hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.ipb .ipb-palette-foot {
+  padding: 9px 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── 05 §3.8 — toggle switch (opt-in, no markup churn until a screen adopts it) */
+.ipb .ipb-switch { position: relative; width: 40px; height: 22px; display: inline-block; }
+.ipb .ipb-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.ipb .ipb-switch-track {
+  position: absolute; inset: 0; border-radius: 999px; background: var(--border-strong);
+  transition: background var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
+}
+.ipb .ipb-switch-thumb {
+  position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: var(--shadow-1);
+  transition: transform var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
+}
+.ipb .ipb-switch input:checked ~ .ipb-switch-track { background: var(--primary-500); }
+.ipb .ipb-switch input:checked ~ .ipb-switch-thumb { transform: translateX(18px); }
+
+/* ── 05 §3.9 — checkbox check-draw (SVG stroke, opt-in) */
+.ipb-check svg { width: 22px; height: 22px; fill: none; stroke: var(--primary-500); stroke-width: 3;
+  stroke-linecap: round; stroke-linejoin: round; }
+.ipb-check svg path { stroke-dasharray: 26; stroke-dashoffset: 26;
+  transition: stroke-dashoffset var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1)); }
+.ipb-check input { position: absolute; opacity: 0; }
+.ipb-check input:checked ~ svg path { stroke-dashoffset: 0; }
+
+/* ── 05 §4.1 — staggered row reveal (paired with saas.js ipbStaggerRows) */
+.ipb .ipb-reveal {
+  animation: ipbRowIn var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1)) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+@keyframes ipbRowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── 05 §8 — skeleton -> content crossfade (ties to doc 04's .ipb-skeleton).
+   Contract: the loading helper adds .is-ready to the wrapper the moment real
+   content is injected. Skeleton fades out (ease-in), real content fades up
+   (ease-out) — exit shorter than enter, per the motion hard rules. */
+.ipb .ipb-skel-swap { position: relative; }
+.ipb .ipb-skel-swap > .ipb-skeleton { transition: opacity var(--dur, .18s) var(--ease-in, cubic-bezier(.4,0,1,.6)); }
+.ipb .ipb-skel-swap.is-ready > .ipb-skeleton { opacity: 0; pointer-events: none; }
+.ipb .ipb-skel-swap > .ipb-real { animation: ipbVTIn var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1)) both; }

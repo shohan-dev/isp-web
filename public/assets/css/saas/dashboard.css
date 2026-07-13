@@ -1,0 +1,1084 @@
+/* Super Admin dashboard — matches isp-pay-bd-saas-redesign.jsx AdminDashboard */
+
+.ipb-dash {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.ipb-section-label {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* Group/Separate toggle lives once in the dashboard toolbar (.ipb-btn-outline) —
+   not repeated per section, which read as clutter.
+
+   Grouped mode used to just hide each section's label and close the vertical
+   gap between them — but four SEPARATE grids can never share a row (a partial
+   last row in one section can't be filled by the next section's cards), so it
+   still showed visible seams at every boundary. Real fix: the cards are
+   physically moved (by the script below) into one shared .ipb-metrics-merged
+   grid so they flow as a single continuous list with zero seams.
+
+   .ipb-metrics-merged lives INSIDE the Customer Metrics widget (.ipb-metrics-host)
+   rather than as its own top-level grid item — customize.js re-appends every
+   TRACKED widget to the end of the grid on load/reorder (see applyWidgets()),
+   which would leave an untracked standalone node stranded wherever it started
+   while everything else migrated past it. Nesting it inside a tracked widget
+   means it inherits that widget's position for free. */
+[data-ipb-metrics-group-toggle].is-active {
+  background: var(--primary-50) !important;
+  border-color: var(--primary-500) !important;
+  color: var(--primary-600) !important;
+}
+.ipb-dash-grid.is-metrics-grouped .ipb-metrics-section:not(.ipb-metrics-host) {
+  display: none;
+}
+.ipb-dash-grid.is-metrics-grouped .ipb-metrics-host > div:not(.ipb-metrics-merged) {
+  display: none;
+}
+.ipb-metrics-merged {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 240px));
+}
+
+/* Dashboard list skeletons — wires the shared .ipb-skeleton / .ipb-skel-swap
+   crossfade system (components.css §05.8) into the three AJAX-loaded lists
+   (Geo Revenue, Package Distribution, Payment Method) that previously either
+   showed a bare spinner + "Loading…" text or nothing at all, then hard-swapped
+   straight to final content with zero transition.
+
+   .ipb-skeleton-list is the row CONTAINER — it carries the .ipb-skeleton class
+   only so `.ipb-skel-swap > .ipb-skeleton` matches it for the fade-out, not
+   because the container itself should shimmer (its own background/animation
+   are neutralized here); the shimmer belongs to the .ipb-skeleton-text bars
+   inside each row. */
+.ipb-skeleton-list {
+  background: none;
+  animation: none;
+}
+.ipb-skeleton-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.ipb-skeleton-list-row .ipb-skeleton-text {
+  margin: 0;
+}
+
+.ipb-dash-kpi,
+.ipb-dash-mini {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.ipb-dash-mini {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 240px));
+  gap: 14px;
+}
+
+/* KPI card — JSX StatCard.
+   Icon + value share a row (grid-area, not DOM order); label + CTA sit full-width
+   below. Cuts the "icon on its own row" dead space that made cards feel sparse. */
+.ipb-kpi {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icon  value"
+    "label label"
+    "cta   cta";
+  align-items: center;
+  column-gap: 14px;
+  text-decoration: none !important;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-1);
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  color: inherit !important;
+  transition: transform var(--dur, .16s) ease, box-shadow var(--dur, .16s) ease, border-color var(--dur, .16s) ease;
+}
+
+/* Accent bar reveals on hover/focus only — an always-on stripe across every card in
+   a grid of 15-20 reads as a "rainbow row" rather than premium. The icon chip alone
+   carries the tone signal at rest; the bar is a delighter, not a permanent label. */
+.ipb-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--kpi-accent, var(--primary-500));
+  opacity: 0;
+  transform: scaleX(0.4);
+  transform-origin: left;
+  transition: opacity var(--dur, .18s) ease, transform var(--dur, .18s) ease;
+}
+
+.ipb-kpi:hover,
+.ipb-kpi:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+  border-color: var(--kpi-accent, var(--primary-500));
+  color: inherit !important;
+}
+
+.ipb-kpi:hover::before,
+.ipb-kpi:focus-visible::before {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* Reduced-motion: transition:none is covered by base.css's canonical guard
+   (05 §10); transform:none is kept — the guard zeroes durations, not
+   magnitudes, so a hover lift would still jump instantly without this. */
+@media (prefers-reduced-motion: reduce) {
+  .ipb-kpi:hover { transform: none; }
+}
+
+/* Compact tier reads as an unfinished stat tile at the old sizing — smaller
+   icon/value than the hero row AND (in markup) no CTA line, so it dead-ends
+   instead of inviting a click. Bring it closer to the hero card's weight;
+   keep it a step down (not identical) so the top-5 KPI row still reads as
+   the primary hierarchy. */
+.ipb-kpi.compact { padding: 16px; }
+
+.ipb-kpi-top {
+  grid-area: icon;
+  display: flex;
+}
+
+.ipb-kpi-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: var(--kpi-icon-bg);
+  color: var(--kpi-icon-fg);
+  box-shadow: var(--shadow-inset, inset 0 1px 0 rgba(255, 255, 255, .5), inset 0 0 0 1px rgba(15, 23, 42, .03));
+}
+
+.ipb-kpi.compact .ipb-kpi-icon { width: 38px; height: 38px; border-radius: 11px; font-size: 16px; }
+
+.ipb-kpi-value {
+  grid-area: value;
+  /* min-width:0 is load-bearing here — grid items default to a min-width based on
+     their content, so a long value ("35200 (70)") couldn't shrink and was getting
+     silently clipped by .ipb-kpi's overflow:hidden instead of fitting the column. */
+  min-width: 0;
+  font-size: clamp(17px, 2.1vw, 26px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+
+.ipb-kpi.compact .ipb-kpi-value { font-size: clamp(16px, 1.9vw, 22px); }
+.ipb-kpi.compact .ipb-kpi-cta { margin-top: 10px; }
+
+.ipb-kpi-label {
+  grid-area: label;
+  min-width: 0;
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  /* 03 §8 — was single-line ellipsis: "Employee Payment Received" and
+     "…Pending" both truncated identically to "Employee Payment…", losing the
+     distinguishing word. Wrap to 2 lines instead. */
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.3em;
+  line-height: 1.15;
+}
+
+/* Customer-quota card's progress bar is an extra unnamed child — span full width
+   below the label instead of being auto-placed into the narrow icon column. */
+.ipb-kpi > .progress {
+  grid-column: 1 / -1;
+}
+
+.ipb-kpi-cta {
+  grid-area: cta;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--kpi-accent, var(--primary-500));
+  opacity: 0.9;
+}
+
+.ipb-kpi.tone-brand { --kpi-accent: var(--primary-500); --kpi-icon-bg: linear-gradient(135deg, var(--primary-100), var(--primary-50)); --kpi-icon-fg: var(--primary-600); }
+.ipb-kpi.tone-success { --kpi-accent: var(--success-500); --kpi-icon-bg: linear-gradient(135deg, var(--success-50), var(--surface)); --kpi-icon-fg: var(--success-600); }
+.ipb-kpi.tone-warning { --kpi-accent: var(--warning-500); --kpi-icon-bg: linear-gradient(135deg, var(--warning-50), var(--surface)); --kpi-icon-fg: var(--warning-600); }
+.ipb-kpi.tone-error { --kpi-accent: var(--error-500); --kpi-icon-bg: linear-gradient(135deg, var(--error-50), var(--surface)); --kpi-icon-fg: var(--error-600); }
+.ipb-kpi.tone-info { --kpi-accent: var(--info-500); --kpi-icon-bg: linear-gradient(135deg, var(--info-50), var(--surface)); --kpi-icon-fg: var(--info-600); }
+.ipb-kpi.tone-navy { --kpi-accent: var(--secondary-500); --kpi-icon-bg: linear-gradient(135deg, var(--secondary-100), var(--surface)); --kpi-icon-fg: var(--secondary-700); }
+
+/* Insights panel */
+.ipb-insights {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  padding: 22px;
+  border: none;
+  background: linear-gradient(135deg, var(--secondary-800), var(--secondary-900) 60%, #1a0f2e);
+  color: #fff;
+  box-shadow: var(--shadow-2);
+}
+
+.ipb-insights-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ipb-insights-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.ipb-insights-title {
+  font-weight: 800;
+  font-size: 14px;
+  color: #fff;
+}
+
+.ipb-insights-head .ipb-badge { margin-left: auto; }
+
+.ipb-insights-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, .92);
+}
+
+.ipb-insights-row:last-child { border-bottom: 0; }
+
+.ipb-insights-ic {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.ipb-insights-ic.success { color: #4ade80; }
+.ipb-insights-ic.warning { color: #fbbf24; }
+.ipb-insights-ic.info { color: #60a5fa; }
+
+/* Cards */
+.ipb-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+  padding: 18px 20px;
+  height: 100%;
+}
+
+.ipb-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ipb-card-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.ipb-card-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.ipb-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: var(--success-50);
+  color: var(--success-600);
+}
+
+.ipb-status-pill.error {
+  background: var(--error-50);
+  color: var(--error-600);
+}
+
+.ipb-status-pill .status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.ipb-status-pill .status-dot.online { background: var(--success-500); }
+.ipb-status-pill .status-dot.error { background: var(--error-500); }
+
+/* 12-col grid */
+.ipb-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  grid-auto-flow: row dense;
+}
+
+.ipb-span-4 { grid-column: span 4; min-width: 0; }
+.ipb-span-6 { grid-column: span 6; min-width: 0; }
+.ipb-span-8 { grid-column: span 8; min-width: 0; }
+.ipb-span-12 { grid-column: span 12; min-width: 0; }
+
+@media (max-width: 1024px) {   /* was 1180px — folded into the 03 §1.3 ladder */
+  .ipb-span-4,
+  .ipb-span-6,
+  .ipb-span-8,
+  .ipb-span-12 { grid-column: span 12; }
+}
+
+.ipb-growth {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ipb-growth.up { color: var(--success-700); background: var(--success-50); }
+.ipb-growth.down { color: var(--error-700); background: var(--error-50); }
+.ipb-growth.warn { color: var(--warning-700); background: var(--warning-50); }
+
+/* The read-out under a donut (Package Distribution, Payment Method Mix) and the
+   ticket counts under the Collection & Support ring are the same thing: a keyed
+   legend row. One component, so the three cards stop each inventing their own
+   (these lists used to be built in JS with inline borders and paddings). */
+.ipb-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  /* 8px/10px ran the rows at the chip's minimum: the text sat on the border, the
+     count sat on the opposite border, and stacked they read as one dense block
+     rather than a list. */
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  /* --surface-2 (#f1f4f9) sits only ~4% off --surface (#ffffff) — with just a 1px
+     border, the row read as barely distinguishable from the card underneath it,
+     which is what made a real 10px gap + 13/16px padding still look like "no
+     space, no padding" at a glance. The shadow gives the row a visible edge the
+     background-tint difference alone could not. */
+  background: var(--surface-2);
+  box-shadow: var(--shadow-1);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.ipb-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: var(--dot, var(--primary-500));
+}
+
+.ipb-legend-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ipb-legend-val {
+  margin-left: auto;
+  padding-left: 14px;   /* never let a long name touch its own count */
+  color: var(--text-primary);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;   /* counts stay column-aligned across rows */
+}
+
+/* An unused payment method is still worth showing (it says the rail is wired up)
+   but it is not worth reading first — the Mix card was 6 rows of "0%" competing
+   with the 2 rows that carry the data. */
+.ipb-legend-row.is-zero {
+  opacity: 0.5;
+}
+
+.ipb-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 12px;
+  /* The list was starting 12px under the donut, so the chart's own bottom padding
+     was the only thing separating them and the two read as one lump. */
+  margin-top: 20px;
+}
+
+/* Collection & Support — ring on top, the four ticket counts under it, at every
+   width. Side by side, the ring took the left and left the counts squeezed into
+   the leftover ~120px; stacked, the ring is the headline and the counts read as
+   a tidy row of chips beneath it. */
+.ipb-support-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0 4px;
+}
+
+/* The radialBar chart, at the same weight as the donut in Payment Method Mix.
+   (This replaced a 90px CSS conic-gradient ring that stood in for the chart while
+   the real one sat at display:none — hence .ipb-support-ring / -ring-inner /
+   -pct / -sub are gone with it.) */
+.ipb-support-chart {
+  width: 100%;
+  min-width: 0;
+}
+
+/* One chip per row. auto-fit put all four on a single line on a card this wide,
+   which squeezed each one to ~104px — enough to truncate "Ongoing" to "Ongoi…" —
+   while the card still had empty space below them. A column reads as a list
+   (label left, count right, aligned down the edge) and uses the height. */
+.ipb-support-legend {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;   /* same rhythm as .ipb-list-grid — these are the same component */
+  width: 100%;
+}
+
+.ipb-router-select { margin-bottom: 10px; }
+.ipb-router-select .form-control { max-width: 280px; }
+
+/* Router switch, first load for that router: dim the chart in place rather than
+   emptying it. Keeping the old plot on screen (greyed) is what makes the switch
+   feel instant — an empty grid reads as "broken", a dimmed one reads as "loading". */
+#bandwidthUsageChart.is-bw-loading {
+  opacity: .45;
+  pointer-events: none;
+  transition: opacity var(--dur-fast, .15s) ease;
+}
+
+/* ── Geo Revenue ─────────────────────────────────────────────────────────── */
+.ipb-geo-card { overflow: hidden; }
+
+.ipb-geo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 18px;
+}
+
+.ipb-geo-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ipb-geo-stat {
+  min-width: 96px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2, #f8fafc);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ipb-geo-stat-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-geo-stat strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  line-height: 1.2;
+}
+
+.ipb-geo-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 12px 0 14px;
+  width: 100%;
+}
+
+.ipb-geo-search {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  flex: none;
+}
+
+.ipb-geo-search i {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 16px;
+  text-align: center;
+  color: var(--text-muted, #94a3b8);
+  font-size: 14px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+body.ipb .ipb-geo-search .form-control,
+body.ipb .ipb-geo-search .ipb-geo-search-input,
+.ipb-geo-search .form-control,
+.ipb-geo-search .ipb-geo-search-input {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+  height: 44px !important;
+  margin: 0 !important;
+  padding: 10px 14px 10px 42px !important;
+  border: 1.5px solid var(--border, #e6eaf0) !important;
+  border-radius: 12px !important;
+  background: var(--surface, #fff) !important;
+  color: var(--text-primary, #0f172a) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  box-shadow: none !important;
+}
+
+body.ipb .ipb-geo-search .form-control::placeholder,
+.ipb-geo-search .ipb-geo-search-input::placeholder {
+  color: var(--text-muted, #94a3b8) !important;
+  opacity: 1;
+}
+
+body.ipb .ipb-geo-search .form-control:focus,
+.ipb-geo-search .ipb-geo-search-input:focus {
+  border-color: var(--primary-500, #f75803) !important;
+  box-shadow: var(--shadow-focus, 0 0 0 3.5px var(--focus-glow, rgba(247, 88, 3, .16))) !important;
+  outline: none !important;
+}
+
+body.ipb .ipb-geo-search .form-control:disabled,
+.ipb-geo-search .ipb-geo-search-input:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+  background: var(--surface-2, #f8fafc) !important;
+}
+
+.ipb-geo-hint {
+  align-self: flex-end;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+}
+
+.ipb-geo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.ipb-geo-row {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  transition: border-color var(--dur-fast, .15s) ease, box-shadow var(--dur-fast, .15s) ease, transform var(--dur-fast, .15s) ease;
+}
+
+.ipb-geo-row:hover {
+  border-color: var(--primary-300, #fdba74);
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(15, 23, 42, .06));
+}
+
+/* Rank tones are the brand colour at two strengths — they used to be a hardcoded
+   blue (#3b82f6) and green (#10b981), which not only fought the orange rank chip
+   and bar sitting next to them, but ignored the tenant's Theme Studio primary
+   entirely: a blue-branded ISP still got an orange list with blue highlights. */
+.ipb-geo-row.is-top {
+  border-color: rgba(var(--primary-rgb, 247, 88, 3), .38);
+  background: rgba(var(--primary-rgb, 247, 88, 3), .06);
+}
+
+.ipb-geo-row.is-high {
+  border-color: rgba(var(--primary-rgb, 247, 88, 3), .2);
+}
+
+.ipb-geo-rank {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--primary-700, #c2410c);
+  background: var(--primary-50, #fff7ed);
+  align-self: center;
+}
+
+/* #1 reads as the brand at full strength; the rest keep the soft primary chip. */
+.ipb-geo-row.is-top .ipb-geo-rank {
+  color: #fff;
+  background: var(--primary-500, #f75803);
+}
+
+.ipb-geo-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ipb-geo-row-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.ipb-geo-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-geo-name i {
+  color: var(--primary-500, #f75803);
+  flex-shrink: 0;
+}
+
+.ipb-geo-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ipb-geo-amount {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.ipb-geo-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2, #f1f5f9);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+/* Flat primary, not the primary->#60a5fa gradient: the bar encodes ONE quantity
+   (share of revenue), so a colour ramp along its length reads as a second
+   dimension that isn't there — and the blue end was off-brand besides. */
+.ipb-geo-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary-500, #f75803);
+  min-width: 4px;
+  transition: width var(--dur-slow, .25s) ease;
+}
+
+.ipb-geo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748b);
+}
+
+.ipb-geo-meta i {
+  margin-right: 4px;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-geo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--text-muted, #94a3b8);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface-2, #f8fafc);
+}
+
+.ipb-geo-empty i {
+  font-size: 22px;
+  margin-bottom: 4px;
+  color: var(--primary-400, #fb923c);
+}
+
+.ipb-geo-empty p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-geo-empty span {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .ipb-geo-stat { min-width: calc(33.33% - 6px); }
+  .ipb-geo-amount { font-size: 13px; }
+  .ipb-geo-list { max-height: 360px; }
+}
+
+.ipb-hidden-metrics {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+}
+
+/* Platform admin revenue widgets */
+.ipb-admin-month-list,
+.ipb-admin-pkg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ipb-admin-month-row,
+.ipb-admin-pkg-row {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+}
+
+.ipb-admin-month-top,
+.ipb-admin-pkg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ipb-admin-month-top strong,
+.ipb-admin-pkg-row span {
+  color: var(--text-primary, #0f172a);
+  font-size: 13.5px;
+}
+
+.ipb-admin-month-top span,
+.ipb-admin-pkg-row strong {
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.ipb-admin-month-bar {
+  height: 8px;
+  margin: 8px 0 4px;
+  border-radius: 999px;
+  background: var(--surface-2, #eef2f7);
+  overflow: hidden;
+}
+
+.ipb-admin-month-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary-500, #f75803), #fb923c);
+}
+
+.ipb-admin-month-meta {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-admin-pkg-row i {
+  margin-right: 6px;
+  color: var(--primary-500, #f75803);
+}
+
+/* ApexCharts containers */
+.ipb-card [id$="Chart"] { min-height: 240px; }
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .ipb-dash-kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ipb-dash-mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ipb-metrics-merged { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ipb-dash-grid { grid-template-columns: repeat(6, 1fr); }
+  .ipb-span-4,
+  .ipb-span-6,
+  .ipb-span-8,
+  .ipb-span-12 { grid-column: span 6; }
+  .ipb-router-select .form-control { max-width: 100%; }
+  /* POP Live Status "View details" is a real <a> here — unlike every other tone-*
+     KPI card, where the whole card is the link, this one's own text (11.5px, no
+     padding) is the only tappable area. Under the ~44px touch-target floor on a
+     touch tablet. */
+  a.ipb-kpi-cta { min-height: 44px; }
+  /* Geo Revenue search pins font-size:14px !important, which trips iOS Safari's
+     auto-zoom-on-focus (inputs <16px). --text-input is 02 §5's documented cure
+     and never resolves below 16px. */
+  body.ipb .ipb-geo-search .form-control,
+  body.ipb .ipb-geo-search .ipb-geo-search-input,
+  .ipb-geo-search .form-control,
+  .ipb-geo-search .ipb-geo-search-input {
+    font-size: var(--text-input) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .ipb-dash-kpi,
+  .ipb-dash-mini,
+  .ipb-metrics-merged { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ipb-kpi-value { font-size: 20px; }
+  /* admin.php/user.php pin these revenue & status values to an inline
+     style="font-size:22px", which out-specifies the rule above — force the
+     intended mobile downscale so a platform-wide total ("৳12,345,678") has
+     room in the narrow single-column card instead of crowding the label below it. */
+  .ipb-kpi-value[style*="font-size:22px"] { font-size: 20px !important; }
+  .ipb-list-grid { grid-template-columns: 1fr; }
+  .ipb-router-select .form-control { max-width: 100%; }
+  .ipb-card [id$="Chart"] { min-height: 200px; }
+  /* Same touch-target and iOS-zoom fixes as the tablet block above — this
+     query's condition stays true all the way down to phone width too. */
+  a.ipb-kpi-cta { min-height: 44px; }
+  body.ipb .ipb-geo-search .form-control,
+  body.ipb .ipb-geo-search .ipb-geo-search-input,
+  .ipb-geo-search .form-control,
+  .ipb-geo-search .ipb-geo-search-input {
+    font-size: var(--text-input) !important;
+  }
+  /* .ipb-admin-month-top / .ipb-admin-pkg-row is a plain space-between flex row
+     with no min-width:0 on its children — a long package name or month label
+     (real data, not a fixed enum) pushes the row past the card's edge instead of
+     truncating, since flex items default to min-width:auto. */
+  .ipb-admin-month-top strong,
+  .ipb-admin-pkg-row span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ipb-admin-month-top span,
+  .ipb-admin-pkg-row strong {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Phone density pass. This tier used to drop to a single 1fr column of
+     full-size cards, so one KPI ate ~120px of height — a 42px icon, a value, a
+     label and a "View details" line, mostly whitespace, and five of them meant
+     scrolling past a screen and a half of near-empty cards. Two-up compact grid
+     instead: four KPIs now fit where one used to sit.
+     body.ipb + !important is required, not decorative — responsive.css pins
+     `body.ipb .ipb-dash-kpi { grid-template-columns: 1fr !important }` at this
+     tier, and a bare .ipb-dash-kpi loses that on specificity no matter which
+     file loads last. */
+  body.ipb .ipb-dash-kpi,
+  body.ipb .ipb-dash-mini,
+  body.ipb .ipb-metrics-merged {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+
+  body.ipb .ipb-kpi,
+  body.ipb .ipb-kpi.compact {
+    padding: 12px;
+    border-radius: 14px;
+    column-gap: 10px;
+  }
+
+  body.ipb .ipb-kpi-icon,
+  body.ipb .ipb-kpi.compact .ipb-kpi-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  body.ipb .ipb-kpi-value,
+  body.ipb .ipb-kpi.compact .ipb-kpi-value { font-size: 17px; }
+  /* Re-pin the inline-22px values (see 767px block) one step further down. */
+  body.ipb .ipb-kpi-value[style*="font-size:22px"] { font-size: 17px !important; }
+
+  body.ipb .ipb-kpi-label {
+    margin-top: 6px;
+    font-size: 11.5px;
+    line-height: 1.35;
+  }
+
+  /* The whole card is the <a>, so "View details ›" spends a third of a 2-up
+     card repeating what tapping it already does. Drop it — but only where it is
+     decorative. A real <a class="ipb-kpi-cta"> (router cards, POP live status)
+     is the ONLY tappable thing in its card, and .has-meta carries a count
+     ("12 payments · View report"), so both stay. */
+  body.ipb .ipb-kpi > div.ipb-kpi-cta:not(.has-meta) { display: none; }
+
+  body.ipb .ipb-kpi > div.ipb-kpi-cta.has-meta {
+    margin-top: 8px;
+    font-size: 11px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Phone pass for everything BELOW the KPI row — toolbar, chart cards, the
+   support ring and the geo stats. These all still carried desktop chrome at
+   phone width: 20px card padding on a ~400px screen, a right-aligned toolbar
+   that stranded its third button on its own row, and chart cards whose SVG
+   could out-measure the card. Loaded after customize.css/responsive.css, so
+   equal-specificity rules here win.
+   ════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  /* Toolbar: customize.css uses justify-content:flex-end + wrap, which on a
+     phone reads as ragged — "Separate Metrics"/"Theme Studio" right-aligned on
+     one row and "Customize" stranded on the next. Split the row evenly instead:
+     two buttons up, and the third (flex-grow) fills the row below it. */
+  .ipb-dash-toolbar {
+    justify-content: stretch;
+  }
+
+  .ipb-dash-toolbar .ipb-btn-outline {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+    padding: 7px 10px;
+    white-space: nowrap;
+  }
+
+  /* Cards: 18px/20px of desktop padding leaves a ~400px screen with a content
+     column barely 340px wide — the charts and lists inside were paying for it. */
+  .ipb-card {
+    padding: 14px;
+  }
+
+  .ipb-card-head {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .ipb-card-title { font-size: 14px; }
+  .ipb-card-sub { font-size: 11.5px; }
+
+  /* Chart hosts are grid/flex children: without min-width:0 they refuse to size
+     below their content, so an ApexCharts SVG measured at a wider layout keeps
+     the card (and the page with it) wider than the viewport instead of scaling
+     back down to it. max-width caps the canvas at the card either way. */
+  .ipb-card > [id$="Chart"] {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .ipb-card .apexcharts-canvas {
+    max-width: 100% !important;
+  }
+
+  /* Phone keeps the same shape as desktop — chart on top, counts below. The
+     column direction is now set once, in the base rule; the rule that used to
+     re-declare it here (and a third one in responsive.css) are gone. */
+  /* Trimmed from the desktop 13/16, not collapsed back to the old cramped 7/9 —
+     these rows need to stay tappable and readable, not just small. */
+  body.ipb .ipb-legend-row {
+    padding: 12px 14px;
+    font-size: 12.5px;
+  }
+
+  /* Geo stats: min-width:96px + wrap gave a ragged last row (three up, one
+     orphan). Even halves instead. */
+  .ipb-geo-summary { width: 100%; }
+
+  .ipb-geo-stat {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Close the last of the dead space: 16px grid gutters between full-width
+     cards on a 400px screen is 8% of the viewport spent on air. */
+  .ipb-dash { gap: 12px; }
+  .ipb-dash-grid { gap: 12px; }
+  .ipb-section-label { margin-bottom: 8px; }
+  .ipb-card { padding: 12px; }
+  .ipb-card [id$="Chart"] { min-height: 190px; }
+}

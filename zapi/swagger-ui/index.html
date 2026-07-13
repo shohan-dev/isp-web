@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAPI Swagger UI</title>
+  <link rel="stylesheet" href="__SWAGGER_CSS_URL__">
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="__SWAGGER_BUNDLE_URL__"></script>
+  <script>
+    window.onload = function () {
+      window.ui = SwaggerUIBundle({
+        url: "__SWAGGER_JSON_URL__",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis],
+        layout: "BaseLayout",
+        tryItOutEnabled: true,
+        persistAuthorization: true,
+        displayRequestDuration: true,
+        filter: true,
+        queryConfigEnabled: true,
+        docExpansion: "list",
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 1,
+        displayOperationId: false,
+        showCommonExtensions: true,
+        showExtensions: true,
+        supportedSubmitMethods: ["get", "post", "put", "delete", "patch"]
+      });
+    };
+  </script>
+</body>
+</html>

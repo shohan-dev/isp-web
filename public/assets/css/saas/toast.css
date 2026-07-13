@@ -1,0 +1,274 @@
+/**
+ * Premium Tata toast overrides (global)
+ */
+
+/* 05 §7.1 — spring enter from the edge. Non-invasive (no tata.js edits). */
+body.ipb .tata { animation: ipbToastIn var(--dur-slow, .28s) var(--ease-spring, cubic-bezier(.22,1.2,.36,1)) both; }
+@keyframes ipbToastIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+
+body.ipb .tata {
+  position: fixed !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  width: min(360px, calc(100vw - 24px)) !important;
+  min-height: 0 !important;
+  padding: 14px 40px 14px 14px !important;
+  border-radius: 14px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-sans, 'Satoshi', system-ui, sans-serif) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  box-shadow: var(--shadow-2, 0 16px 40px rgba(15, 23, 42, 0.14)) !important;
+  z-index: var(--z-toast) !important;
+  overflow: hidden !important;
+  pointer-events: auto !important;
+}
+
+body.ipb .tata::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--text-muted);
+}
+
+body.ipb .tata .tata-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  border-radius: 10px !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  flex: 0 0 36px !important;
+  background: var(--surface-hover) !important;
+  color: var(--text-secondary) !important;
+}
+
+body.ipb .tata .tata-body {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+body.ipb .tata .tata-title {
+  margin: 0 0 3px !important;
+  padding: 0 !important;
+  color: var(--text-primary, #0f172a) !important;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.25 !important;
+}
+
+body.ipb .tata .tata-text {
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--text-secondary, #51607a) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  word-break: break-word !important;
+}
+
+body.ipb .tata .tata-close {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: var(--text-muted) !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  outline: none !important;
+}
+
+body.ipb .tata .tata-close:hover {
+  background: var(--surface-hover) !important;
+  color: var(--text-primary, #0f172a) !important;
+  opacity: 1 !important;
+}
+
+body.ipb .tata .tata-progress,
+body.ipb .tata-progress {
+  position: absolute !important;
+  left: 0 !important;
+  right: auto !important;
+  bottom: 0 !important;
+  height: 3px !important;
+  border-radius: 0 0 14px 14px !important;
+  background: rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Types */
+body.ipb .tata.success {
+  background: var(--surface) !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+
+body.ipb .tata.success::before {
+  background: var(--success-500, #16a34a);
+}
+
+body.ipb .tata.success .tata-icon {
+  background: var(--success-100, #dcfce7) !important;
+  color: var(--success-600, #15803d) !important;
+}
+
+body.ipb .tata.success .tata-progress {
+  background: var(--success-500, #16a34a) !important;
+}
+
+body.ipb .tata.error {
+  background: var(--surface) !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+
+body.ipb .tata.error::before {
+  background: var(--error-500, #dc2626);
+}
+
+body.ipb .tata.error .tata-icon {
+  background: var(--error-100, #fee2e2) !important;
+  color: var(--error-600, #b91c1c) !important;
+}
+
+body.ipb .tata.error .tata-progress {
+  background: var(--error-500, #dc2626) !important;
+}
+
+body.ipb .tata.info,
+body.ipb .tata.text,
+body.ipb .tata.log {
+  background: var(--surface) !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+
+body.ipb .tata.info::before,
+body.ipb .tata.text::before,
+body.ipb .tata.log::before {
+  background: var(--info-500, #2563eb);
+}
+
+body.ipb .tata.info .tata-icon,
+body.ipb .tata.text .tata-icon,
+body.ipb .tata.log .tata-icon {
+  background: var(--info-100, #dbeafe) !important;
+  color: var(--info-600, #1d4ed8) !important;
+}
+
+body.ipb .tata.info .tata-progress,
+body.ipb .tata.text .tata-progress,
+body.ipb .tata.log .tata-progress {
+  background: var(--info-500, #2563eb) !important;
+}
+
+body.ipb .tata.warn {
+  background: var(--surface) !important;
+  color: var(--text-primary, #0f172a) !important;
+}
+
+body.ipb .tata.warn::before {
+  background: var(--warning-500, #d97706);
+}
+
+body.ipb .tata.warn .tata-icon {
+  background: var(--primary-100, #ffedd5) !important;
+  color: var(--primary-700, #c2410c) !important;
+}
+
+body.ipb .tata.warn .tata-progress {
+  background: var(--warning-500, #d97706) !important;
+}
+
+body.ipb .tata.ask::before {
+  background: #7c3aed;
+}
+
+body.ipb .tata.ask .tata-icon {
+  background: var(--violet-100, #ede9fe) !important;
+  color: var(--violet-600, #6d28d9) !important;
+}
+
+/* Position under topbar */
+body.ipb .tata.top-right {
+  top: 76px !important;
+  right: 16px !important;
+}
+
+body.ipb .tata.top-left {
+  top: 76px !important;
+  left: 16px !important;
+}
+
+body.ipb .tata.top-mid {
+  top: 76px !important;
+}
+
+body.ipb .tata.bottom-right {
+  right: 16px !important;
+  bottom: 20px !important;
+}
+
+body.ipb .tata.bottom-left {
+  left: 16px !important;
+  bottom: 20px !important;
+}
+
+/* Dark mode */
+body.ipb[data-theme="dark"] .tata,
+body.ipb.dark-mode .tata {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: #eef2f9 !important;
+  box-shadow: var(--shadow-2, 0 16px 40px rgba(0, 0, 0, 0.35)) !important;
+}
+
+body.ipb[data-theme="dark"] .tata .tata-title,
+body.ipb.dark-mode .tata .tata-title {
+  color: #eef2f9 !important;
+}
+
+body.ipb[data-theme="dark"] .tata .tata-text,
+body.ipb.dark-mode .tata .tata-text {
+  color: #9aa7c2 !important;
+}
+
+body.ipb[data-theme="dark"] .tata .tata-close:hover,
+body.ipb.dark-mode .tata .tata-close:hover {
+  background: #1a2234 !important;
+  color: #eef2f9 !important;
+}
+
+@media (max-width: 767px) {
+  body.ipb .tata,
+  body.ipb .tata.top-right,
+  body.ipb .tata.top-left,
+  body.ipb .tata.top-mid {
+    top: 68px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    transform: none !important;
+  }
+}

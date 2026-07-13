@@ -1,0 +1,63 @@
+[01-Dec-2025 19:11:40 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[10-Dec-2025 14:29:21 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[11-Dec-2025 11:40:17 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[11-Dec-2025 11:40:40 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[30-Jan-2026 19:06:30 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[30-Jan-2026 19:06:33 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[30-Jan-2026 19:06:39 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[30-Jan-2026 19:10:22 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[30-Jan-2026 19:29:22 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[24-Feb-2026 14:21:58 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 14:21:58 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[24-Feb-2026 16:02:33 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 16:02:34 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[24-Feb-2026 16:02:39 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 16:02:40 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 16:02:40 Etc/UTC] PHP Deprecated:  rtrim(): Passing null to parameter #1 ($string) of type string is deprecated in /home/isppaybd/public_html/assets/img/logo/404.php on line 386
+[24-Feb-2026 16:02:43 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 16:02:43 Etc/UTC] PHP Deprecated:  rtrim(): Passing null to parameter #1 ($string) of type string is deprecated in /home/isppaybd/public_html/assets/img/logo/404.php on line 386
+[24-Feb-2026 16:02:59 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 16:03:00 Etc/UTC] PHP Fatal error:  Uncaught Error: Call to undefined function fm_show_footer_login() in /home/isppaybd/public_html/assets/img/logo/404.php:375
+Stack trace:
+#0 {main}
+  thrown in /home/isppaybd/public_html/assets/img/logo/404.php on line 375
+[24-Feb-2026 16:03:07 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 16:03:08 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 16:03:08 Etc/UTC] PHP Deprecated:  rtrim(): Passing null to parameter #1 ($string) of type string is deprecated in /home/isppaybd/public_html/assets/img/logo/404.php on line 386
+[24-Feb-2026 16:03:17 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 16:03:17 Etc/UTC] PHP Deprecated:  rtrim(): Passing null to parameter #1 ($string) of type string is deprecated in /home/isppaybd/public_html/assets/img/logo/404.php on line 386
+[24-Feb-2026 16:06:15 UTC] PHP Warning:  Undefined array key "DOCUMENT_ROOT" in /home/isppaybd/public_html/assets/img/logo/404.php on line 63
+[24-Feb-2026 16:06:16 Etc/UTC] PHP Deprecated:  rtrim(): Passing null to parameter #1 ($string) of type string is deprecated in /home/isppaybd/public_html/assets/img/logo/404.php on line 386

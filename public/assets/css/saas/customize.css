@@ -1,0 +1,913 @@
+/**
+ * Dashboard Customize + Theme Studio (from isp-pay-bd-saas-redesign.jsx)
+ */
+
+/* ── Drawer ──────────────────────────────────────────────────────────────── */
+.ipb-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: calc(var(--z-drawer) - 1);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur, .2s) var(--ease-out, cubic-bezier(.3,.8,.4,1)),
+              visibility var(--dur, .2s) var(--ease-out, cubic-bezier(.3,.8,.4,1));   /* 05 §6.4 retokenized */
+}
+.ipb-drawer-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ipb-drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(400px, 100vw);
+  background: var(--surface, #fff);
+  border-left: 1px solid var(--border, #e6eaf0);
+  z-index: var(--z-drawer);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--dur-slow, .22s) var(--ease-out, cubic-bezier(.3,.8,.4,1));   /* 05 §6.4 retokenized */
+  box-shadow: var(--shadow-3, -12px 0 40px rgba(15, 23, 42, 0.12));
+}
+.ipb-drawer-panel.open {
+  transform: translateX(0);
+}
+.ipb-drawer-panel.wide {
+  width: min(520px, 100vw);
+}
+
+.ipb-drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+  flex-shrink: 0;
+}
+.ipb-drawer-header .ipb-icon-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border, #e6eaf0);
+  background: var(--surface, #fff);
+  color: var(--text-secondary, #51607a);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ipb-drawer-header .ipb-icon-btn:hover {
+  background: var(--surface-hover, #f1f5f9);
+  color: var(--text-primary, #0f172a);
+}
+.ipb-drawer-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary, #0f172a);
+  letter-spacing: -0.02em;
+}
+.ipb-drawer-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary, #51607a);
+  line-height: 1.4;
+}
+.ipb-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 18px 18px;
+  min-height: 0;
+}
+.ipb-drawer-footer {
+  padding: 12px 18px;
+  border-top: 1px solid var(--border, #e6eaf0);
+  flex-shrink: 0;
+}
+
+/* Touch-drawer range (<=1024, --bp-tablet-max — sidebar-becomes-drawer
+   threshold). areas.css already bumped every OTHER .ipb-drawer-panel's
+   close button to 44px and explicitly left these two drawers for this
+   cluster to own (see areas.css's "44px minimum tap target" comment) — the
+   36px base .ipb-icon-btn falls under the 40-44px tap-target floor. */
+@media (max-width: 1024px) {
+  #ipbCustomizeDrawer .ipb-icon-btn,
+  #ipbThemeDrawer .ipb-icon-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+body.ipb.ipb-drawer-open {
+  overflow: hidden;
+}
+
+/* ── Dashboard toolbar ───────────────────────────────────────────────────── */
+.ipb-dash-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.ipb-dash-toolbar .ipb-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-strong, #d7dee7);
+  background: var(--surface, #fff);
+  color: var(--text-primary, #0f172a);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background var(--dur-fast, .12s) ease, border-color var(--dur-fast, .12s) ease, color var(--dur-fast, .12s) ease;
+}
+.ipb-dash-toolbar .ipb-btn-outline:hover {
+  background: var(--surface-hover, #f1f5f9);
+  border-color: var(--primary-500);
+  color: var(--primary-600);
+}
+
+@media (max-width: 1024px) {
+  /* Theme Studio / Customize Dashboard drawer triggers — 36px min-height
+     falls under the 40-44px tap-target floor on touch. */
+  .ipb-dash-toolbar .ipb-btn-outline {
+    min-height: 44px;
+  }
+}
+
+/* ── Widget grid ─────────────────────────────────────────────────────────── */
+/* Hide dashboard body until prefs are applied (prevents show/hide flicker) */
+[data-ipb-dashboard]:not(.ipb-dash-ready) [data-ipb-dash-grid],
+[data-ipb-dashboard]:not(.ipb-dash-ready) [data-ipb-dash-empty] {
+  opacity: 0;
+  pointer-events: none;
+}
+[data-ipb-dashboard].ipb-dash-ready [data-ipb-dash-grid],
+[data-ipb-dashboard].ipb-dash-ready [data-ipb-dash-empty].show {
+  opacity: 1;
+  transition: opacity var(--dur-fast, .12s) ease;
+}
+
+.ipb-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  grid-auto-flow: row dense;
+  width: 100%;
+}
+
+.ipb-widget {
+  min-width: 0;
+  grid-column: span 12;
+}
+.ipb-widget[data-size="third"] { grid-column: span 4 !important; }
+.ipb-widget[data-size="half"] { grid-column: span 6 !important; }
+.ipb-widget[data-size="twoThird"] { grid-column: span 8 !important; }
+.ipb-widget[data-size="full"] { grid-column: span 12 !important; }
+.ipb-widget.is-hidden {
+  display: none !important;
+}
+
+.ipb-widget .ipb-dash-kpi,
+.ipb-widget .ipb-dash-mini {
+  width: 100%;
+}
+
+.ipb-widget .ipb-card,
+.ipb-widget .ipb-insights,
+.ipb-widget .ipb-router-card {
+  height: 100%;
+  margin-bottom: 0;
+}
+
+.ipb-widget[data-widget-id="pop"] {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 03 §1.4 — two-tier widget grid: was a single ≤1180 collapse-to-1-col that
+   fought dashboard.css's 2-up tablet grid, producing the lopsided "KPIs 2-up /
+   everything-else 1-up" tablet layout. Now: 2-up on tablet, 1-up only ≤767. */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .ipb-dash-grid { grid-template-columns: repeat(12, 1fr); }
+  .ipb-dash-grid > .ipb-widget[data-size="third"],
+  .ipb-dash-grid > .ipb-widget[data-size="half"]     { grid-column: span 6 !important; }
+  .ipb-dash-grid > .ipb-widget[data-size="twoThird"],
+  .ipb-dash-grid > .ipb-widget[data-size="full"]     { grid-column: span 12 !important; }
+}
+@media (max-width: 767px) {
+  .ipb-dash-grid > .ipb-widget,
+  .ipb-dash-grid > .ipb-widget[data-size] {
+    grid-column: span 12 !important;
+  }
+}
+
+/* Empty state when all widgets hidden */
+.ipb-dash-empty {
+  display: none;
+  text-align: center;
+  padding: 48px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 12px);
+}
+.ipb-dash-empty.show {
+  display: block;
+}
+.ipb-dash-empty-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  background: var(--primary-50, #fff4ed);
+  color: var(--primary-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.ipb-dash-empty h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.ipb-dash-empty p {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+/* ── Widget rows in customize panel ──────────────────────────────────────── */
+.ipb-widget-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+}
+.ipb-widget-row + .ipb-widget-row {
+  border-top: 1px solid var(--border);
+}
+.ipb-widget-row-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--primary-50, #fff4ed);
+  color: var(--primary-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.ipb-widget-row-meta {
+  flex: 1;
+  min-width: 0;
+}
+.ipb-widget-row-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.ipb-widget-row.is-hidden .ipb-widget-row-title {
+  color: var(--text-muted);
+}
+.ipb-widget-row-size {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-style: dotted;
+  font-family: inherit;
+}
+.ipb-widget-stepper {
+  display: flex;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ipb-widget-stepper button {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ipb-widget-stepper button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+.ipb-widget-stepper button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.ipb-widget-stepper .sep {
+  width: 1px;
+  background: var(--border);
+}
+
+@media (max-width: 1024px) {
+  /* Reorder controls inside the customize drawer: 28px stepper buttons fall
+     under the 40-44px tap-target floor on touch. Row math still clears at
+     the min drawer width (min(400px,100vw)): icon 32 + gap 10 + stepper
+     81 + gap 10 + toggle 40 leaves the flexible title/size-label column
+     enough room to wrap without clipping. */
+  .ipb-widget-stepper button {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* "· tap to resize" is a real button (data-action="size") with zero
+     padding — effectively a ~14px-tall tap target for the one control this
+     drawer explicitly tells the user to tap. */
+  .ipb-widget-row-size {
+    padding: 6px 0;
+  }
+}
+
+/* Toggle switch */
+.ipb-toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.ipb-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.ipb-toggle span {
+  position: absolute;
+  inset: 0;
+  background: var(--neutral-200, #e2e8f0);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--dur-fast, .15s) ease;
+}
+.ipb-toggle span::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(15, 23, 42, 0.2));
+  transition: transform var(--dur-fast, .15s) ease;
+}
+.ipb-toggle input:checked + span {
+  background: var(--primary-500);
+}
+.ipb-toggle input:checked + span::after {
+  transform: translateX(18px);
+}
+.ipb-toggle input:focus-visible + span {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.ipb-customize-section {
+  margin-top: 8px;
+}
+.ipb-customize-section-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 12px 2px 4px;
+  border-top: 1px solid var(--border);
+}
+
+.ipb-btn-block {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 13.5px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+.ipb-btn-block:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+/* ── Theme Studio ────────────────────────────────────────────────────────── */
+.ipb-theme-page-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.ipb-theme-page-title {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.ipb-theme-page-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 52ch;
+  line-height: 1.45;
+}
+.ipb-theme-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.ipb-theme-grid--page {
+  gap: 16px;
+}
+.ipb-theme-page-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1024px) {   /* was 900px — folded into the 03 §1.3 ladder */
+  .ipb-theme-page-cols {
+    grid-template-columns: 1fr;
+  }
+}
+.ipb-theme-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg, 14px);
+  background: var(--surface);
+  overflow: hidden;
+}
+.ipb-theme-card-head {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.ipb-theme-card-head strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.ipb-theme-card-head span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.ipb-theme-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ipb-theme-prefs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+}
+@media (max-width: 700px) {
+  .ipb-theme-prefs-row {
+    grid-template-columns: 1fr;
+  }
+}
+.ipb-theme-grid--page .ipb-theme-presets {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.ipb-theme-field label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.ipb-theme-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ipb-theme-swatch {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid var(--border-strong);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.ipb-theme-swatch input[type="color"] {
+  position: absolute;
+  inset: -4px;
+  width: 50px;
+  height: 50px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.ipb-theme-hex {
+  flex: 1;
+  min-width: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+.ipb-theme-ramp {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 28px;
+  margin-top: 10px;
+}
+.ipb-theme-ramp span {
+  flex: 1;
+}
+
+.ipb-radius-opts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ipb-radius-opts button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+.ipb-radius-opts button.active {
+  background: var(--primary-500);
+  border-color: var(--primary-500);
+  color: #fff;
+}
+.ipb-radius-opts button .dot {
+  width: 14px;
+  height: 14px;
+  background: var(--text-muted);
+  display: inline-block;
+}
+.ipb-radius-opts button.active .dot {
+  background: #fff;
+}
+
+.ipb-theme-note {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  line-height: 1.45;
+}
+
+.ipb-theme-presets {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.ipb-theme-preset {
+  text-align: left;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-family: var(--font-sans);
+  transition: border-color var(--dur-fast, .14s) ease, box-shadow var(--dur-fast, .14s) ease;
+}
+.ipb-theme-preset:hover {
+  border-color: var(--primary-300, #ffa66e);
+}
+.ipb-theme-preset.active {
+  border: 2px solid var(--primary-500);
+  box-shadow: var(--shadow-focus, 0 0 0 3px var(--focus-glow, rgba(247, 88, 3, 0.16)));
+}
+.ipb-theme-preset-swatches {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.ipb-theme-preset-swatches i {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: inline-block;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.ipb-theme-preset-swatches i + i {
+  margin-left: -12px;
+}
+.ipb-theme-preset-name {
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--text-primary);
+}
+.ipb-theme-preset-active {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--primary-600);
+  background: var(--primary-50);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.ipb-theme-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.ipb-theme-preview-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ipb-theme-preview-btns .btn-p {
+  background: var(--primary-500);
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.ipb-theme-preview-btns .btn-s {
+  background: var(--secondary-700);
+  color: #fff;
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.ipb-theme-preview-btns .btn-o {
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.ipb-theme-preview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ipb-theme-preview-badges span {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.ipb-theme-preview-badges .badge-brand {
+  background: var(--primary-50, #fff4ed);
+  color: var(--primary-600, #c2410c);
+}
+.ipb-theme-preview-badges .badge-ok {
+  background: var(--success-50, #ecfdf3);
+  color: var(--success-700, #166534);
+}
+.ipb-theme-preview-badges .badge-warn {
+  background: var(--warning-50, #fffbeb);
+  color: var(--warning-700, #92400e);
+}
+.ipb-theme-preview-stat {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-left: 3px solid var(--primary-500);
+}
+.ipb-theme-preview-stat small {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.ipb-theme-preview-stat strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.ipb-theme-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  margin: 0;
+}
+.ipb-theme-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.ipb-theme-io {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ipb-theme-io .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.ipb-theme-io-hint {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.ipb-theme-io-hint code {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.ipb-theme-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.ipb-theme-preview-hero {
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--secondary-700), var(--secondary-900));
+  color: #fff;
+}
+.ipb-theme-preview-hero small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.75;
+  font-weight: 700;
+}
+.ipb-theme-preview-hero strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+body.ipb[data-theme="dark"] .ipb-drawer-panel,
+body.ipb.dark-mode .ipb-drawer-panel {
+  background: var(--surface);
+  border-left-color: var(--border);
+}
+body.ipb[data-theme="dark"] .ipb-theme-hex,
+body.ipb.dark-mode .ipb-theme-hex {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: #eef2f9;
+}
+
+/* ── UI preferences (density / font / compact sidebar) ───────────────────── */
+body.ipb[data-density="compact"] .content {
+  padding-top: 4px !important;
+  padding-bottom: 20px !important;
+}
+body.ipb[data-density="compact"] .box-header {
+  padding: 10px 14px !important;
+}
+body.ipb[data-density="compact"] .box-body {
+  padding: 12px 14px !important;
+}
+body.ipb[data-density="compact"] .content .table > thead > tr > th,
+body.ipb[data-density="compact"] .content .table > tbody > tr > td {
+  padding: 9px 12px !important;
+}
+body.ipb[data-density="compact"] .ipb-page-header {
+  padding-bottom: 10px !important;
+}
+
+body.ipb[data-table-density="compact"] .content .table > thead > tr > th,
+body.ipb[data-table-density="compact"] .content .table > tbody > tr > td,
+body.ipb[data-table-density="compact"] .content .dataTables_wrapper .table > thead > tr > th,
+body.ipb[data-table-density="compact"] .content .dataTables_wrapper .table > tbody > tr > td {
+  padding: 7px 10px !important;
+  font-size: 12.5px;
+}
+
+.ipb-theme-page-box {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.ipb-theme-page-box > .box-body {
+  padding: 0 !important;
+}
+
+body.ipb[data-font-scale="sm"] {
+  font-size: 14px;
+}
+body.ipb[data-font-scale="md"] {
+  font-size: 15px;
+}
+body.ipb[data-font-scale="lg"] {
+  font-size: 16.5px;
+}
+body.ipb[data-font-scale="sm"] .ipb-page-header h1 {
+  font-size: 18px !important;
+}
+body.ipb[data-font-scale="lg"] .ipb-page-header h1 {
+  font-size: 24px !important;
+}
+
+/* Reduced-motion: covered by base.css's canonical guard (05 §10) — removed
+   the local duplicate here. */
+
+/* Compact sidebar preference (icons-first, desktop only) */
+@media (min-width: 1025px) {   /* was 901px — the ladder's --bp-desktop-min (03 §1.3) */
+  body.ipb.ipb-sidebar-pref-compact .main-sidebar {
+    width: 72px !important;
+  }
+  body.ipb.ipb-sidebar-pref-compact .content-wrapper,
+  body.ipb.ipb-sidebar-pref-compact .main-footer {
+    margin-left: 72px !important;
+  }
+  body.ipb.ipb-sidebar-pref-compact .main-header {
+    left: 72px !important;
+  }
+  body.ipb.ipb-sidebar-pref-compact .ipb-brand-text,
+  body.ipb.ipb-sidebar-pref-compact .ipb-sidebar-search,
+  body.ipb.ipb-sidebar-pref-compact .sidebar-menu > li > a > span,
+  body.ipb.ipb-sidebar-pref-compact .sidebar-menu .treeview-menu,
+  body.ipb.ipb-sidebar-pref-compact .ipb-nav-section,
+  body.ipb.ipb-sidebar-pref-compact .sidebar-menu .pull-right-container {
+    display: none !important;
+  }
+  body.ipb.ipb-sidebar-pref-compact .sidebar-menu > li > a {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
