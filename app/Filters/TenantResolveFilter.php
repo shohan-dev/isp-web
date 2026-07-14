@@ -16,23 +16,12 @@ class TenantResolveFilter implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
-        helper(['tenant', 'flag']);
+        helper('tenant');
 
         TenantContext::reset();
 
         $host = normalizeRequestHost($request->getServer('HTTP_HOST') ?? $request->getUri()->getHost());
         $path = trim($request->getUri()->getPath(), '/');
-
-        // Tenanting disabled (TENANT_ENABLED=false) — every host is the platform
-        // app. No slug extraction, no tenants table lookup, no suspended-portal
-        // blocking. This is the single choke point: every other tenant-aware
-        // helper reads TenantContext, so it's enough to stop it here.
-        if (!isTenantingEnabled()) {
-            TenantContext::markResolved(TenantContext::MODE_PLATFORM, $host);
-            $this->applyBaseUrl($host);
-
-            return null;
-        }
 
         // Never block infrastructure / static paths.
         if ($this->isExemptPath($path)) {

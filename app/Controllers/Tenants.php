@@ -21,7 +21,7 @@ class Tenants extends BaseController
 
     public function __construct()
     {
-        helper(['tenant', 'utility', 'user', 'flag']);
+        helper(['tenant', 'utility', 'user']);
         $this->tenants = model(TenantModel::class);
         $this->users   = model(User::class);
     }
@@ -30,18 +30,6 @@ class Tenants extends BaseController
     {
         $isAjax = $this->request->isAJAX()
             || strtolower((string) $this->request->getHeaderLine('X-Requested-With')) === 'xmlhttprequest';
-
-        if (! isTenantingEnabled()) {
-            if ($isAjax) {
-                return $this->response->setStatusCode(403)->setJSON([
-                    'status'   => 'error',
-                    'response' => 'Tenant portals are currently disabled.',
-                ]);
-            }
-
-            return redirect()->to(route_to('route.dashboard'))
-                ->with('error', 'Tenant portals are currently disabled.');
-        }
 
         if (! isPlatformSuperAdmin()) {
             if ($isAjax) {
