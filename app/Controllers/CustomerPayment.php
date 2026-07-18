@@ -322,7 +322,7 @@ class CustomerPayment extends BaseController
                 }
 
                 if (userHasPermission('customer_payment', 'invoice') && $row->status === 'successful') {
-                    $html .= '<a href="' . route_to('route.customer.payment.invoice', $row->id) . '" target="_blank" rel="noopener noreferrer" class="ipb-row-btn tone-info" title="Invoice"><i class="fa fa-file-pdf-o"></i> Invoice</a>';
+                    $html .= '<a href="' . route_to('route.customer.payment.invoice', $row->id) . '" target="_blank" rel="noopener noreferrer" class="ipb-row-btn tone-info" title="Invoice"><i class="far fa-file-pdf"></i> Invoice</a>';
                     $html .= '<a href="' . route_to('route.customer.payment.receiptPrint', $row->id) . '" target="_blank" class="ipb-row-btn tone-slate" title="POS"><i class="fa fa-print"></i> POS</a>';
                 }
 
@@ -467,7 +467,7 @@ class CustomerPayment extends BaseController
                 }
 
                 if (userHasPermission('customer_payment', 'invoice') && $row->status === 'successful') {
-                    $html .= '<a href="' . route_to('route.customer.payment.invoice', $row->id) . '" target="_blank" class="ipb-row-btn tone-info" title="Invoice"><i class="fa fa-file-pdf-o"></i> Invoice</a>';
+                    $html .= '<a href="' . route_to('route.customer.payment.invoice', $row->id) . '" target="_blank" class="ipb-row-btn tone-info" title="Invoice"><i class="far fa-file-pdf"></i> Invoice</a>';
                     $html .= '<a href="' . route_to('route.customer.payment.receiptPrint', $row->id) . '" target="_blank" class="ipb-row-btn tone-slate" title="POS"><i class="fa fa-print"></i> POS</a>';
                 }
 

@@ -110,6 +110,15 @@
             <small id="method_trx-error" class="error text-danger"></small>
           </div>
 
+          <?php /* User / Admin / Paid-By ID overrides are a SUPER-ADMIN-only power
+                   tool for cross-tenant corrections. A tenant admin never needs them:
+                   the customer is chosen from the "Customer" dropdown above (which is
+                   already scoped to this admin's own customers and sets the user_id),
+                   and admin_id is derived server-side from that customer's admin_id
+                   (i.e. the logged-in admin). The backend already ignores
+                   admin_id_override for non-super_admins, so showing these to a tenant
+                   admin was just a confusing, no-op field. */ ?>
+          <?php if (session()->get('user_role') === 'super_admin') : ?>
           <div class="row">
             <div class="col-xs-4">
               <div class="form-group">
@@ -145,6 +154,7 @@
               </div>
             </div>
           </div>
+          <?php endif; ?>
 
           <div class="form-group">
             <label>Comment</label>

@@ -18,6 +18,7 @@ class PluginModel extends Model
         'category',
         'description',
         'price_type',
+        'price',
         'billing_cycle',
         'image',
         'status'
@@ -75,6 +76,11 @@ class PluginModel extends Model
                 'price_type' => [
                     'type'       => 'VARCHAR',
                     'constraint' => 50,
+                    'null'       => true,
+                ],
+                'price' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '10,2',
                     'null'       => true,
                 ],
                 'billing_cycle' => [

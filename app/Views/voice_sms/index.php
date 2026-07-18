@@ -216,7 +216,7 @@
         <div class="modal-content border-radius-15">
             <div class="modal-header bg-blue shadow">
                 <button type="button" class="close" data-dismiss="modal" style="color:#fff">&times;</button>
-                <h4 class="modal-title" style="color:#fff"><i class="fa fa-pencil-square-o"></i> Edit Voice Template</h4>
+                <h4 class="modal-title" style="color:#fff"><i class="far fa-pen-to-square"></i> Edit Voice Template</h4>
             </div>
             <form id="edit-message-form">
                 <?= csrf_field() ?>

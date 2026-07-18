@@ -39,6 +39,29 @@
 
     <?= $this->include('components/trial-banner', ['trialUser' => $trialUser ?? null]); ?>
 
+    <?php if (session()->get('user_role') === 'super_admin'): ?>
+    <div class="box box-solid box-primary">
+      <div class="box-header with-border">
+        <h3 class="box-title"><i class="fa fa-percent" aria-hidden="true"></i> Yearly Billing Discount</h3>
+      </div>
+      <div class="box-body">
+        <p class="text-muted" style="margin-bottom:12px">
+          Controls the "Save N months" badge and the yearly-price math on the public landing pricing page.
+          Display-only — it does not change how any tenant is actually billed.
+        </p>
+        <form id="pricingSettingsForm" class="form-inline">
+          <div class="form-group">
+            <label for="yearly_discount_months" style="margin-right:8px">Months free when billed yearly</label>
+            <input type="number" class="form-control" id="yearly_discount_months" name="yearly_discount_months"
+              min="0" max="11" value="<?= (int) ($yearlyDiscountMonths ?? 2) ?>" style="width:90px">
+          </div>
+          <button type="button" class="btn btn-primary" id="savePricingSettingsBtn" style="margin-left:12px">Save</button>
+          <span id="pricingSettingsPreview" class="text-muted" style="display:block;margin-top:10px"></span>
+        </form>
+      </div>
+    </div>
+    <?php endif; ?>
+
 <div class="box box-warning">
       <div class="box-header with-border ipb-box-toolbar">
         <div class="ipb-list-toolbar">
@@ -568,6 +591,49 @@
   $(document).ready(function() {
     var csrfToken = $('meta[name="csrf-token"]').attr('content');
     var csrfHeader = $('meta[name="csrf-header"]').attr('content');
+
+    // Yearly billing discount ("Save N months" badge) — live preview + save
+    function renderPricingPreview() {
+      var $input = $('#yearly_discount_months');
+      if (!$input.length) return;
+      var months = parseInt($input.val(), 10);
+      if (isNaN(months)) months = 0;
+      months = Math.max(0, Math.min(11, months));
+      var percent = Math.round(months / 12 * 100);
+      $('#pricingSettingsPreview').text('Badge will read: Save ' + months + (months === 1 ? ' month' : ' months') + ' (~' + percent + '% off)');
+    }
+    renderPricingPreview();
+    $(document).on('input', '#yearly_discount_months', renderPricingPreview);
+
+    $('#savePricingSettingsBtn').on('click', function() {
+      var $btn = $(this);
+      var months = $('#yearly_discount_months').val();
+      $btn.prop('disabled', true);
+      $.ajax({
+        url: '<?= route_to('Admin.savePricingSettings'); ?>',
+        type: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': csrfToken
+        },
+        data: { yearly_discount_months: months },
+        success: function(response) {
+          if (response.success) {
+            $('#yearly_discount_months').val(response.yearly_discount_months);
+            renderPricingPreview();
+            tata.success('Saved', 'Yearly billing discount updated.');
+          } else {
+            var msg = response.errors ? Object.values(response.errors).join(' ') : 'Failed to save. Please try again.';
+            tata.error('Could not save', msg);
+          }
+        },
+        error: function() {
+          tata.error('Could not save', 'An error occurred. Please try again.');
+        },
+        complete: function() {
+          $btn.prop('disabled', false);
+        }
+      });
+    });
 
     // Show/hide plan-type specific field groups in both modals
     function togglePlanFields(scope, planType) {

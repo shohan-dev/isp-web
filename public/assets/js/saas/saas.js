@@ -266,8 +266,15 @@
   }
 
   /* 06 §2.1(b) — moves the sliding accent rail to the active (or hovered)
-     top-level sidebar item. Call after openActiveTreeviews() so li.active
-     is already set. */
+     sidebar item — the EXACT row for the current page, not just its parent
+     category. Call after openActiveTreeviews() so li.active is already set.
+
+     Bug fix: this used to read `:scope > li.active` only — a direct child of
+     `.sidebar-menu`. sidebar-boot.js's sync() marks BOTH the real active leaf
+     (e.g. "All Customers" inside the Customers submenu) AND its top-level
+     ancestor ("Customers") as `.active`, so the rail needs to prefer the
+     nested leaf when one exists; otherwise it always snapped to the parent
+     header and never pointed at the page you're actually on. */
   function initNavIndicator() {
     var menu = document.querySelector(".main-sidebar .sidebar-menu");
     if (!menu) return;
@@ -278,15 +285,29 @@
       menu.appendChild(bar);
     }
 
+    function rowAnchor(li) {
+      return li.querySelector(":scope > a") || li;
+    }
     function moveTo(li) {
       if (!li) return;
-      var a = li.querySelector(":scope > a") || li;
-      var top = a.offsetTop, h = a.offsetHeight;
-      bar.style.height = h + "px";
+      var a = rowAnchor(li);
+      // offsetTop is relative to the anchor's offsetParent, which for a NESTED
+      // submenu row (e.g. Product Showcase under Platform Admin) is the open
+      // treeview-menu — NOT the .sidebar-menu the rail lives in — so the rail
+      // used to land near the top (the Dashboard row) for every nested page.
+      // Measure against the menu itself so it's correct at any nesting depth.
+      var menuRect = menu.getBoundingClientRect();
+      var aRect = a.getBoundingClientRect();
+      var top = aRect.top - menuRect.top + (menu.scrollTop || 0);
+      bar.style.height = aRect.height + "px";
       bar.style.transform = "translateY(" + top + "px)";
       bar.classList.add("is-ready");
     }
-    function activeLi() { return menu.querySelector(":scope > li.active"); }
+    // Prefer the nested leaf (the actual current page) over its top-level
+    // section ancestor; fall back to the top-level li for non-nested pages.
+    function activeLi() {
+      return menu.querySelector(".treeview-menu li.active") || menu.querySelector(":scope > li.active");
+    }
 
     moveTo(activeLi());
 
@@ -299,7 +320,9 @@
     void bar.offsetHeight;
     bar.classList.add("is-animatable");
 
-    menu.querySelectorAll(":scope > li > a").forEach(function (a) {
+    // Follow hover on every row — top-level AND nested submenu items — so the
+    // rail never sits still next to a row you're not pointing at.
+    menu.querySelectorAll("li > a").forEach(function (a) {
       var li = a.parentElement;
       a.addEventListener("mouseenter", function () { moveTo(li); });
     });
@@ -799,13 +822,11 @@
           defaultContent: "-",
         },
       ],
-      ajax: {
-        error: function (_xhr, _error, _code) {
-          if (window.tata && typeof window.tata.error === "function") {
-            window.tata.error("Error", "Could not load table data. Please try again.");
-          }
-        },
-      },
+      /* NOTE: never put `ajax` in $.fn.dataTable.defaults. A truthy default `ajax`
+         forces EVERY table into Ajax-source mode — so DOM-sourced tables (all the
+         accounts + inventory lists render rows server-side) fired an XHR at the
+         page URL, got HTML, and failed with "Could not load table data." Genuine
+         serverSide tables pass their own `ajax:{url, error}` at init instead. */
     });
   }
 
@@ -1103,7 +1124,7 @@
     setInterval(poll, 60000);
 
     /* --- progress mode: fires on same-origin nav + jQuery AJAX --- */
-    var timer = null, p = 0;
+    var timer = null, stuckGuard = null, p = 0;
     function start() {
       el.classList.add("is-loading"); p = 8;
       el.style.setProperty("--np-progress", p + "%");
@@ -1112,9 +1133,31 @@
         p = Math.min(p + (90 - p) * 0.12, 90);
         el.style.setProperty("--np-progress", p + "%");
       }, 200);
+
+      /* Bug fix: `start()` fires on `beforeunload`, which — on a same-tab MPA
+         nav — is immediately followed by the next page's own fresh load (this
+         whole document, timers included, is torn down). But modern Chrome/
+         Firefox/Safari can also park an unloading page in the back/forward
+         cache (bfcache) instead of destroying it, freezing execution mid-
+         "is-loading". Hit Back and the browser hands you that exact frozen
+         DOM back — rail stuck at ~90% forever, looking permanently loading.
+         The `pageshow`/`persisted` listener below is what actually detects
+         and fixes that case, instantly. This timeout is only a last-resort
+         backstop for whatever it doesn't catch, so it has to be long enough
+         to never fire during an ordinary, still-in-flight navigation: the old
+         page stays fully alive and rendered (timers running) until the new
+         page's response arrives — this app has DataTables/report pages that
+         can legitimately take several seconds — so a short guard here would
+         hide the bar and read as "stopped loading" while the browser is still
+         waiting on the real navigation. Kept bounded (rather than removed
+         outright) only so a page that never gets its pageshow event for some
+         other reason still self-heals eventually instead of staying stuck. */
+      clearTimeout(stuckGuard);
+      stuckGuard = setTimeout(done, 30000);
     }
     function done() {
       clearInterval(timer);
+      clearTimeout(stuckGuard);
       el.style.setProperty("--np-progress", "100%");
       setTimeout(function () {
         el.classList.remove("is-loading");
@@ -1122,6 +1165,14 @@
       }, 260);
     }
     window.addEventListener("beforeunload", start);
+    /* The actual root cause: when this page IS restored from bfcache instead
+       of reloaded fresh, `pageshow` fires with `event.persisted === true` —
+       the one reliable signal that we're looking at the frozen "is-loading"
+       DOM from just before the user navigated away, not a fresh load. Clear
+       it immediately rather than waiting out the safety-net timeout above. */
+    window.addEventListener("pageshow", function (e) {
+      if (e.persisted) done();
+    });
     if (window.jQuery) {
       window.jQuery(document).ajaxStart(start).ajaxStop(done);
     }

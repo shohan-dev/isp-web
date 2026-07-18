@@ -82,7 +82,7 @@
   background:
     radial-gradient(ellipse 80% 60% at 10% 15%, rgba(var(--primary-rgb, 247, 88, 3), 0.42), transparent 55%),
     radial-gradient(ellipse 60% 50% at 90% 85%, rgba(255, 255, 255, 0.07), transparent 50%),
-    linear-gradient(155deg, var(--secondary-700, #1e293b) 0%, var(--secondary-900, #0f172a) 100%);
+    linear-gradient(155deg, var(--secondary-700, #1a0b38) 0%, var(--secondary-900, #0c0118) 100%);
 }
 
 .ipb-auth-pane--brand::before {
@@ -100,17 +100,26 @@
   max-width: 440px;
 }
 
+/* No card/badge — the logo sits directly on the brand panel's own dark
+   gradient background, nothing hosting it. */
 .ipb-auth-pane--brand .ipb-brand-mark {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   display: flex;
   align-items: center;
-  justify-content: center;
   margin-bottom: 28px;
-  font-size: 22px;
-  box-shadow: var(--shadow-brand, 0 8px 24px rgba(var(--primary-rgb, 247, 88, 3), 0.35));
+  animation: ipbPop var(--dur-slow, .28s) var(--ease-out, cubic-bezier(.3, .8, .4, 1)) both;
+}
+
+.ipb-auth-pane--brand .ipb-brand-mark img {
+  height: 48px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+}
+/* Fallback glyph only (no resolved logo URL) — no badge to sit inside, so it
+   needs its own visible color directly against the dark panel background. */
+.ipb-auth-pane--brand .ipb-brand-mark i {
+  font-size: 32px;
+  color: var(--primary-500, #f75803);
 }
 
 .ipb-auth-pane--brand h1 {
@@ -120,6 +129,7 @@
   margin: 0 0 14px;
   line-height: 1.18;
   color: #fff;
+  animation: ipbSlideUp var(--dur-slow, .28s) var(--ease-out, cubic-bezier(.3, .8, .4, 1)) .08s both;
 }
 
 .ipb-auth-pane--brand .ipb-brand-lead {
@@ -128,6 +138,7 @@
   max-width: 400px;
   line-height: 1.65;
   margin: 0 0 28px;
+  animation: ipbSlideUp var(--dur-slow, .28s) var(--ease-out, cubic-bezier(.3, .8, .4, 1)) .14s both;
 }
 
 .ipb-auth-features {
@@ -146,7 +157,12 @@
   font-size: 14px;
   color: rgba(255, 255, 255, 0.88);
   line-height: 1.45;
+  animation: ipbSlideUp var(--dur-slow, .28s) var(--ease-out, cubic-bezier(.3, .8, .4, 1)) both;
+  animation-delay: .18s;
 }
+.ipb-auth-features li:nth-child(2) { animation-delay: .22s; }
+.ipb-auth-features li:nth-child(3) { animation-delay: .26s; }
+.ipb-auth-features li:nth-child(4) { animation-delay: .30s; }
 
 .ipb-auth-features li i {
   width: 28px;
@@ -168,6 +184,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 20px 28px;
+  animation: ipbSlideUp var(--dur-slow, .28s) var(--ease-out, cubic-bezier(.3, .8, .4, 1)) .34s both;
 }
 
 .ipb-auth-trust-item {
@@ -220,6 +237,7 @@
   border-radius: 22px;
   padding: clamp(24px, 3.5vw, 32px);
   box-shadow: var(--shadow-3, 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 40px rgba(15, 23, 42, 0.07));
+  animation: ipbSlideUp var(--dur-slow, .28s) var(--ease-out, cubic-bezier(.3, .8, .4, 1)) .06s both;
 }
 
 .ipb-auth-reg-header {
@@ -422,10 +440,19 @@
   border-radius: 20px;
   padding: clamp(28px, 4vw, 36px);
   box-shadow: var(--shadow-3, 0 4px 6px rgba(15, 23, 42, 0.04), 0 20px 48px rgba(15, 23, 42, 0.08));
+  animation: ipbSlideUp var(--dur-slow, .28s) var(--ease-out, cubic-bezier(.3, .8, .4, 1)) .06s both;
 }
 
 .ipb-auth-logo {
+  /* Was a plain <div> (never clickable); now an <a href> to the current
+     request's home (route_to('route.home') — tenant-subdomain-aware, see
+     _brand_logo.php). display:block keeps the same box layout an anchor
+     doesn't get by default; the rest resets link chrome so it still reads
+     as a logo, not a text link. */
+  display: block;
   margin-bottom: 24px;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .ipb-auth-logo:has(.ipb-brand-logo-mark) {
@@ -1081,4 +1108,81 @@
 @media (prefers-reduced-motion: reduce) {
   .ipb-auth-status { animation: none; }
   .ipb-auth-status-bar > span { animation: none; width: 100%; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Landing-palette alignment — the auth gate hardcodes data-theme="light" on
+   <body> (gate.php), so it always rendered the dashboard's light token set
+   regardless of the landing page's dark, purple-black identity: a visitor
+   bouncing from the marketing site into sign-in/sign-up landed on a
+   different-looking product. Everything below is a token remap on the SAME
+   --bg/--surface/--text-*/--border custom properties auth.css already reads
+   (tokens.css, `.ipb, body.ipb`) — no new selectors invented, no markup
+   changes, scoped to `.ipb-auth-gate-body` only so nothing else on the site
+   (dashboard, landing) is touched. Values are the locked landing palette,
+   not new colors.
+
+   Two accents, kept deliberately separate (landing's own convention):
+     - azure #2E8BFF / hover #1D6FE8 — identity accent: links, focus rings,
+       the trial badge.
+     - vermilion #f75803 / hover #d24b03 — interaction accent: the primary
+       CTA only. --primary-500 already matched landing's orange; only the
+       hover shade (--primary-600) needed to move off the dashboard's
+       #d94601 to the landing's own #d24b03. The button keeps its existing
+       white text (`color: #fff !important` above) — never dark-on-orange.
+   ════════════════════════════════════════════════════════════════════════════ */
+body.ipb.ipb-auth-gate-body {
+  --bg: #0c0118;
+  --surface: #180a30;
+  --surface-2: #1a0b38;
+  --surface-hover: #22103f;
+  --border: rgba(160, 140, 220, .18);
+  --border-strong: rgba(160, 140, 220, .30);
+  --text-primary: #F1ECFF;
+  --text-secondary: #A99FC6;
+  --text-muted: rgba(223, 214, 245, .66);
+  --primary-600: #d24b03;
+  --focus-glow: rgba(46, 139, 255, .35);
+  /* Existing dark-safe status inks (already authored in tokens.css's own
+     [data-theme="dark"] block, not new colors) — otherwise validation/error
+     text stays the light theme's near-black-on-dark-bg reds and becomes
+     unreadable once --bg/--surface go dark. */
+  --error-600: #f87171;
+  --success-600: #4ade80;
+  --warning-600: #fbbf24;
+  color-scheme: dark;
+}
+
+/* Headings are pure white in the landing palette; --text-primary above is
+   the slightly-off-white body/value color, so the heading needs its own
+   line rather than sharing the token. */
+body.ipb.ipb-auth-gate-body .ipb-auth-heading {
+  color: #FFFFFF;
+}
+
+/* Identity accent (azure) for every link on the auth pages — "Forgot
+   password?", "Create free trial" / "Sign in" switch links, the trial
+   badge, and the focus border on inputs — kept off --primary-500/600 so
+   those stay reserved for the CTA button alone. */
+body.ipb.ipb-auth-gate-body .ipb-auth-inline-link,
+body.ipb.ipb-auth-gate-body .ipb-auth-links a {
+  color: #2E8BFF;
+}
+
+body.ipb.ipb-auth-gate-body .ipb-auth-inline-link:hover,
+body.ipb.ipb-auth-gate-body .ipb-auth-links a:hover,
+body.ipb.ipb-auth-gate-body .ipb-auth-back:hover {
+  color: #1D6FE8;
+}
+
+body.ipb.ipb-auth-gate-body .ipb-auth-trial-badge {
+  color: #2E8BFF;
+  background: rgba(46, 139, 255, .12);
+  border-color: rgba(46, 139, 255, .28);
+}
+
+body.ipb.ipb-auth-gate-body .ipb-auth-card .form-control:focus,
+body.ipb.ipb-auth-gate-body .ipb-auth-card-wide .form-control:focus,
+body.ipb.ipb-auth-gate-body .ipb-auth-reg-card .form-control:focus {
+  border-color: #2E8BFF;
 }

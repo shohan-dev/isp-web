@@ -566,6 +566,7 @@
       var tableDensityOpts = root.querySelector("[data-table-density-opts]");
       var fontOpts = root.querySelector("[data-font-opts]");
       var darkMode = root.querySelector("[data-theme-dark-mode]");
+      var colorfulCards = root.querySelector("[data-theme-colorful-cards]");
       var sidebarCompact = root.querySelector("[data-theme-sidebar-compact]");
       var reduceMotion = root.querySelector("[data-theme-reduce-motion]");
       var presetsEl = root.querySelector("[data-theme-presets]");
@@ -599,6 +600,7 @@
         });
       }
       if (darkMode) darkMode.checked = isDarkMode();
+      if (colorfulCards) colorfulCards.checked = theme.cardStyle !== "plain";
       if (sidebarCompact) sidebarCompact.checked = !!theme.sidebarCompact;
       if (reduceMotion) reduceMotion.checked = !!theme.reduceMotion;
       if (presetsEl) {
@@ -711,6 +713,18 @@
           applyBrandTheme(theme);
           syncUi();
           toast(darkMode.checked ? "Dark mode on" : "Light mode on", "Theme Studio");
+        });
+      }
+
+      var colorfulCards = root.querySelector("[data-theme-colorful-cards]");
+      if (colorfulCards) {
+        colorfulCards.addEventListener("change", function () {
+          commit(
+            Object.assign({}, theme, {
+              cardStyle: colorfulCards.checked ? "tinted" : "plain",
+            }),
+            colorfulCards.checked ? "Colorful cards on" : "Colorful cards off"
+          );
         });
       }
 

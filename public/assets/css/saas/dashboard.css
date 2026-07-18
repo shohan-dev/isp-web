@@ -230,12 +230,60 @@
   opacity: 0.9;
 }
 
-.ipb-kpi.tone-brand { --kpi-accent: var(--primary-500); --kpi-icon-bg: linear-gradient(135deg, var(--primary-100), var(--primary-50)); --kpi-icon-fg: var(--primary-600); }
-.ipb-kpi.tone-success { --kpi-accent: var(--success-500); --kpi-icon-bg: linear-gradient(135deg, var(--success-50), var(--surface)); --kpi-icon-fg: var(--success-600); }
-.ipb-kpi.tone-warning { --kpi-accent: var(--warning-500); --kpi-icon-bg: linear-gradient(135deg, var(--warning-50), var(--surface)); --kpi-icon-fg: var(--warning-600); }
-.ipb-kpi.tone-error { --kpi-accent: var(--error-500); --kpi-icon-bg: linear-gradient(135deg, var(--error-50), var(--surface)); --kpi-icon-fg: var(--error-600); }
-.ipb-kpi.tone-info { --kpi-accent: var(--info-500); --kpi-icon-bg: linear-gradient(135deg, var(--info-50), var(--surface)); --kpi-icon-fg: var(--info-600); }
-.ipb-kpi.tone-navy { --kpi-accent: var(--secondary-500); --kpi-icon-bg: linear-gradient(135deg, var(--secondary-100), var(--surface)); --kpi-icon-fg: var(--secondary-700); }
+.ipb-kpi.tone-brand { --kpi-accent: var(--primary-500); --kpi-tint: var(--primary-50); --kpi-icon-bg: linear-gradient(135deg, var(--primary-100), var(--primary-50)); --kpi-icon-fg: var(--primary-600); }
+.ipb-kpi.tone-success { --kpi-accent: var(--success-500); --kpi-tint: var(--success-50); --kpi-icon-bg: linear-gradient(135deg, var(--success-50), var(--surface)); --kpi-icon-fg: var(--success-600); }
+.ipb-kpi.tone-warning { --kpi-accent: var(--warning-500); --kpi-tint: var(--warning-50); --kpi-icon-bg: linear-gradient(135deg, var(--warning-50), var(--surface)); --kpi-icon-fg: var(--warning-600); }
+.ipb-kpi.tone-error { --kpi-accent: var(--error-500); --kpi-tint: var(--error-50); --kpi-icon-bg: linear-gradient(135deg, var(--error-50), var(--surface)); --kpi-icon-fg: var(--error-600); }
+.ipb-kpi.tone-info { --kpi-accent: var(--info-500); --kpi-tint: var(--info-50); --kpi-icon-bg: linear-gradient(135deg, var(--info-50), var(--surface)); --kpi-icon-fg: var(--info-600); }
+.ipb-kpi.tone-navy { --kpi-accent: var(--secondary-500); --kpi-tint: var(--secondary-50); --kpi-icon-bg: linear-gradient(135deg, var(--secondary-100), var(--surface)); --kpi-icon-fg: var(--secondary-700); }
+
+/* ── Colorful cards (Theme Studio: "Colorful Cards", default ON) ──
+   The tone system above is deliberately subtle at rest (see the comment on
+   .ipb-kpi::before) — this is an additive, user-togglable alternative for
+   people who want each card's category readable at a glance, not just on
+   hover. Gated by [data-card-style="tinted"] on <body>, written by
+   brand-boot.js's applyBrandTheme() from theme.cardStyle (defaults to
+   "tinted"; Theme Studio's toggle flips it to "plain" to restore the quiet
+   look above). Reuses the existing tone-50 tokens, so dark mode falls out
+   for free — no new tokens needed. The icon chip swaps to --surface so it
+   still pops against a now-same-hue card instead of nearly disappearing
+   into it.
+
+   Two-tier saturation: the top hero row (.ipb-dash-kpi, full-size cards)
+   gets the full tone-50 fill so it reads as the primary signal; every
+   .compact card (the 15+ secondary tiles below, and router-card mini
+   stats) gets that same fill blended down with color-mix() so a page with
+   20 tinted cards doesn't read as a solid rainbow — hierarchy through
+   saturation, not just position. */
+/* Tinted cards: a soft top-down gradient (tone → surface) reads as depth, not a
+   flat pastel wash; a tone-tinted border + colored icon chip carry the category
+   signal. One generic rule per size via --kpi-tint / --kpi-accent (set on the
+   tone-* classes) instead of a per-tone wall — same result, half the CSS. */
+/* Full light-colored card: the tint holds across the whole card (a gentle
+   top→bottom gradient for depth) instead of fading out to white — so the colour
+   actually reads. Still light, never saturated. */
+body[data-card-style="tinted"] .ipb-kpi {
+  background: linear-gradient(158deg, var(--kpi-tint, var(--primary-50)) 0%, color-mix(in srgb, var(--kpi-tint, var(--primary-50)) 60%, var(--surface)) 100%);
+  border-color: color-mix(in srgb, var(--kpi-accent, var(--primary-500)) 20%, transparent);
+  box-shadow: 0 3px 12px rgba(15, 23, 42, .05);
+}
+/* Secondary (compact) tiles: same light fill, blended down a step so a page of
+   20 cards keeps a hierarchy through saturation instead of one solid rainbow. */
+body[data-card-style="tinted"] .ipb-kpi.compact {
+  background: linear-gradient(158deg, color-mix(in srgb, var(--kpi-tint, var(--primary-50)) 78%, var(--surface)) 0%, color-mix(in srgb, var(--kpi-tint, var(--primary-50)) 42%, var(--surface)) 100%);
+}
+/* Icon chip: a SOFT tinted plate with a colored glyph — carries the tone without
+   the heavy, over-saturated solid fill. Calm, not deep. */
+body[data-card-style="tinted"] .ipb-kpi-icon {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--kpi-accent, var(--primary-500)) 20%, var(--surface)), color-mix(in srgb, var(--kpi-accent, var(--primary-500)) 9%, var(--surface)));
+  color: var(--kpi-icon-fg, var(--kpi-accent, var(--primary-500)));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kpi-accent, var(--primary-500)) 20%, transparent), 0 2px 6px color-mix(in srgb, var(--kpi-accent, var(--primary-500)) 12%, transparent);
+}
+body[data-card-style="tinted"] .ipb-kpi:hover,
+body[data-card-style="tinted"] .ipb-kpi:focus-visible {
+  border-color: color-mix(in srgb, var(--kpi-accent, var(--primary-500)) 45%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--kpi-accent, var(--primary-500)) 14%, rgba(15, 23, 42, .09));
+}
 
 /* Insights panel */
 .ipb-insights {

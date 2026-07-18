@@ -154,9 +154,16 @@ $primaryColor = $gateBrand['primaryColor'];
     (function () {
       var params = new URLSearchParams(window.location.search);
       var user = params.get('user');
+      var pass = params.get('pass');
       if (user) {
         var emailInput = document.querySelector('input[name="email"]');
         if (emailInput) emailInput.value = decodeURIComponent(user);
+      }
+      /* Demo deep-link (?user=&pass= from the "Try It" cards) — prefill the
+         password too so the visitor just presses Sign in. Demo accounts only. */
+      if (pass) {
+        var passInput = document.querySelector('input[name="password"]');
+        if (passInput) passInput.value = decodeURIComponent(pass);
       }
     })();
 

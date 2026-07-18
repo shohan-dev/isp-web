@@ -96,7 +96,7 @@
               </div>
             <?php else: ?>
               <div class="text-center" style="padding: 30px;">
-                <i class="fa fa-newspaper-o" style="font-size: 50px; color: #ddd; margin-bottom: 10px; display: block;"></i>
+                <i class="far fa-newspaper" style="font-size: 50px; color: #ddd; margin-bottom: 10px; display: block;"></i>
                 <p class="text-muted">No notices posted yet.</p>
               </div>
             <?php endif; ?>

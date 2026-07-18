@@ -154,14 +154,26 @@ body.ipb {
   background: rgba(255, 255, 255, .06) !important;
   color: #fff !important;
 }
-.ipb .sidebar-menu > li.menu-open > a,
-.ipb .sidebar-menu > li > a:focus {
-  background: var(--primary-500) !important;
+/* Expanding a section (browsing, not necessarily viewing it) only rotates the
+   chevron and lightens the label — it must NOT borrow the active item's fill,
+   or every dropdown you open looks like "you are here" too. */
+.ipb .sidebar-menu > li.menu-open > a {
   color: #fff !important;
 }
+/* Bug fix: `:focus` used to force `background: var(--primary-500) !important`
+   — a full solid-orange flash on every click, colliding with the quiet
+   navy-tinted `.active` fill below (same specificity, so whichever handler
+   ran last "won" — the reported color flip/flicker). Removed: the global
+   `.ipb *:focus-visible` outline (base.css) already gives every sidebar link
+   an accessible keyboard-focus ring without adding a second "selected" color. */
 /* 06 §2.1(b) — active item: a quieter navy-tinted pill instead of a full
    orange slab, pairs with the sliding accent bar (below) so the two read
-   as one "you are here" system instead of two competing fills. */
+   as one "you are here" system instead of two competing fills. This is now
+   the ONLY background used to mean "current page" — sync() in
+   sidebar-boot.js adds `.active` to the top-level ancestor <li> too (not
+   just the leaf), so a nested treeview page (Customers, Employees, POP, …)
+   gets this same constant tint instead of falling back to the old solid
+   `.menu-open` orange. */
 .ipb .sidebar-menu > li.active > a {
   background: rgba(var(--primary-rgb), .14) !important;
   color: #fff !important;
@@ -556,7 +568,19 @@ body.ipb {
    initNavIndicator(); a single moving element beats a border on each <li>). */
 .ipb .main-sidebar .sidebar-menu { position: relative; }
 .ipb .ipb-nav-indicator {
+  /* Bug fix: `top` was never declared. An absolutely-positioned element with
+     both `top` and `bottom` auto falls back to its STATIC position (where it
+     would render if position were static) as the baseline for `top`. JS
+     appends this bar as the LAST child of .sidebar-menu (after "Logout"), so
+     its static position — and therefore its real baseline — was the very
+     bottom of the menu. `transform: translateY(offsetTop)` then shifted it
+     further down FROM that wrong baseline instead of from the top of the
+     menu, landing the rail off the end of the list, nowhere near the active
+     row it was supposed to mark. Pinning `top: 0` makes translateY(px) an
+     absolute offset from the top of .sidebar-menu, matching what
+     initNavIndicator()'s moveTo() actually computes. */
   position: absolute;
+  top: 0;
   left: 0;
   width: 3px;
   height: 0;

@@ -141,6 +141,14 @@
     if (emailInput) emailInput.value = decodeURIComponent(userParam);
   }
 
+  /* Demo deep-link (?user=&pass= from the landing "Try It" cards) — prefill the
+     password too so the visitor just presses Sign in. Demo accounts only. */
+  var passParam = new URLSearchParams(window.location.search).get('pass');
+  if (passParam) {
+    var demoPassInput = document.getElementById('login_password');
+    if (demoPassInput) demoPassInput.value = decodeURIComponent(passParam);
+  }
+
   /* Login AJAX */
   var loginValidateUrl = '<?= route_to("route.auth.login.validate"); ?>';
 

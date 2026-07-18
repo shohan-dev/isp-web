@@ -83,16 +83,20 @@ body.ipb {
   --primary-900: #78290b;
   --primary-rgb: 247, 88, 3;
 
-  --secondary-50: #e8eef8;
-  --secondary-100: #c5d4ec;
-  --secondary-200: #9bb4db;
-  --secondary-300: #6f92c8;
-  --secondary-400: #4a74b5;
-  --secondary-500: #2a5699;
-  --secondary-600: #1a3f7a;
-  --secondary-700: #001f55;
-  --secondary-800: #001640;
-  --secondary-900: #000d28;
+  /* Deep-violet family — matches the landing page's locked palette (deepest bg
+     #0c0118, raised panel #180a30 / #1a0b38). -700 is the exact anchor
+     DEFAULT_THEME.secondary in brand-boot.js uses, so the sidebar/secondary-button
+     colour doesn't flash between this static fallback and the JS-applied theme. */
+  --secondary-50: #f6f5fa;
+  --secondary-100: #e8e3f2;
+  --secondary-200: #cdc0e7;
+  --secondary-300: #a990da;
+  --secondary-400: #8059cf;
+  --secondary-500: #5a2db4;
+  --secondary-600: #371778;
+  --secondary-700: #1a0b38;
+  --secondary-800: #180a30;
+  --secondary-900: #0c0118;
 
   --neutral-50: #f8fafc;
   --neutral-100: #f1f5f9;
@@ -289,8 +293,8 @@ body.ipb[data-theme="dark"] {
   --primary-200: #5c2a0e;
   --primary-600: #ff8a4c;
   --primary-700: #ffab7a;
-  --secondary-500: #4a74b5;
-  --secondary-600: #6f92c8;
+  --secondary-500: #8059cf;
+  --secondary-600: #a990da;
   /* Dark elevation ladder. The direction inverts here: lighter = raised, so the
      order is bg < surface < surface-2, the mirror of the light block. Measured:
      bg->surface 1.16:1, surface->surface-2 1.10:1, border-on-surface 1.46:1. */

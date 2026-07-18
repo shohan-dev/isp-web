@@ -357,8 +357,12 @@ if (!headers_sent()) {
 
 
   <script>
-    // Initialize Bootstrap tooltips
-    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    // Initialize Bootstrap tooltips. This app bundles Bootstrap 3.4.1
+    // (assets/vendor/bootstrap/js/bootstrap.min.js), which never defines a
+    // global `bootstrap` object — `new bootstrap.Tooltip(...)` is Bootstrap 5
+    // API and threw "bootstrap is not defined" on every page load. Bootstrap
+    // 3's tooltip is a jQuery plugin instead.
+    $('[data-bs-toggle="tooltip"]').tooltip();
 
     function toggleTranslation() {
       const currentUrl = window.location.href;

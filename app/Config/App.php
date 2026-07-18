@@ -35,66 +35,6 @@ class App extends BaseConfig
 
     /**
      * --------------------------------------------------------------------------
-     * Base URL auto-detection (non-production only)
-     * --------------------------------------------------------------------------
-     *
-     * base_url() bakes $baseURL into every asset, form and redirect URL. When the
-     * dev server is reached on a host or port that differs from $baseURL — e.g.
-     * `php spark serve --host 0.0.0.0 --port 5028` browsed as http://<lan-ip>:5028
-     * — those URLs point at an origin nothing is listening on, so CSS/JS/images
-     * 404 and the page renders unstyled.
-     *
-     * $allowedHostnames cannot cover this: it substitutes the host but always
-     * keeps the port from $baseURL (see IncomingRequest::determineHost()).
-     *
-     * So outside production we follow the host:port the request actually arrived
-     * on, while keeping the path from $baseURL so sub-directory installs still
-     * work. Production always keeps the configured $baseURL: the Host header is
-     * client-supplied and must never be trusted to build absolute URLs there.
-     */
-    public function __construct()
-    {
-        parent::__construct();
-
-        // Not ENVIRONMENT: CodeIgniter defines that constant in
-        // CodeIgniter::detectEnvironment(), which runs *after* Services::codeigniter()
-        // has already constructed this config. Reading it here is a fatal error.
-        // DotEnv::load() has run by now, so env() is the reliable source.
-        $environment = defined('ENVIRONMENT') ? ENVIRONMENT : (string) env('CI_ENVIRONMENT', 'production');
-
-        $this->baseURL = self::resolveBaseURL($this->baseURL, $environment, $_SERVER);
-    }
-
-    /**
-     * Pure so the production and forged-host branches stay testable: under PHPUnit
-     * the environment is always "testing", so they are unreachable via globals.
-     *
-     * @param array<string, mixed> $server
-     */
-    public static function resolveBaseURL(string $configured, string $environment, array $server): string
-    {
-        if ($environment === 'production') {
-            return $configured;
-        }
-
-        $host = $server['HTTP_HOST'] ?? null;
-
-        // Bare host[:port] only - anything else is a malformed or forged Host header.
-        if (! is_string($host) || preg_match('/^[a-z0-9.\-]+(:\d{1,5})?$/i', $host) !== 1) {
-            return $configured;
-        }
-
-        $https    = (string) ($server['HTTPS'] ?? '');
-        $isSecure = ($https !== '' && strtolower($https) !== 'off')
-            || (string) ($server['SERVER_PORT'] ?? '') === '443';
-
-        $path = rtrim((string) parse_url($configured, PHP_URL_PATH), '/');
-
-        return ($isSecure ? 'https' : 'http') . '://' . $host . $path . '/';
-    }
-
-    /**
-     * --------------------------------------------------------------------------
      * Index File
      * --------------------------------------------------------------------------
      *

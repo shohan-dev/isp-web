@@ -12,8 +12,15 @@ $logoUrl = $brand['logoUrl'];
 $logoAlt = $brand['logoAlt'];
 $logoFull = $brand['logoFull'];
 $tagline = $brand['tagline'] ?? '';
+// Same pattern as landing/partials/nav.php & footer.php: route_to('route.home')
+// already resolves against the CURRENT request's Host, because the global
+// 'tenantresolve' filter (app/Filters/TenantResolveFilter.php) rewrites
+// config('App')->baseURL to the current tenant subdomain (or the platform
+// apex, off-subdomain) on every request, before this view ever renders.
+// No separate "current tenant home URL" helper is needed — route_to() IS it.
+$authHomeHref = route_to('route.home');
 ?>
-<div class="<?= esc($logoClass, 'attr'); ?>">
+<a href="<?= esc($authHomeHref, 'attr'); ?>" class="<?= esc($logoClass, 'attr'); ?>" aria-label="<?= esc($logoAlt); ?> Home">
   <?php if ($logoFull): ?>
     <img
       src="<?= esc($logoUrl, 'attr'); ?>"
@@ -43,4 +50,4 @@ $tagline = $brand['tagline'] ?? '';
       </span>
     <?php endif; ?>
   <?php endif; ?>
-</div>
+</a>

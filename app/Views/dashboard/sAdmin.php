@@ -1139,173 +1139,197 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
             loadRouterData('', <?= $router->id; ?>);
           }, <?= $index * 500; ?>);
         <?php $index++; endforeach; ?>
-
-        // 2. Charts load AFTER cards are displayed (100ms delay so browser paints cards first)
-        setTimeout(function() {
-          $.ajax({
-            url: "<?= base_url('api/dashboard/sadmin-charts-data') ?>",
-            method: "GET",
-            dataType: "json",
-            success: function(response) {
-              if (response.status !== 'success') {
-                console.error('Failed to load Super Admin charts:', response.message);
-                renderGeoRevenue([]);
-                swapSkeletonHtml('packageDistributionList', '<div class="py-2 text-muted text-center">No package data</div>');
-                swapSkeletonHtml('paymentMethodList', '<div class="py-2 text-muted text-center">No payment method data</div>');
-                return;
-              }
-
-              // Update Ticket Stats
-              if (response.ticket_stats) {
-                $('#ticket_open').text(response.ticket_stats.open || 0);
-                $('#ticket_open_kpi').text(response.ticket_stats.open || 0);
-                $('#ticket_ongoing').text(response.ticket_stats.ongoing || 0);
-                $('#ticket_solved').text(response.ticket_stats.solved || 0);
-                $('#ticket_closed').text(response.ticket_stats.closed || 0);
-                // The solved rate is drawn by collectionRateRadialChart (updated below).
-                // It used to ALSO be pushed into a CSS ring's --pct and a text node — two
-                // renderings of one number, which could disagree if either update failed.
-              }
-
-              // Update Badges
-              $('#efficiencyRateBadge').text(`Efficiency: ${response.efficiency_rate || 0}%`);
-              $('#retentionRateBadge').text(`Retention: ${response.retention_rate || 0}%`);
-
-              const weeklyGrowth = parseFloat(response.weekly_growth || 0);
-              const growthArrow = weeklyGrowth >= 0 ? 'up' : 'down';
-              $('#weeklyGrowthBadge')
-                .removeClass('up down')
-                .addClass(growthArrow)
-                .html(`<i class="fa fa-arrow-${growthArrow}"></i> ${weeklyGrowth >= 0 ? '+' : ''}${weeklyGrowth}%`);
-
-              // This total is platform-wide. The bandwidth card scopes it to the selected
-              // router, so only let the poll write it while the card is on "All Routers" —
-              // otherwise every refresh silently reverted the router's total to the global one.
-              if (($('#routerSelect').val() || 'all') === 'all') {
-                $('#totalDataGB').text(parseFloat(response.total_data_gb || 0).toFixed(1));
-              }
-
-              // Package Distribution List
-              const pkgColors = ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#dc3545', '#fd7e14', '#20c997', '#0d6efd'];
-              let pkgHtml = '';
-              if (response.package_distribution && response.package_distribution.length > 0) {
-                response.package_distribution.forEach((pkg, index) => {
-                  const color = pkgColors[index % pkgColors.length];
-                  const empty = Number(pkg.count) > 0 ? '' : ' is-zero';
-                  pkgHtml += `<div class="ipb-legend-row${empty}">`
-                    + `<span class="ipb-legend-dot" style="--dot:${color}"></span>`
-                    + `<span class="ipb-legend-name">${escapeHtml(pkg.package_name || 'Unknown')}</span>`
-                    + `<span class="ipb-legend-val">${pkg.count}</span></div>`;
-                });
-              } else {
-                pkgHtml = '<div class="py-2 text-muted text-center">No package data</div>';
-              }
-              swapSkeletonHtml('packageDistributionList', pkgHtml);
-
-              // Payment Method Mix List
-              const payColors = ['#e83e8c', '#28a745', '#fd7e14', '#6f42c1', '#007bff', '#20c997', '#ffc107'];
-              const paidViaTotal = response.payment_methods ? response.payment_methods.reduce((sum, item) => sum + parseFloat(item.total || 0), 0) : 0;
-              let payHtml = '';
-              if (response.payment_methods && response.payment_methods.length > 0) {
-                // Rails carrying nothing ("0%") still belong in a *mix* — they say the
-                // method is wired up — but they were listed in table order, so six dead
-                // rows outranked the two that carry the money. Biggest share first, and
-                // the empty ones dimmed (.is-zero) rather than dropped.
-                const payRows = response.payment_methods
-                  .map((pay, index) => ({
-                    color: payColors[index % payColors.length],
-                    label: pay.paid_via.charAt(0).toUpperCase() + pay.paid_via.slice(1),
-                    total: parseFloat(pay.total || 0),
-                  }))
-                  .sort((a, b) => b.total - a.total);
-
-                payRows.forEach((row) => {
-                  const percent = paidViaTotal > 0 ? ((row.total / paidViaTotal) * 100).toFixed(0) : '0';
-                  const empty = row.total > 0 ? '' : ' is-zero';
-                  payHtml += `<div class="ipb-legend-row${empty}">`
-                    + `<span class="ipb-legend-dot" style="--dot:${row.color}"></span>`
-                    + `<span class="ipb-legend-name">${escapeHtml(row.label)}</span>`
-                    + `<span class="ipb-legend-val">${percent}%</span></div>`;
-                });
-              } else {
-                payHtml = '<div class="py-2 text-muted text-center">No payment method data</div>';
-              }
-              swapSkeletonHtml('paymentMethodList', payHtml);
-
-              // Geo Revenue
-              renderGeoRevenue(response.geo_revenue || []);
-
-              // Update Charts
-              if (customerPaymentReportChart && response.customer_payment_statistics) {
-                customerPaymentReportChart.updateSeries([
-                  { name: 'Successful', data: response.customer_payment_statistics.successful },
-                  { name: 'Pending', data: response.customer_payment_statistics.pending },
-                  { name: 'Failed', data: response.customer_payment_statistics.failed }
-                ]);
-                customerPaymentReportChart.updateOptions({ xaxis: { categories: response.customer_payment_statistics.months } });
-              }
-              if (employeePaymentReportChart && response.employee_payment_statistics) {
-                employeePaymentReportChart.updateSeries([
-                  { name: 'Successful', data: response.employee_payment_statistics.successful },
-                  { name: 'Pending', data: response.employee_payment_statistics.pending },
-                  { name: 'Failed', data: response.employee_payment_statistics.failed }
-                ]);
-                employeePaymentReportChart.updateOptions({ xaxis: { categories: response.employee_payment_statistics.months } });
-              }
-              if (weeklyCollectionChart && response.weekly_collections) {
-                weeklyCollectionChart.updateSeries([{ name: 'Collection', data: response.weekly_collections.map(i => i.amount) }]);
-                weeklyCollectionChart.updateOptions({ xaxis: { categories: response.weekly_collections.map(i => i.day) } });
-              }
-              if (packageDistributionChart && response.package_distribution) {
-                const pkgCounts = response.package_distribution.map(item => parseInt(item.count || 0));
-                const pkgLabels = response.package_distribution.map(item => item.package_name || 'Unknown');
-                packageDistributionChart.updateOptions({ series: pkgCounts.length > 0 ? pkgCounts : [0], labels: pkgLabels.length > 0 ? pkgLabels : ['None'] });
-                if (pkgCounts.length === 0) {
-                  packageDistributionChart.updateOptions({ noData: { text: 'No data yet' } });
-                }
-              }
-              if (paymentMethodChart && response.payment_methods) {
-                const payTotals = response.payment_methods.map(item => parseFloat(item.total || 0));
-                const payLabels = response.payment_methods.map(item => item.paid_via.charAt(0).toUpperCase() + item.paid_via.slice(1));
-                paymentMethodChart.updateOptions({ series: payTotals.length > 0 ? payTotals : [0], labels: payLabels.length > 0 ? payLabels : ['None'] });
-                if (payTotals.length === 0) {
-                  paymentMethodChart.updateOptions({ noData: { text: 'No data yet' } });
-                }
-              }
-              if (revenueOverviewChart && response.revenue_overview) {
-                revenueOverviewChart.updateSeries([
-                  { name: 'Revenue', data: response.revenue_overview.map(i => i.revenue) },
-                  { name: 'Collection', data: response.revenue_overview.map(i => i.collection) },
-                  { name: 'Expense', data: response.revenue_overview.map(i => i.expense) }
-                ]);
-                revenueOverviewChart.updateOptions({ xaxis: { categories: response.revenue_overview.map(i => i.month) } });
-              }
-              if (growthChurnChart && response.growth_churn) {
-                growthChurnChart.updateSeries([
-                  { name: 'New Customers', data: response.growth_churn.map(i => i.new) },
-                  { name: 'Churn', data: response.growth_churn.map(i => i.churn * -1) }
-                ]);
-                growthChurnChart.updateOptions({ xaxis: { categories: response.growth_churn.map(i => i.month) } });
-              }
-              if (collectionRateRadialChart) {
-                collectionRateRadialChart.updateSeries([response.ticket_solving_rate || 0]);
-              }
-            },
-            error: function(xhr, status, error) {
-              console.error('Error fetching Super Admin charts data:', error);
-              renderGeoRevenue([]);
-              swapSkeletonHtml('packageDistributionList', '<div class="py-2 text-muted text-center">No package data</div>');
-              swapSkeletonHtml('paymentMethodList', '<div class="py-2 text-muted text-center">No payment method data</div>');
-            }
-          });
-        }, 100); // Small delay so browser paints card numbers before starting charts request
       },
       error: function(xhr, status, error) {
         console.error('Error fetching Super Admin card metrics:', error);
       }
     });
+  });
 
-    // (Charts AJAX is now chained inside the cards success callback above)
+  // Charts load independently of the card metrics above. They used to be
+  // chained inside that request's success callback (100ms setTimeout), so
+  // any failure there — session expiry, a network blip, a slow response —
+  // silently and permanently left every chart on this page with no data
+  // and no retry, with only a console.error nobody would ever see.
+  function loadSuperAdminCharts(isRetry) {
+    $.ajax({
+      url: "<?= base_url('api/dashboard/sadmin-charts-data') ?>",
+      method: "GET",
+      dataType: "json",
+      success: function(response) {
+        if (response.status !== 'success') {
+          console.error('Failed to load Super Admin charts:', response.message);
+          renderGeoRevenue([]);
+          swapSkeletonHtml('packageDistributionList', '<div class="py-2 text-muted text-center">No package data</div>');
+          swapSkeletonHtml('paymentMethodList', '<div class="py-2 text-muted text-center">No payment method data</div>');
+          return;
+        }
+
+        // Update Ticket Stats
+        if (response.ticket_stats) {
+          $('#ticket_open').text(response.ticket_stats.open || 0);
+          $('#ticket_open_kpi').text(response.ticket_stats.open || 0);
+          $('#ticket_ongoing').text(response.ticket_stats.ongoing || 0);
+          $('#ticket_solved').text(response.ticket_stats.solved || 0);
+          $('#ticket_closed').text(response.ticket_stats.closed || 0);
+          // The solved rate is drawn by collectionRateRadialChart (updated below).
+          // It used to ALSO be pushed into a CSS ring's --pct and a text node — two
+          // renderings of one number, which could disagree if either update failed.
+        }
+
+        // Update Badges
+        $('#efficiencyRateBadge').text(`Efficiency: ${response.efficiency_rate || 0}%`);
+        $('#retentionRateBadge').text(`Retention: ${response.retention_rate || 0}%`);
+
+        const weeklyGrowth = parseFloat(response.weekly_growth || 0);
+        const growthArrow = weeklyGrowth >= 0 ? 'up' : 'down';
+        $('#weeklyGrowthBadge')
+          .removeClass('up down')
+          .addClass(growthArrow)
+          .html(`<i class="fa fa-arrow-${growthArrow}"></i> ${weeklyGrowth >= 0 ? '+' : ''}${weeklyGrowth}%`);
+
+        // This total is platform-wide. The bandwidth card scopes it to the selected
+        // router, so only let the poll write it while the card is on "All Routers" —
+        // otherwise every refresh silently reverted the router's total to the global one.
+        if (($('#routerSelect').val() || 'all') === 'all') {
+          $('#totalDataGB').text(parseFloat(response.total_data_gb || 0).toFixed(1));
+        }
+
+        // Package Distribution List
+        const pkgColors = ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#dc3545', '#fd7e14', '#20c997', '#0d6efd'];
+        let pkgHtml = '';
+        if (response.package_distribution && response.package_distribution.length > 0) {
+          response.package_distribution.forEach((pkg, index) => {
+            const color = pkgColors[index % pkgColors.length];
+            const empty = Number(pkg.count) > 0 ? '' : ' is-zero';
+            pkgHtml += `<div class="ipb-legend-row${empty}">`
+              + `<span class="ipb-legend-dot" style="--dot:${color}"></span>`
+              + `<span class="ipb-legend-name">${escapeHtml(pkg.package_name || 'Unknown')}</span>`
+              + `<span class="ipb-legend-val">${pkg.count}</span></div>`;
+          });
+        } else {
+          pkgHtml = '<div class="py-2 text-muted text-center">No package data</div>';
+        }
+        swapSkeletonHtml('packageDistributionList', pkgHtml);
+
+        // Payment Method Mix List
+        const payColors = ['#e83e8c', '#28a745', '#fd7e14', '#6f42c1', '#007bff', '#20c997', '#ffc107'];
+        const paidViaTotal = response.payment_methods ? response.payment_methods.reduce((sum, item) => sum + parseFloat(item.total || 0), 0) : 0;
+        let payHtml = '';
+        if (response.payment_methods && response.payment_methods.length > 0) {
+          // Rails carrying nothing ("0%") still belong in a *mix* — they say the
+          // method is wired up — but they were listed in table order, so six dead
+          // rows outranked the two that carry the money. Biggest share first, and
+          // the empty ones dimmed (.is-zero) rather than dropped.
+          const payRows = response.payment_methods
+            .map((pay, index) => ({
+              color: payColors[index % payColors.length],
+              label: pay.paid_via.charAt(0).toUpperCase() + pay.paid_via.slice(1),
+              total: parseFloat(pay.total || 0),
+            }))
+            .sort((a, b) => b.total - a.total);
+
+          payRows.forEach((row) => {
+            const percent = paidViaTotal > 0 ? ((row.total / paidViaTotal) * 100).toFixed(0) : '0';
+            const empty = row.total > 0 ? '' : ' is-zero';
+            payHtml += `<div class="ipb-legend-row${empty}">`
+              + `<span class="ipb-legend-dot" style="--dot:${row.color}"></span>`
+              + `<span class="ipb-legend-name">${escapeHtml(row.label)}</span>`
+              + `<span class="ipb-legend-val">${percent}%</span></div>`;
+          });
+        } else {
+          payHtml = '<div class="py-2 text-muted text-center">No payment method data</div>';
+        }
+        swapSkeletonHtml('paymentMethodList', payHtml);
+
+        // Geo Revenue
+        renderGeoRevenue(response.geo_revenue || []);
+
+        // Update Charts
+        if (customerPaymentReportChart && response.customer_payment_statistics) {
+          customerPaymentReportChart.updateSeries([
+            { name: 'Successful', data: response.customer_payment_statistics.successful },
+            { name: 'Pending', data: response.customer_payment_statistics.pending },
+            { name: 'Failed', data: response.customer_payment_statistics.failed }
+          ]);
+          customerPaymentReportChart.updateOptions({ xaxis: { categories: response.customer_payment_statistics.months } });
+        }
+        if (employeePaymentReportChart && response.employee_payment_statistics) {
+          employeePaymentReportChart.updateSeries([
+            { name: 'Successful', data: response.employee_payment_statistics.successful },
+            { name: 'Pending', data: response.employee_payment_statistics.pending },
+            { name: 'Failed', data: response.employee_payment_statistics.failed }
+          ]);
+          employeePaymentReportChart.updateOptions({ xaxis: { categories: response.employee_payment_statistics.months } });
+        }
+        if (weeklyCollectionChart && response.weekly_collections) {
+          weeklyCollectionChart.updateSeries([{ name: 'Collection', data: response.weekly_collections.map(i => i.amount) }]);
+          weeklyCollectionChart.updateOptions({ xaxis: { categories: response.weekly_collections.map(i => i.day) } });
+        }
+        if (packageDistributionChart && response.package_distribution) {
+          const pkgCounts = response.package_distribution.map(item => parseInt(item.count || 0));
+          const pkgLabels = response.package_distribution.map(item => item.package_name || 'Unknown');
+          packageDistributionChart.updateOptions({ series: pkgCounts.length > 0 ? pkgCounts : [0], labels: pkgLabels.length > 0 ? pkgLabels : ['None'] });
+          if (pkgCounts.length === 0) {
+            packageDistributionChart.updateOptions({ noData: { text: 'No data yet' } });
+          }
+        }
+        if (paymentMethodChart && response.payment_methods) {
+          const payTotals = response.payment_methods.map(item => parseFloat(item.total || 0));
+          const payLabels = response.payment_methods.map(item => item.paid_via.charAt(0).toUpperCase() + item.paid_via.slice(1));
+          paymentMethodChart.updateOptions({ series: payTotals.length > 0 ? payTotals : [0], labels: payLabels.length > 0 ? payLabels : ['None'] });
+          if (payTotals.length === 0) {
+            paymentMethodChart.updateOptions({ noData: { text: 'No data yet' } });
+          }
+        }
+        if (revenueOverviewChart && response.revenue_overview) {
+          revenueOverviewChart.updateSeries([
+            { name: 'Revenue', data: response.revenue_overview.map(i => i.revenue) },
+            { name: 'Collection', data: response.revenue_overview.map(i => i.collection) },
+            { name: 'Expense', data: response.revenue_overview.map(i => i.expense) }
+          ]);
+          revenueOverviewChart.updateOptions({ xaxis: { categories: response.revenue_overview.map(i => i.month) } });
+        }
+        if (growthChurnChart && response.growth_churn) {
+          growthChurnChart.updateSeries([
+            { name: 'New Customers', data: response.growth_churn.map(i => i.new) },
+            { name: 'Churn', data: response.growth_churn.map(i => i.churn * -1) }
+          ]);
+          growthChurnChart.updateOptions({ xaxis: { categories: response.growth_churn.map(i => i.month) } });
+        }
+        if (collectionRateRadialChart) {
+          collectionRateRadialChart.updateSeries([response.ticket_solving_rate || 0]);
+        }
+      },
+      error: function(xhr, status, error) {
+        console.error('Error fetching Super Admin charts data:', error);
+
+        // A parsererror here almost always means the session expired and
+        // AuthCheck redirected to the login page's HTML instead of
+        // returning JSON — retrying against a dead session just repeats
+        // the same failure, so only auto-retry genuinely transient
+        // failures (timeout / network / 5xx), once.
+        if (!isRetry && status !== 'parsererror') {
+          setTimeout(function() { loadSuperAdminCharts(true); }, 3000);
+          return;
+        }
+
+        renderGeoRevenue([]);
+        swapSkeletonHtml('packageDistributionList', '<div class="py-2 text-muted text-center">No package data</div>');
+        swapSkeletonHtml('paymentMethodList', '<div class="py-2 text-muted text-center">No payment method data</div>');
+
+        var failedText = status === 'parsererror' ? 'Session expired — please refresh' : 'Failed to load';
+        [customerPaymentReportChart, employeePaymentReportChart, weeklyCollectionChart,
+          packageDistributionChart, paymentMethodChart, revenueOverviewChart,
+          growthChurnChart, collectionRateRadialChart].forEach(function(chart) {
+          if (chart) chart.updateOptions({ noData: { text: failedText } });
+        });
+      }
+    });
+  }
+
+  $(document).ready(function () {
+    loadSuperAdminCharts();
   });
 
 
@@ -1339,7 +1363,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         size: 4
       },
       colors: ['#16a34a', '#d97706', '#dc2626'],
-      noData: { text: 'Loading…', style: { color: window.IpbTheme.chartPalette().axis, fontSize: '13px' } },
       dataLabels: {
         enabled: false
       },
@@ -1404,7 +1427,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         },
       },
       colors: ['#0e7220ff', '#f59e0b', '#ff0080'],
-      noData: { text: 'Loading…', style: { color: window.IpbTheme.chartPalette().axis, fontSize: '13px' } },
       dataLabels: {
         enabled: false
       },
@@ -1441,7 +1463,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       chart: { type: 'bar', height: 250, toolbar: { show: false } },
       plotOptions: { bar: { borderRadius: 8, columnWidth: '45%' } },
       colors: ['#4f46e5'],
-      noData: { text: 'Loading…', style: { color: window.IpbTheme.chartPalette().axis, fontSize: '13px' } },
       grid: { borderColor: p.grid },
       xaxis: {
         categories: [],
@@ -1469,7 +1490,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         background: 'transparent'
       },
       labels: [],
-      noData: { text: 'Loading…', style: { color: window.IpbTheme.chartPalette().axis, fontSize: '13px' } },
       colors: ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#dc3545', '#fd7e14', '#20c997'],
       legend: { show: false, labels: { colors: p.ink } },
       dataLabels: {
@@ -1497,7 +1517,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         background: 'transparent'
       },
       labels: [],
-      noData: { text: 'Loading…', style: { color: window.IpbTheme.chartPalette().axis, fontSize: '13px' } },
       colors: ['#e83e8c', '#28a745', '#fd7e14', '#6f42c1', '#007bff', '#20c997'],
       legend: { show: false, labels: { colors: p.ink } },
       dataLabels: {
@@ -1526,7 +1545,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       stroke: { curve: 'smooth', width: 3 },
       fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05 } },
       colors: ['#00f2fe', '#10b981', '#ff0080'],
-      noData: { text: 'Loading…', style: { color: window.IpbTheme.chartPalette().axis, fontSize: '13px' } },
       legend: { labels: { colors: p.ink } },
       grid: { borderColor: p.grid },
       yaxis: {
@@ -1554,7 +1572,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       chart: { type: 'bar', height: 300, stacked: true, toolbar: { show: false } },
       plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
       colors: ['#00f2fe', '#ff0080'],
-      noData: { text: 'Loading…', style: { color: window.IpbTheme.chartPalette().axis, fontSize: '13px' } },
       legend: { labels: { colors: p.ink } },
       grid: { borderColor: p.grid },
       yaxis: { labels: { style: { colors: p.axis } } },
@@ -1594,10 +1611,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           style: { colors: bwPalette.axis },
           formatter: (val) => val < 1024 ? val.toFixed(2) + ' MB' : (val / 1024).toFixed(2) + ' GB'
         }
-      },
-      noData: {
-        text: 'Loading…',
-        style: { color: bwPalette.axis, fontSize: '13px' }
       },
       // Keep the MB/GB unit (an unlabelled bandwidth axis is meaningless) but
       // drop the two decimals — "1024.00 MB" is nine characters of axis gutter.
@@ -1808,7 +1821,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       labels: ['Solved'],   // the value IS the solved rate — "Support" named the card, not the number
       colors: ['#f59e0b'],
       stroke: { lineCap: 'round' },
-      noData: { text: 'Loading…', style: { color: window.IpbTheme.chartPalette().axis, fontSize: '13px' } },
       responsive: window.IpbUI ? window.IpbUI.chartResponsive('radial') : undefined
     });
     window.IpbTheme.registerChart(collectionRateRadialChart);

@@ -248,24 +248,51 @@ class AdminPackage extends Model
     }
 
     /**
+     * Parses the admin_packages "features" textarea convention (one feature per
+     * line, prefixed '+ ' for included / '- ' for excluded) into the shape the
+     * landing page pricing cards render: a flat list of either a plain string
+     * (included, checkmark) or ['no' => string] (excluded, crossed-out).
+     *
+     * @return list<string|array{no: string}>
+     */
+    public static function parseFeaturesText(?string $text): array
+    {
+        $features = [];
+        foreach (preg_split('/\R/', (string) $text) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            if (str_starts_with($line, '+ ')) {
+                $features[] = trim(substr($line, 2));
+            } elseif (str_starts_with($line, '- ')) {
+                $features[] = ['no' => trim(substr($line, 2))];
+            }
+        }
+
+        return $features;
+    }
+
+    /**
      * Landing-page pricing payload: public fixed tiers + PAYG rates + add-ons.
      * Falls back to the rates hardcoded on the marketing page when the DB is empty.
      *
-     * @return array{tiers: array<string, array{id: ?int, price: float, cap: int, name: string}>,
+     * @return array{tiers: array<string, array{id: ?int, price: float, cap: int, name: string, features: array}>,
      *               payg: array{platform: float, perUser: float, minWallet: float, id?: int},
      *               addons: array<string, array{key: string, label: string, price: float}>,
-     *               fixedPlans: list<array|object>}
+     *               fixedPlans: list<array|object>,
+     *               yearlyDiscountMonths: int}
      */
     public function landingPricingPayload(): array
     {
         $tierKeys = ['basic', 'standard', 'premium', 'business', 'enterprise', 'ultimate'];
         $tiers = [
-            'basic'      => ['id' => null, 'price' => 999.0,   'cap' => 500,   'name' => 'Basic'],
-            'standard'   => ['id' => null, 'price' => 2499.0,  'cap' => 2000,  'name' => 'Standard'],
-            'premium'    => ['id' => null, 'price' => 4999.0,  'cap' => 5000,  'name' => 'Premium'],
-            'business'   => ['id' => null, 'price' => 8499.0,  'cap' => 10000, 'name' => 'Business'],
-            'enterprise' => ['id' => null, 'price' => 14999.0, 'cap' => 20000, 'name' => 'Enterprise'],
-            'ultimate'   => ['id' => null, 'price' => 24999.0, 'cap' => 40000, 'name' => 'Ultimate'],
+            'basic'      => ['id' => null, 'price' => 999.0,   'cap' => 500,   'name' => 'Basic',      'features' => []],
+            'standard'   => ['id' => null, 'price' => 2499.0,  'cap' => 2000,  'name' => 'Standard',   'features' => []],
+            'premium'    => ['id' => null, 'price' => 4999.0,  'cap' => 5000,  'name' => 'Premium',    'features' => []],
+            'business'   => ['id' => null, 'price' => 8499.0,  'cap' => 10000, 'name' => 'Business',   'features' => []],
+            'enterprise' => ['id' => null, 'price' => 14999.0, 'cap' => 20000, 'name' => 'Enterprise', 'features' => []],
+            'ultimate'   => ['id' => null, 'price' => 24999.0, 'cap' => 40000, 'name' => 'Ultimate',   'features' => []],
         ];
 
         $fixed = $this->publicFixedPackages();
@@ -273,10 +300,11 @@ class AdminPackage extends Model
             $key = $tierKeys[$i] ?? ('tier' . $i);
             $row = is_object($pkg) ? (array) $pkg : $pkg;
             $tiers[$key] = [
-                'id'    => (int) ($row['id'] ?? 0),
-                'price' => (float) ($row['price'] ?? 0),
-                'cap'   => (int) ($row['duration'] ?? 0),
-                'name'  => (string) ($row['package_name'] ?? ucfirst($key)),
+                'id'       => (int) ($row['id'] ?? 0),
+                'price'    => (float) ($row['price'] ?? 0),
+                'cap'      => (int) ($row['duration'] ?? 0),
+                'name'     => (string) ($row['package_name'] ?? ucfirst($key)),
+                'features' => self::parseFeaturesText($row['features'] ?? null),
             ];
         }
 
@@ -307,11 +335,20 @@ class AdminPackage extends Model
             }
         }
 
+        // Marketing-display only (see Save-N-months badge on the pricing toggle) —
+        // never used for real billing math. Platform-wide setting, read via the
+        // same platformBrandingUserId() scope convention as other platform-wide
+        // settings (e.g. safeAuthBrandLogo()'s "auth-register" branch). Clamped to
+        // 0-11 in case the stored value is ever out of range (12+ would mean free
+        // forever).
+        $yearlyDiscountMonths = max(0, min(11, (int) getSetting('yearly_discount_months', 2, platformBrandingUserId())));
+
         return [
-            'tiers'      => $tiers,
-            'payg'       => $payg,
-            'addons'     => $addons,
-            'fixedPlans' => array_slice($fixed, 0, 6),
+            'tiers'                => $tiers,
+            'payg'                 => $payg,
+            'addons'               => $addons,
+            'fixedPlans'           => array_slice($fixed, 0, 6),
+            'yearlyDiscountMonths' => $yearlyDiscountMonths,
         ];
     }
 

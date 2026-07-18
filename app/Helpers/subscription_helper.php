@@ -311,7 +311,10 @@ if (!function_exists('requestPackageChange')) {
         } else {
             $paymentData = [
                 'user_id' => $userId,
-                'admin_id' => $user->admin_id ?? null,
+                // A top-level ISP admin has no parent admin_id, so scope their own
+                // SaaS subscription invoice to themselves. Customers keep their
+                // parent's id. payments.admin_id is NOT NULL — never insert null.
+                'admin_id' => $user->admin_id ?: $userId,
                 'paidby' => $userId,
                 'user_type' => $user->role === 'admin' ? 'admin' : 'user',
                 'invoice' => 'INV-' . random_int(100000, 999999),

@@ -713,6 +713,44 @@ body.ipb.dark-mode .ipb-wallet-alert.is-danger {
   margin: 0 0 12px;
 }
 
+/* Full-width banner variant — sits below the two-column grid so the left/right
+   columns stay balanced (2 cards each) instead of leaving a bottom-right void.
+   Icon | text (grows) | CTA (right), wrapping to stacked on narrow widths. */
+.ipb-wallet-action-card--wide {
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ipb-wallet-action-card--wide .ipb-wallet-action-card__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ipb-wallet-action-card--wide .ipb-wallet-action-card__text p {
+  margin-bottom: 0;
+}
+
+.ipb-wallet-action-card--wide .ipb-wallet-action-card__note {
+  margin: 8px 0 0;
+}
+
+.ipb-wallet-action-card__cta {
+  flex-shrink: 0;
+  white-space: nowrap;
+  align-self: center;
+}
+
+@media (max-width: 640px) {
+  .ipb-wallet-action-card--wide {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .ipb-wallet-action-card__cta {
+    width: 100%;
+  }
+}
+
 /* ── Ledger table ───────────────────────────────────────────── */
 .ipb-wallet-ledger .ipb-wallet-table {
   margin-bottom: 0;

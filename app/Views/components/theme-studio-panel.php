@@ -145,6 +145,14 @@ $isPage = $layout === 'page';
 
   <div class="ipb-theme-field">
     <label class="ipb-theme-check">
+      <input type="checkbox" data-theme-colorful-cards />
+      <span>Colorful cards</span>
+    </label>
+    <span class="ipb-theme-field-hint">Tint each dashboard stat card with its category color instead of just the icon. On by default.</span>
+  </div>
+
+  <div class="ipb-theme-field">
+    <label class="ipb-theme-check">
       <input type="checkbox" data-theme-sidebar-compact />
       <span>Compact sidebar (icons-first)</span>
     </label>

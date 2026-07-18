@@ -138,8 +138,8 @@
             </li>
           <?php endif; ?>
 
-          <li class="<?= ($uri->getSegment(1) === 'plugins') ? 'active' : ''; ?>">
-            <a href="<?= route_to('route.plugins.index'); ?>">
+          <li class="<?= ($uri->getSegment(1) === 'admin' && $uri->getSegment(2) === 'plugins') ? 'active' : ''; ?>">
+            <a href="<?= route_to('route.plugins.admin'); ?>">
               <i class="fa fa-puzzle-piece"></i>
               <span>Plugins & Addons</span>
             </a>
@@ -162,6 +162,16 @@
             <a href="<?= route_to('route.useraccess'); ?>">
               <i class="fa fa-user-lock"></i>
               <span>User Access Management</span>
+            </a>
+          </li>
+
+          <?php /* Software Settings was only in the non-super_admin branch below and
+                   gated by userHasPermission('software_settings'), so the platform
+                   owner never saw it. Surface it here for super_admin too. */ ?>
+          <li class="<?= ($uri->getSegment(2) === 'software') ? 'active' : ''; ?>">
+            <a href="<?= route_to('route.settings.software'); ?>">
+              <i class="fa fa-gears"></i>
+              <span>Software Settings</span>
             </a>
           </li>
 
@@ -363,7 +373,7 @@
                 <span class="fa fa-angle-down pull-right"></span>
               </a>
               <ul class="treeview-menu" style="display: none;">
-                <!-- <li><a href="<?= route_to('reseller.subscription'); ?>"><i class="fa fa-circle-o"></i> Subscription</a></li> -->
+                <!-- <li><a href="<?= route_to('reseller.subscription'); ?>"><i class="far fa-circle"></i> Subscription</a></li> -->
                 <li><a href="<?= route_to('reseller.packages'); ?>"><i class="fa fa-boxes-stacked"></i>Customer Packages</a>
                 </li>
                 <li><a href="<?= route_to('route.reseller'); ?>"><i class="fa fa-building"></i> POP</a></li>
@@ -417,9 +427,9 @@
               <li><a href="<?= route_to('bandwidth.sell.purchase_list'); ?>"><i class="fa fa-file-invoice-dollar"></i>Sales
                   Invoice</a>
               </li>
-              <!-- <li><a href="<?= route_to('bandwidth.dailyindex'); ?>"><i class="fa fa-circle-o"></i>Bill Collection</a>
+              <!-- <li><a href="<?= route_to('bandwidth.dailyindex'); ?>"><i class="far fa-circle"></i>Bill Collection</a>
             </li>
-            <li><a href="<?= route_to('bandwidth.purchess'); ?>"><i class="fa fa-circle-o"></i>Purchase Bill</a>
+            <li><a href="<?= route_to('bandwidth.purchess'); ?>"><i class="far fa-circle"></i>Purchase Bill</a>
             </li> -->
             </ul>
           </li>

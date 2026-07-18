@@ -46,13 +46,17 @@ $tierFeatures = [
         'Everything in Enterprise', 'Multi-Region Deployment', 'Dedicated Success Manager', 'Priority Feature Requests',
     ],
 ];
+// Yearly-discount badge value — super-admin editable (SecondAdmin/package.php),
+// read platform-wide via AdminPackage::landingPricingPayload(). Display-only,
+// never used for real billing math.
+$lpYearlyDiscountMonths = (int) ($lpPricing['yearlyDiscountMonths'] ?? 2);
 ?>
 <section class="lp-section lp-section--dark" id="lp-pricing" data-lp-section>
     <div class="lp-container">
         <div class="lp-section__header lp-reveal">
             <span class="lp-section__label">Pricing</span>
-            <h2 class="lp-section__title">Pay Your Way — Fixed or Pay-As-You-Go</h2>
-            <p class="lp-section__desc">Choose predictable monthly plans, or pay a low <strong>per-customer rate</strong> each month with our wallet system — no fixed tier caps.</p>
+            <h2 class="lp-section__title">Priced per subscriber, not per promise.</h2>
+            <p class="lp-section__desc">Lock a fixed monthly plan for predictable billing, or go pay-as-you-go: one low <strong>per-customer rate</strong>, wallet-funded, no tier ceiling to outgrow.</p>
         </div>
 
         <!-- Pricing model switch -->
@@ -76,7 +80,7 @@ $tierFeatures = [
                 <span class="lp-pricing-toggle__label is-active" id="lp-label-monthly">Monthly</span>
                 <button type="button" class="lp-pricing-toggle__switch" id="lp-pricing-toggle" aria-label="Toggle yearly pricing"></button>
                 <span class="lp-pricing-toggle__label" id="lp-label-yearly">Yearly</span>
-                <span class="lp-pricing-toggle__badge">Save 2 months</span>
+                <span class="lp-pricing-toggle__badge">Save <?= $lpYearlyDiscountMonths ?> month<?= $lpYearlyDiscountMonths === 1 ? '' : 's' ?></span>
             </div>
 
             <?php
@@ -88,13 +92,16 @@ $tierFeatures = [
                     $tierKey = $card['key'] ?? ('tier' . $cardIndex);
                     $planId = !empty($card['id']) ? (int) $card['id'] : $tierKey;
                     $isFeatured = $cardIndex === 1 || $tierKey === 'standard';
-                    $features = $tierFeatures[$tierKey] ?? $tierFeatures['basic'];
+                    // Prefer this package row's own admin_packages.features (set via the
+                    // super-admin package screen) — fall back to the curated hardcoded
+                    // list only when the row has never had its features column touched.
+                    $features = !empty($card['features']) ? $card['features'] : ($tierFeatures[$tierKey] ?? $tierFeatures['basic']);
                     $cap = (int) ($card['cap'] ?? 0);
                     $price = (float) ($card['price'] ?? 0);
                     $name = esc($card['name'] ?? ucfirst($tierKey));
                 ?>
                 <div class="lp-pricing-card<?= $isFeatured ? ' lp-pricing-card--featured' : '' ?> lp-reveal<?= $cardIndex > 0 ? ' lp-reveal-delay-' . min($cardIndex, 3) : '' ?>">
-                    <?php if ($isFeatured): ?><span class="lp-pricing-card__badge">Most Popular</span><?php endif; ?>
+                    <?php if ($isFeatured): ?><span class="lp-pricing-card__badge">Most ISPs · 500–2,000 subs</span><?php endif; ?>
                     <h3 class="lp-pricing-card__name"><?= $name ?></h3>
                     <p class="lp-pricing-card__users">Up to <?= number_format(max(1, $cap)) ?> active users</p>
                     <div class="lp-pricing-card__price"><span data-plan-price="<?= esc($tierKey, 'attr') ?>">৳<?= number_format($price) ?></span> <span class="lp-pricing-card__unit">/mo</span></div>
@@ -136,7 +143,7 @@ $tierFeatures = [
                 <?php foreach ($lpExtraCards as $cardIndex => $card):
                     $tierKey = $card['key'] ?? ('tier' . $cardIndex);
                     $planId = !empty($card['id']) ? (int) $card['id'] : $tierKey;
-                    $features = $tierFeatures[$tierKey] ?? $tierFeatures['basic'];
+                    $features = !empty($card['features']) ? $card['features'] : ($tierFeatures[$tierKey] ?? $tierFeatures['basic']);
                     $cap = (int) ($card['cap'] ?? 0);
                     $price = (float) ($card['price'] ?? 0);
                     $name = esc($card['name'] ?? ucfirst($tierKey));
@@ -226,6 +233,31 @@ $tierFeatures = [
                             <p>Estimate your monthly cost based on your customer count. Price adjusts automatically as you grow or shrink.</p>
                         </div>
 
+                        <?php /* Months-to-cover picker — promoted to the TOP of the configurator
+                                 as a one-tap segmented control (was a dropdown buried at the bottom).
+                                 Backed by a visually-hidden <select id="lp-topup-months"> so the wallet
+                                 math in landing.js reads it unchanged. Default: 1 month. */ ?>
+                        <div class="lp-payg__topup">
+                            <div class="lp-payg__topup-head">
+                                <label id="lp-topup-label">Wallet top-up covers</label>
+                                <span class="lp-payg__topup-hint">Tap to set how many months of balance to add</span>
+                            </div>
+                            <div class="lp-payg__topup-seg" role="radiogroup" aria-labelledby="lp-topup-label">
+                                <button type="button" class="lp-payg__topup-opt is-active" data-months="1" role="radio" aria-checked="true">1 <span>mo</span></button>
+                                <button type="button" class="lp-payg__topup-opt" data-months="2" role="radio" aria-checked="false">2 <span>mo</span></button>
+                                <button type="button" class="lp-payg__topup-opt" data-months="3" role="radio" aria-checked="false">3 <span>mo</span></button>
+                                <button type="button" class="lp-payg__topup-opt" data-months="6" role="radio" aria-checked="false">6 <span>mo</span></button>
+                                <button type="button" class="lp-payg__topup-opt" data-months="12" role="radio" aria-checked="false">12 <span>mo</span></button>
+                            </div>
+                            <select id="lp-topup-months" class="lp-visually-hidden" aria-hidden="true" tabindex="-1">
+                                <option value="1" selected>1 month</option>
+                                <option value="2">2 months</option>
+                                <option value="3">3 months</option>
+                                <option value="6">6 months</option>
+                                <option value="12">12 months</option>
+                            </select>
+                        </div>
+
                         <div class="lp-payg__field">
                             <div class="lp-payg__field-top">
                                 <label for="lp-user-slider">Total customers</label>
@@ -267,16 +299,6 @@ $tierFeatures = [
                             <?php endforeach; ?>
                         </div>
 
-                        <div class="lp-payg__topup-select">
-                            <label for="lp-topup-months">Wallet top-up covers</label>
-                            <select id="lp-topup-months" aria-label="Months of balance to add">
-                                <option value="1">1 month (minimum)</option>
-                                <option value="2" selected>2 months (recommended)</option>
-                                <option value="3">3 months (best value)</option>
-                                <option value="6">6 months</option>
-                                <option value="12">12 months</option>
-                            </select>
-                        </div>
                     </div>
 
                     <!-- Right: Wallet preview -->

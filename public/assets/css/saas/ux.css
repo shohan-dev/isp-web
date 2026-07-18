@@ -122,15 +122,20 @@ body.ipb .sidebar-menu .treeview-menu > li > a {
   min-height: 38px;
 }
 
-/* Active child: keep parent visually open and readable */
-body.ipb .sidebar-menu > li.menu-open > a:not(.active-parent-force) {
+/* Active child: keep parent visually open and readable — but ONLY when it's
+   expanded and NOT the current page's own section. Bug fix: this used to
+   match unconditionally, and a second rule below forced a solid
+   `var(--primary-500)` background whenever an item was BOTH .menu-open AND
+   .active. sidebar-boot.js's sync() now deliberately marks a nested page's
+   top-level ancestor with BOTH classes (so the indicator + quiet tint work
+   for nested pages too), which made that combination the COMMON case —
+   reintroducing the old solid-orange fill on every nested page's section
+   header and masking layout.css's quiet-tint redesign. Scoping this to
+   :not(.active) lets layout.css's rgba(--primary-rgb,.14) tint show through
+   for the active case instead; the solid-orange rule below is removed. */
+body.ipb .sidebar-menu > li.menu-open:not(.active) > a {
   background: rgba(255, 255, 255, 0.08) !important;
   color: #fff !important;
-}
-
-body.ipb .sidebar-menu > li.menu-open.active > a,
-body.ipb .sidebar-menu > li.active.menu-open > a {
-  background: var(--primary-500) !important;
 }
 
 /* Clear empty search state */

@@ -8,6 +8,7 @@ $platformOpen = $seg1 === 'tenants'
     || ($seg2 !== '' && ctype_digit($seg2))
   ))
   || ($seg1 === 'admins' && $seg2 === 'revenue')
+  || ($seg1 === 'product-showcase')
   || ($seg2 === 'contactfetch');
 ?>
 <li class="treeview <?= $platformOpen ? 'active menu-open' : ''; ?>">
@@ -31,6 +32,9 @@ $platformOpen = $seg1 === 'tenants'
     </li>
     <li class="<?= ($uri->getSegment(2) === 'packages') ? 'active' : ''; ?>">
       <a href="<?= route_to('Admin.packages'); ?>"><i class="fa fa-box"></i> Admin Packages</a>
+    </li>
+    <li class="<?= ($seg1 === 'product-showcase') ? 'active' : ''; ?>">
+      <a href="<?= route_to('route.productShowcase.index'); ?>"><i class="fa fa-images"></i> Product Showcase</a>
     </li>
     <li class="<?= ($seg1 === 'admins' && $seg2 === 'revenue') ? 'active' : ''; ?>">
       <a href="<?= route_to('route.Admin.revenue'); ?>"><i class="fa fa-chart-line"></i> Platform Revenue</a>

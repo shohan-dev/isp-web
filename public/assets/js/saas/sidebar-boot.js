@@ -58,6 +58,20 @@
     }
   }
 
+  /** The <li> one hop below `.sidebar-menu` itself — for a top-level link this
+   *  IS the active li; for a nested treeview-menu link it's the enclosing
+   *  section (e.g. "Customers"). Both the sliding nav-indicator and the
+   *  quiet-tint active style key off `.sidebar-menu > li.active`, so a nested
+   *  active page needs its top-level ancestor marked too, or neither ever
+   *  fires for it. */
+  function findTopLevelLi(menuRoot, li) {
+    var node = li;
+    while (node && node.parentElement && node.parentElement !== menuRoot) {
+      node = node.parentElement.closest("li");
+    }
+    return node;
+  }
+
   /** Mark the active item for the current URL and open its section(s).
    *  Idempotent, and only touches what actually changes — never strips the
    *  classes first, because removing then re-adding them IS a repaint.
@@ -90,12 +104,21 @@
     var activeLi = best ? best.closest("li") : menuRoot.querySelector("li.active");
     if (!activeLi) return null;
 
+    var topLi = findTopLevelLi(menuRoot, activeLi);
+
     if (best) {
       menuRoot.querySelectorAll("li.active").forEach(function (li) {
-        if (li !== activeLi) li.classList.remove("active");
+        if (li !== activeLi && li !== topLi) li.classList.remove("active");
       });
       activeLi.classList.add("active");
     }
+    // Bug fix: this used to sit inside `if (best)`, so a page reached only via
+    // a non-menu link (best === null, activeLi falls back to whatever PHP
+    // already marked) never got its top-level ancestor tagged "active" — the
+    // section header silently missed the quiet tint even though its nested
+    // leaf was correctly marked. Additive only (never removes a class), so
+    // it's safe to run in both branches.
+    if (topLi) topLi.classList.add("active");
 
     openAncestorSections(activeLi);
     return activeLi;

@@ -71,7 +71,7 @@
                           <h5>
                             <?= getUserById($ticket->user_id)->name ?? '--'; ?>
                             <small class="pull-right">
-                              <i class="fa fa-clock-o" aria-hidden="true"></i> <?= date('d-m-y', strtotime($ticket->datetime)); ?>
+                              <i class="far fa-clock" aria-hidden="true"></i> <?= date('d-m-y', strtotime($ticket->datetime)); ?>
                             </small>
                           </h5>
                           <p><?= esc($ticket->subject); ?></p>

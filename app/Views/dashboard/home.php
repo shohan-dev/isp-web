@@ -55,6 +55,7 @@ $lpPricing = $lpPricing ?? [
     ],
     'payg' => ['platform' => 500, 'perUser' => 1.5, 'minWallet' => 750],
     'addons' => [],
+    'yearlyDiscountMonths' => 2,
 ];
 $lpTierOrder = ['basic', 'standard', 'premium', 'business', 'enterprise', 'ultimate'];
 $lpFixedCards = [];
@@ -126,6 +127,8 @@ $lpData = [
     'lpFaqs' => $lpFaqs,
     'lpTestimonials' => $lpTestimonials ?? [],
     'lpCaseStudy' => $lpCaseStudy ?? null,
+    'lpPlugins' => $lpPlugins ?? [],
+    'lpProductShowcase' => $lpProductShowcase ?? ['website' => [], 'mobile' => []],
 ];
 ?>
 <!DOCTYPE html>
@@ -155,7 +158,7 @@ $lpData = [
     <link rel="preload" href="<?= base_url('assets/fonts/plus-jakarta-latin.woff2') ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= base_url('assets/css/landing/fonts.css') ?>?v=1">
     <link rel="stylesheet" href="<?= base_url('assets/vendor/fontawesome/all.min.css') ?>?v=6.7.2-1">
-    <link rel="stylesheet" href="<?= base_url('assets/css/landing/landing.css') ?>?v=4.3">
+    <link rel="stylesheet" href="<?= base_url('assets/css/landing/landing.css') ?>?v=8.7">
     <script type="application/ld+json"><?= json_encode($organizationSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
     <script type="application/ld+json"><?= json_encode($softwareSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
     <script type="application/ld+json"><?= json_encode($faqSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
@@ -168,24 +171,36 @@ $lpData = [
 
 <main id="lp-main">
     <?php
-    // Section order: pricing moved up next to features (the #1 question for this
-    // audience); why_choose + partners removed — their content duplicated benefits
-    // and the trust marquee (see docs/landing-review/03-content-copy.md §6).
+    // "Operator's Console" redesign narrative (20 → 13 beats):
+    //   hero → reconcile (flagship) → why → product tour → features → roles/access
+    //   → pricing → go-live → customer app → why-switch → connects → proof → FAQ → contact.
+    // Merges: roles_access = reseller_hierarchy + permissions; connects = integrations
+    // + plugins; proof = proof_band(stats) + our_partners + case_study + testimonials.
+    // Dropped: try_it (duplicate CTA) + the 3 orphaned partials (stats/why_choose/roi).
     ?>
     <?= view('landing/partials/hero', $lpData) ?>
+
+    <div class="lp-status-rail" aria-hidden="true">
+        <div class="lp-container lp-status-rail__inner">
+            <span class="lp-status-rail__item">auto-reconcile <b>on</b></span>
+            <span class="lp-status-rail__item">MikroTik <b>real-time sync</b></span>
+            <span class="lp-status-rail__item">disconnect on expiry &middot; <b>reconnect on payment</b></span>
+            <span class="lp-status-rail__item">bKash &middot; Nagad &middot; <b>SSLCommerz</b></span>
+        </div>
+    </div>
+
     <?= view('landing/partials/auto_reconciliation', $lpData) ?>
     <?= view('landing/partials/benefits', $lpData) ?>
     <?= view('landing/partials/product_preview', $lpData) ?>
     <?= view('landing/partials/features', $lpData) ?>
-    <?= view('landing/partials/reseller_hierarchy', $lpData) ?>
+    <?= view('landing/partials/roles_access', $lpData) ?>
     <?= view('landing/partials/pricing', $lpData) ?>
-    <?= view('landing/partials/mobile_app', $lpData) ?>
     <?= view('landing/partials/how_it_works', $lpData) ?>
+    <?= view('landing/partials/try_it', $lpData) ?>
+    <?= view('landing/partials/mobile_app', $lpData) ?>
     <?= view('landing/partials/comparison', $lpData) ?>
-    <?= view('landing/partials/integrations', $lpData) ?>
-    <?= view('landing/partials/proof_band', $lpData) ?>
-    <?= view('landing/partials/case_study', $lpData) ?>
-    <?= view('landing/partials/testimonials', $lpData) ?>
+    <?= view('landing/partials/connects', $lpData) ?>
+    <?= view('landing/partials/proof', $lpData) ?>
     <?= view('landing/partials/faq', $lpData) ?>
     <?= view('landing/partials/cta_contact', $lpData) ?>
 </main>
@@ -201,6 +216,6 @@ $lpData = [
 window.LP_PRICING = <?= json_encode($lpPricing, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <?php /* reCAPTCHA is lazy-loaded by landing.js when the contact section approaches. */ ?>
-<script src="<?= base_url('assets/js/landing/landing.js') ?>?v=3.8"></script>
+<script src="<?= base_url('assets/js/landing/landing.js') ?>?v=3.9"></script>
 </body>
 </html>

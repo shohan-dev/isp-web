@@ -1,6 +1,6 @@
 <?= $this->extend('layout/main-layout'); ?>
 <?= $this->section('css'); ?>
-<link rel="stylesheet" href="<?= base_url('assets/css/saas/wallet.css?v=7'); ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/saas/wallet.css?v=8'); ?>">
 <?= $this->endSection('css'); ?>
 <?= $this->section('content'); ?>
 
@@ -167,27 +167,6 @@ $totalUsers = (int) ($estimate['total_users'] ?? 0);
           </div>
         </div>
 
-        <?php if (!$isPayg): ?>
-          <div class="ipb-wallet-action-card">
-            <div class="ipb-wallet-action-card__icon" aria-hidden="true"><i class="fa fa-shuffle"></i></div>
-            <div>
-              <h4 class="ipb-wallet-action-card__title">Switch to Pay-As-You-Go</h4>
-              <p>
-                No fixed tier — pay only for your total customers each month.
-                Remaining subscription days carry over until wallet billing starts.
-              </p>
-              <?php if (!$canSwitchPayg): ?>
-                <p class="ipb-wallet-action-card__note">
-                  <i class="fa fa-circle-info"></i>
-                  Add at least <strong>৳<?= number_format($minTopup); ?></strong> before switching (subscription already expired).
-                </p>
-              <?php endif; ?>
-              <button type="button" id="switchPaygBtn" class="btn btn-warning" <?= $canSwitchPayg ? '' : 'disabled'; ?>>
-                <i class="fa fa-bolt"></i> Switch to Pay-As-You-Go
-              </button>
-            </div>
-          </div>
-        <?php endif; ?>
       </div>
 
       <div class="ipb-wallet-layout__main">
@@ -269,6 +248,28 @@ $totalUsers = (int) ($estimate['total_users'] ?? 0);
         <?php endif; ?>
       </div>
     </div>
+
+    <?php if (!$isPayg): ?>
+      <div class="ipb-wallet-action-card ipb-wallet-action-card--wide">
+        <div class="ipb-wallet-action-card__icon" aria-hidden="true"><i class="fa fa-shuffle"></i></div>
+        <div class="ipb-wallet-action-card__text">
+          <h4 class="ipb-wallet-action-card__title">Switch to Pay-As-You-Go</h4>
+          <p>
+            No fixed tier — pay only for your total customers each month.
+            Remaining subscription days carry over until wallet billing starts.
+          </p>
+          <?php if (!$canSwitchPayg): ?>
+            <p class="ipb-wallet-action-card__note">
+              <i class="fa fa-circle-info"></i>
+              Add at least <strong>৳<?= number_format($minTopup); ?></strong> before switching (subscription already expired).
+            </p>
+          <?php endif; ?>
+        </div>
+        <button type="button" id="switchPaygBtn" class="btn btn-warning ipb-wallet-action-card__cta" <?= $canSwitchPayg ? '' : 'disabled'; ?>>
+          <i class="fa fa-bolt"></i> Switch to Pay-As-You-Go
+        </button>
+      </div>
+    <?php endif; ?>
 
     <div class="ipb-wallet-section ipb-wallet-ledger">
       <div class="ipb-wallet-section__head">

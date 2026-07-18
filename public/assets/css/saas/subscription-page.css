@@ -34,28 +34,56 @@
 }
 
 .ipb-sub-kpi {
+  display: flex;
+  align-items: center;
+  gap: 13px;
   background: var(--surface, #fff);
   border: 1px solid var(--border, #e6eaf0);
   border-radius: var(--radius, 12px);
-  padding: 14px 16px;
+  padding: 15px 16px;
   box-shadow: var(--shadow-1);
   position: relative;
   overflow: hidden;
   min-width: 0;
+  transition: border-color var(--dur-fast, 0.15s) ease, box-shadow var(--dur-fast, 0.15s) ease, transform var(--dur-fast, 0.15s) ease;
 }
 
-.ipb-sub-kpi::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--sub-accent);
+.ipb-sub-kpi:hover {
+  border-color: var(--sub-accent-border);
+  box-shadow: var(--shadow-2, 0 6px 18px -8px rgba(15, 23, 42, 0.18));
+  transform: translateY(-1px);
 }
 
-.ipb-sub-kpi.is-warn::before { background: var(--warning-500, #d97706); }
-.ipb-sub-kpi.is-danger::before { background: var(--error-500, #dc2626); }
+/* Icon chip — carries status tone (default accent, warn, danger) so the card
+   reads at a glance and matches the icon-driven language of the plan/date cards. */
+.ipb-sub-kpi__ic {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background: var(--sub-accent-soft);
+  color: var(--sub-accent-text);
+}
+
+.ipb-sub-kpi.is-warn .ipb-sub-kpi__ic {
+  background: var(--warning-50, #fffbeb);
+  color: var(--warning-600, #b45309);
+}
+
+.ipb-sub-kpi.is-danger .ipb-sub-kpi__ic {
+  background: var(--error-50, #fef2f2);
+  color: var(--error-600, #b91c1c);
+}
+
+.ipb-sub-kpi__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 
 .ipb-sub-kpi__label {
   display: block;
@@ -64,7 +92,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted, #94a3b8);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .ipb-sub-kpi__value {
@@ -85,6 +113,14 @@
 
 .ipb-sub-kpi__value--accent {
   color: var(--sub-accent-text);
+}
+
+.ipb-sub-kpi.is-warn .ipb-sub-kpi__value--accent {
+  color: var(--warning-600, #b45309);
+}
+
+.ipb-sub-kpi.is-danger .ipb-sub-kpi__value--accent {
+  color: var(--error-600, #b91c1c);
 }
 
 /* Layout */

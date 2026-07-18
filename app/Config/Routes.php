@@ -227,6 +227,10 @@ $routes->group('admins', function ($routes) {
         'as' => 'Admin.deletePackage',
         'filter' => 'role:super_admin',
     ]);
+    $routes->post('save-pricing-settings', 'Admin::savePricingSettings', [
+        'as' => 'Admin.savePricingSettings',
+        'filter' => 'role:super_admin',
+    ]);
 
 
     $routes->get('details/(:num)', 'Admin::details/$1', [
@@ -264,6 +268,43 @@ $routes->group('admins', function ($routes) {
     $routes->post('edit/update/(:num)', 'Admin::update/$1', [
         'as' => 'route.Admin.update',
         'filter' => 'permissioncheck:Admin,update',
+    ]);
+});
+
+/**
+ * Super-admin "Product Showcase" management — website/mobile screenshot
+ * galleries for the public landing page. Every route filtered
+ * role:super_admin (matching the admins/save-package group above); each
+ * controller method also re-checks the role in-method as defense-in-depth.
+ */
+$routes->group('product-showcase', function ($routes) {
+    $routes->get('', 'ProductShowcase::index', [
+        'as' => 'route.productShowcase.index',
+        'filter' => 'role:super_admin',
+    ]);
+    $routes->post('store-category', 'ProductShowcase::storeCategory', [
+        'as' => 'route.productShowcase.storeCategory',
+        'filter' => 'role:super_admin',
+    ]);
+    $routes->post('update-category/(:num)', 'ProductShowcase::updateCategory/$1', [
+        'as' => 'route.productShowcase.updateCategory',
+        'filter' => 'role:super_admin',
+    ]);
+    $routes->post('delete-category/(:num)', 'ProductShowcase::deleteCategory/$1', [
+        'as' => 'route.productShowcase.deleteCategory',
+        'filter' => 'role:super_admin',
+    ]);
+    $routes->post('store-image/(:num)', 'ProductShowcase::storeImage/$1', [
+        'as' => 'route.productShowcase.storeImage',
+        'filter' => 'role:super_admin',
+    ]);
+    $routes->post('delete-image/(:num)', 'ProductShowcase::deleteImage/$1', [
+        'as' => 'route.productShowcase.deleteImage',
+        'filter' => 'role:super_admin',
+    ]);
+    $routes->post('reorder-images', 'ProductShowcase::reorderImages', [
+        'as' => 'route.productShowcase.reorderImages',
+        'filter' => 'role:super_admin',
     ]);
 });
 
@@ -798,7 +839,11 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
     $routes->post('ai-chat', 'AiChatController::aiChat');
 
-    $routes->group('plugins', function ($routes) {
+    // Super-admin plugin management console. Public browsing stays at GET
+    // /plugins (route.plugins.index, marketing shell); everything here is the
+    // admin CRUD surface guarded by authcheck + a super_admin check in-controller.
+    $routes->group('admin/plugins', function ($routes) {
+        $routes->get('', 'Plugins::admin', ['as' => 'route.plugins.admin']);
         $routes->post('store', 'Plugins::store', ['as' => 'route.plugins.store']);
         $routes->post('update/(:num)', 'Plugins::update/$1', ['as' => 'route.plugins.update']);
         $routes->delete('delete/(:num)', 'Plugins::delete/$1', ['as' => 'route.plugins.delete']);

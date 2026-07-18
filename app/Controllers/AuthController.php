@@ -85,9 +85,10 @@ class AuthController extends BaseController
         try {
             $pricingPayload = (new \App\Models\AdminPackage())->landingPricingPayload();
             $data['lpPricing'] = [
-                'tiers'  => $pricingPayload['tiers'],
-                'payg'   => $pricingPayload['payg'],
-                'addons' => $pricingPayload['addons'],
+                'tiers'                => $pricingPayload['tiers'],
+                'payg'                 => $pricingPayload['payg'],
+                'addons'               => $pricingPayload['addons'],
+                'yearlyDiscountMonths' => $pricingPayload['yearlyDiscountMonths'],
             ];
             $data['lpFixedPlans'] = $pricingPayload['fixedPlans'];
         } catch (\Throwable $e) {
@@ -111,6 +112,24 @@ class AuthController extends BaseController
                 'logo_url'        => '',
                 'screenshot_url'  => '',
             ];
+        }
+
+        try {
+            $data['lpPlugins'] = (new \App\Models\PluginModel())
+                ->where('status', 1)
+                ->orderBy('created_at', 'DESC')
+                ->orderBy('id', 'DESC')
+                ->findAll(8);
+        } catch (\Throwable $e) {
+            log_message('error', 'Landing plugins load failed: ' . $e->getMessage());
+            $data['lpPlugins'] = [];
+        }
+
+        try {
+            $data['lpProductShowcase'] = (new \App\Models\ProductShowcaseCategory())->landingShowcasePayload();
+        } catch (\Throwable $e) {
+            log_message('error', 'Landing product showcase load failed: ' . $e->getMessage());
+            $data['lpProductShowcase'] = ['website' => [], 'mobile' => []];
         }
 
         return view('dashboard/home', $data);

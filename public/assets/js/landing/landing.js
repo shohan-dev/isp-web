@@ -16,6 +16,9 @@
   };
   var PAYG = PRICING.payg || { platform: 500, perUser: 1.5, minWallet: 750 };
   var ADDON_PRICES = PRICING.addons || {};
+  // Display-only "Save N months" yearly-discount config — super-admin editable,
+  // never used for real billing math. 0-11 (12+ would mean free forever).
+  var YEARLY_DISCOUNT_MONTHS = typeof PRICING.yearlyDiscountMonths === 'number' ? PRICING.yearlyDiscountMonths : 2;
 
   function easeOutExpo(t) {
     return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
@@ -180,76 +183,219 @@
     });
   }
 
-  /* ── Product tabs with load-aware crossfade ── */
-  function initProductTabs() {
-    var tabs = document.querySelectorAll('.lp-product__tab');
-    var preview = document.getElementById('lp-product-preview');
-    var bullets = document.getElementById('lp-product-bullets');
+  /* ── Product tabs with load-aware crossfade ──
+     Each panel (.lp-showcase-panel) owns its own tab row, preview image,
+     gallery nav, and bullets list — the same crossfade-after-decode technique
+     as before, generalized to swap an arbitrary URL and to page through a
+     category's image list instead of a single fixed image. */
+  function swapLpImage(imgEl, src, onDone) {
+    if (!imgEl || !src) { if (onDone) onDone(); return; }
+    imgEl.classList.add('is-swapping');
+    // Half the CSS transition (0.35s), then swap only after decode so the
+    // fade-in never reveals a half-loaded image.
+    setTimeout(function () {
+      var next = new Image();
+      next.src = src;
+      var ready = next.decode ? next.decode().catch(function () {}) : Promise.resolve();
+      ready.then(function () {
+        imgEl.src = src;
+        imgEl.classList.remove('is-swapping');
+        if (onDone) onDone();
+      });
+    }, prefersReducedMotion ? 0 : 175);
+  }
+
+  function swapLpBullets(bulletsEl, points) {
+    if (!bulletsEl) return;
+    bulletsEl.classList.add('is-swapping');
+    setTimeout(function () {
+      while (bulletsEl.firstChild) { bulletsEl.removeChild(bulletsEl.firstChild); }
+      points.forEach(function (p) {
+        var row = document.createElement('div');
+        row.className = 'lp-product__bullet';
+        var icon = document.createElement('i');
+        icon.className = 'fas fa-check';
+        var span = document.createElement('span');
+        span.textContent = p;
+        row.appendChild(icon);
+        row.appendChild(span);
+        bulletsEl.appendChild(row);
+      });
+      bulletsEl.classList.remove('is-swapping');
+    }, prefersReducedMotion ? 0 : 150);
+  }
+
+  function padTwo(n) {
+    var s = String(n);
+    return s.length < 2 ? '0' + s : s;
+  }
+
+  function initProductShowcasePanel(panel) {
+    var tabs = panel.querySelectorAll('.lp-product__tab');
+    var preview = panel.querySelector('.lp-product__preview img');
+    var bullets = panel.querySelector('.lp-product__bullets');
+    var navWrap = panel.querySelector('.lp-showcase-nav');
+    var prevBtn = navWrap ? navWrap.querySelector('[data-dir="prev"]') : null;
+    var nextBtn = navWrap ? navWrap.querySelector('[data-dir="next"]') : null;
+    var captionEl = navWrap ? navWrap.querySelector('.lp-showcase-nav__caption') : null;
     if (!tabs.length || !preview) return;
+
+    var currentImages = [];
+    var currentIndex = 0;
 
     var preloaded = false;
     function preloadAll() {
       if (preloaded) return;
       preloaded = true;
       tabs.forEach(function (t) {
-        var src = t.getAttribute('data-image');
-        if (src) { new Image().src = src; }
+        try {
+          var imgs = JSON.parse(t.getAttribute('data-images') || '[]');
+          imgs.forEach(function (im) { if (im && im.url) { new Image().src = im.url; } });
+        } catch (e) { /* malformed data-images — skip preload for this tab */ }
       });
+    }
+
+    function updateNav() {
+      if (!navWrap) return;
+      var multi = currentImages.length > 1;
+      navWrap.classList.toggle('is-hidden', !multi);
+      if (prevBtn) prevBtn.disabled = currentIndex <= 0;
+      if (nextBtn) nextBtn.disabled = currentIndex >= currentImages.length - 1;
+      if (captionEl) {
+        if (!currentImages.length) {
+          captionEl.textContent = '';
+        } else {
+          var current = currentImages[currentIndex];
+          var caption = current && current.caption ? ' · ' + current.caption : '';
+          captionEl.textContent = padTwo(currentIndex + 1) + ' / ' + padTwo(currentImages.length) + caption;
+        }
+      }
+    }
+
+    function goToImage(index) {
+      if (!currentImages.length) return;
+      index = Math.max(0, Math.min(index, currentImages.length - 1));
+      if (index === currentIndex) return;
+      currentIndex = index;
+      swapLpImage(preview, currentImages[currentIndex].url, updateNav);
+    }
+
+    function activateTab(tab) {
+      tabs.forEach(function (t) {
+        t.classList.remove('is-active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      tab.classList.add('is-active');
+      tab.setAttribute('aria-selected', 'true');
+
+      var imgs;
+      try {
+        imgs = JSON.parse(tab.getAttribute('data-images') || '[]');
+        if (!Array.isArray(imgs)) { imgs = []; }
+      } catch (e) {
+        imgs = [];
+      }
+      currentImages = imgs;
+      currentIndex = 0;
+      if (imgs.length) {
+        swapLpImage(preview, imgs[0].url, updateNav);
+      } else {
+        updateNav();
+      }
+
+      var points = tab.getAttribute('data-bullets');
+      if (bullets && points) {
+        var pointList;
+        try {
+          pointList = JSON.parse(points);
+          if (!Array.isArray(pointList)) { pointList = []; }
+        } catch (e) {
+          pointList = [];
+        }
+        swapLpBullets(bullets, pointList);
+      }
     }
 
     tabs.forEach(function (tab) {
       tab.addEventListener('click', function () {
         preloadAll();
-        tabs.forEach(function (t) {
-          t.classList.remove('is-active');
-          t.setAttribute('aria-selected', 'false');
-        });
-        tab.classList.add('is-active');
-        tab.setAttribute('aria-selected', 'true');
-
-        var img = tab.getAttribute('data-image');
-        var points = tab.getAttribute('data-bullets');
-        if (img) {
-          preview.classList.add('is-swapping');
-          // Half the CSS transition (0.35s), then swap only after decode so the
-          // fade-in never reveals a half-loaded image.
-          setTimeout(function () {
-            var next = new Image();
-            next.src = img;
-            var ready = next.decode ? next.decode().catch(function () {}) : Promise.resolve();
-            ready.then(function () {
-              preview.src = img;
-              preview.classList.remove('is-swapping');
-            });
-          }, prefersReducedMotion ? 0 : 175);
-        }
-        if (bullets && points) {
-          var pointList;
-          try {
-            pointList = JSON.parse(points);
-            if (!Array.isArray(pointList)) { pointList = []; }
-          } catch (e) {
-            pointList = [];
-          }
-          bullets.classList.add('is-swapping');
-          setTimeout(function () {
-            while (bullets.firstChild) { bullets.removeChild(bullets.firstChild); }
-            pointList.forEach(function (p) {
-              var row = document.createElement('div');
-              row.className = 'lp-product__bullet';
-              var icon = document.createElement('i');
-              icon.className = 'fas fa-check';
-              var span = document.createElement('span');
-              span.textContent = p;
-              row.appendChild(icon);
-              row.appendChild(span);
-              bullets.appendChild(row);
-            });
-            bullets.classList.remove('is-swapping');
-          }, prefersReducedMotion ? 0 : 150);
-        }
+        activateTab(tab);
       });
     });
+
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function () {
+        if (!prevBtn.disabled) goToImage(currentIndex - 1);
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function () {
+        if (!nextBtn.disabled) goToImage(currentIndex + 1);
+      });
+    }
+
+    // Seed nav state from whichever tab the server already rendered active —
+    // the image/bullets themselves are already correct in the markup.
+    var activeTab = panel.querySelector('.lp-product__tab.is-active') || tabs[0];
+    if (activeTab) {
+      try {
+        currentImages = JSON.parse(activeTab.getAttribute('data-images') || '[]');
+        if (!Array.isArray(currentImages)) { currentImages = []; }
+      } catch (e) {
+        currentImages = [];
+      }
+      currentIndex = 0;
+      updateNav();
+    }
+  }
+
+  /* ── Website / Mobile showcase switch — mirrors initPricing()'s fixed/PAYG
+     model-switch mechanism exactly (show/hide via class + aria-selected +
+     roving tabindex). Absent entirely when there is no mobile content. */
+  function initShowcaseModelToggle() {
+    var btnWebsite = document.getElementById('lp-showcase-model-website');
+    var btnMobile = document.getElementById('lp-showcase-model-mobile');
+    if (!btnWebsite || !btnMobile) return;
+    var panelWebsite = document.getElementById('lp-showcase-panel-website');
+    var panelMobile = document.getElementById('lp-showcase-panel-mobile');
+    var modelButtons = [btnWebsite, btnMobile];
+
+    function showPanel(mode) {
+      var isMobile = mode === 'mobile';
+      btnWebsite.classList.toggle('is-active', !isMobile);
+      btnWebsite.setAttribute('aria-selected', !isMobile ? 'true' : 'false');
+      btnWebsite.setAttribute('tabindex', !isMobile ? '0' : '-1');
+      btnMobile.classList.toggle('is-active', isMobile);
+      btnMobile.setAttribute('aria-selected', isMobile ? 'true' : 'false');
+      btnMobile.setAttribute('tabindex', isMobile ? '0' : '-1');
+      if (panelWebsite) {
+        panelWebsite.classList.toggle('is-active', !isMobile);
+        panelWebsite.hidden = isMobile;
+      }
+      if (panelMobile) {
+        panelMobile.classList.toggle('is-active', isMobile);
+        panelMobile.hidden = !isMobile;
+      }
+    }
+
+    btnWebsite.addEventListener('click', function () { showPanel('website'); });
+    btnMobile.addEventListener('click', function () { showPanel('mobile'); });
+
+    // role="tab" advertises arrow-key semantics — honor them.
+    modelButtons.forEach(function (btn, idx) {
+      btn.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        var next = modelButtons[(idx + (e.key === 'ArrowRight' ? 1 : modelButtons.length - 1)) % modelButtons.length];
+        next.focus();
+        next.click();
+      });
+    });
+  }
+
+  function initProductTabs() {
+    document.querySelectorAll('.lp-showcase-panel').forEach(initProductShowcasePanel);
+    initShowcaseModelToggle();
   }
 
   /* ── Feature search (fade-out filtering) + show-more for the extra 6 ── */
@@ -415,8 +561,9 @@
         if (!el) return;
         var base = TIERS[plan].price;
         var current = parseInt(el.textContent.replace(/[^\d]/g, ''), 10) || base;
-        // Yearly = 10 months ("save 2 months"), shown as effective per-month cost.
-        var target = isYearly ? Math.round(base * 10 / 12) : base;
+        // Yearly = (12 - YEARLY_DISCOUNT_MONTHS) billed months, shown as effective per-month cost.
+        var billedMonths = 12 - YEARLY_DISCOUNT_MONTHS;
+        var target = isYearly ? Math.round(base * billedMonths / 12) : base;
         var priceBlock = el.parentElement;
         priceBlock.classList.add('is-updating');
         setTimeout(function () { priceBlock.classList.remove('is-updating'); }, 450);
@@ -427,8 +574,9 @@
 
         var noteEl = document.querySelector('[data-plan-note="' + plan + '"]');
         if (noteEl) {
+          var savePercent = Math.round(YEARLY_DISCOUNT_MONTHS / 12 * 100);
           noteEl.textContent = isYearly
-            ? fmt(base * 10) + ' billed yearly · save 17%'
+            ? fmt(base * billedMonths) + ' billed yearly · save ' + savePercent + '%'
             : '~৳' + (base / TIERS[plan].cap).toFixed(2) + ' per user';
         }
 
@@ -622,6 +770,23 @@
       });
     }
     if (topupSelect) topupSelect.addEventListener('change', updatePaygWallet);
+
+    /* Segmented months picker drives the (visually-hidden) <select> that the
+       wallet math reads — one tap, all options visible, no dropdown to open. */
+    var topupSeg = document.querySelector('.lp-payg__topup-seg');
+    if (topupSeg && topupSelect) {
+      topupSeg.addEventListener('click', function (e) {
+        var btn = e.target.closest('.lp-payg__topup-opt');
+        if (!btn) return;
+        topupSeg.querySelectorAll('.lp-payg__topup-opt').forEach(function (b) {
+          var on = b === btn;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        topupSelect.value = btn.getAttribute('data-months');
+        updatePaygWallet();
+      });
+    }
     updatePaygWallet();
   }
 
@@ -781,7 +946,7 @@
   /* ── Hero parallax: rAF + lerp, stopped when the hero is off-screen ── */
   function initParallax() {
     if (prefersReducedMotion || window.innerWidth < 1024) return;
-    var stack = document.querySelector('.lp-hero__device-stack');
+    var stack = document.querySelector('.lp-hero__console-wrap');
     var hero = document.getElementById('lp-hero');
     if (!stack || !hero) return;
 
@@ -880,6 +1045,69 @@
     });
   }
 
+  /* ── Hero reconciliation feed: payments streaming in and reconnecting ──
+     Illustrative demo (example ৳ amounts + subscriber IDs, not live metrics).
+     A new row enters as "matching" (amber) then settles to "reconnected"
+     (green). Gated on visibility; reduced-motion leaves the static rows as-is. */
+  function initReconFeed() {
+    var feed = document.getElementById('lp-recon-feed');
+    if (!feed) return;
+    if (prefersReducedMotion) return; // keep the settled static rows
+
+    var TX = [
+      { ch: 'bKash · Send Money', amt: '৳1,200', sub: '#SUB-4182' },
+      { ch: 'Nagad · Send Money', amt: '৳800', sub: '#SUB-2290' },
+      { ch: 'bKash · Payment', amt: '৳1,500', sub: '#SUB-0917' },
+      { ch: 'Nagad · Send Money', amt: '৳600', sub: '#SUB-3355' },
+      { ch: 'bKash · Send Money', amt: '৳950', sub: '#SUB-1174' },
+      { ch: 'bKash · Payment', amt: '৳2,300', sub: '#SUB-5061' },
+      { ch: 'Nagad · Send Money', amt: '৳700', sub: '#SUB-8420' },
+      { ch: 'bKash · Send Money', amt: '৳1,050', sub: '#SUB-6293' }
+    ];
+    var idx = 4; // static rows already used the first four
+    var MAX = 4;
+
+    function settle(row) {
+      row.classList.remove('is-matching');
+      row.classList.add('is-online');
+      var st = row.querySelector('.lp-recon__state');
+      if (st) { st.className = 'lp-recon__state is-online'; st.textContent = 'reconnected'; }
+      var sub = row.querySelector('.lp-recon__sub');
+      if (sub) sub.textContent = sub.textContent.replace('match →', 'matched →');
+    }
+
+    function push() {
+      var tx = TX[idx % TX.length];
+      idx++;
+      var row = document.createElement('div');
+      row.className = 'lp-recon__row is-matching is-entering';
+      row.innerHTML =
+        '<span class="lp-recon__ev"><i class="fas fa-bolt"></i>' + tx.ch + '</span>' +
+        '<span class="lp-recon__amt">' + tx.amt + '</span>' +
+        '<span class="lp-recon__link"><span class="lp-recon__sub">match → ' + tx.sub + '</span>' +
+        '<span class="lp-recon__state is-matching">matching</span></span>';
+      feed.insertBefore(row, feed.firstChild);
+      while (feed.children.length > MAX) feed.removeChild(feed.lastChild);
+      setTimeout(function () { settle(row); }, 1100);
+    }
+
+    // Animate the initial "matching" row to reconnected shortly after load.
+    var firstMatching = feed.querySelector('.lp-recon__row.is-matching');
+    if (firstMatching) setTimeout(function () { settle(firstMatching); }, 1300);
+
+    var running = false, timer = null;
+    function start() { if (running) return; running = true; timer = setInterval(push, 2600); }
+    function stop() { running = false; if (timer) { clearInterval(timer); timer = null; } }
+
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) start(); else stop();
+      }, { threshold: 0.2 }).observe(feed);
+    } else {
+      start();
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initNav();
     initLangToggle();
@@ -894,6 +1122,7 @@
     initTestimonialSlider();
     initAnchorFocus();
     initParallax();
+    initReconFeed();
     initLazyRecaptcha();
   });
 })();

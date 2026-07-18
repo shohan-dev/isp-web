@@ -1,11 +1,11 @@
 <section class="lp-cta-band lp-reveal" id="lp-cta">
     <div class="lp-container lp-cta-band__inner">
-        <h2 class="lp-cta-band__title">Ready to automate your ISP?</h2>
-        <p class="lp-cta-band__desc">Start self-serve in minutes, book a demo on WhatsApp, or talk to sales for enterprise plans.</p>
+        <h2 class="lp-cta-band__title">Stop reconciling payments by hand.</h2>
+        <p class="lp-cta-band__desc">Connect your MikroTik, switch on bKash &amp; Nagad auto-matching, and bill your whole reseller tree from one panel — set up in an afternoon.</p>
         <div class="lp-cta-band__actions">
-            <a href="<?= route_to('route.auth.registration') ?>" class="lp-btn lp-btn--primary lp-btn--lg lp-btn--shimmer">Start Free Trial</a>
+            <a href="<?= route_to('route.auth.registration') ?>" class="lp-btn lp-btn--primary lp-btn--lg lp-btn--shimmer">Start free — 14 days, no card</a>
             <a href="https://wa.me/8801781808231?text=Hi%2C%20I%27d%20like%20to%20book%20an%20ISP%20Pay%20BD%20demo" class="lp-btn lp-btn--outline lp-btn--sm" target="_blank" rel="noopener noreferrer" data-lp-inquiry="Demo Request">
-                <i class="fab fa-whatsapp"></i> Book on WhatsApp
+                <i class="fab fa-whatsapp"></i> Book a live demo on WhatsApp
             </a>
             <a href="#lp-contact" class="lp-cta-band__link" data-lp-inquiry="Other Message">Contact sales</a>
         </div>
@@ -16,24 +16,24 @@
     <div class="lp-container">
         <div class="lp-section__header lp-reveal">
             <span class="lp-section__label">Contact</span>
-            <h2 class="lp-section__title">Get In Touch</h2>
-            <p class="lp-section__desc">Self-serve trial, book a demo, or request enterprise pricing — pick the path that fits.</p>
+            <h2 class="lp-section__title">Talk to people who run ISPs.</h2>
+            <p class="lp-section__desc">Trial it yourself, or get a 20-minute walkthrough from someone who knows MikroTik and bKash reconciliation.</p>
         </div>
         <div class="lp-contact-funnel lp-reveal">
-            <a href="<?= route_to('route.auth.registration') ?>" class="lp-contact-funnel__card">
+            <a href="<?= route_to('route.auth.registration') ?>" class="lp-contact-funnel__card lp-contact-funnel__card--primary">
                 <i class="fas fa-rocket"></i>
-                <strong>Start free trial</strong>
-                <span>14 days · no card · full access</span>
+                <strong>Start free</strong>
+                <span>Full panel, 14 days, no card</span>
             </a>
             <a href="https://wa.me/8801781808231?text=Hi%2C%20I%27d%20like%20to%20book%20an%20ISP%20Pay%20BD%20demo" class="lp-contact-funnel__card" target="_blank" rel="noopener noreferrer" data-lp-inquiry="Demo Request">
                 <i class="fab fa-whatsapp"></i>
-                <strong>Book demo on WhatsApp</strong>
-                <span>Fastest for BD operators</span>
+                <strong>Book a demo</strong>
+                <span>WhatsApp — we reply within the hour</span>
             </a>
             <a href="#lp-contact-form" class="lp-contact-funnel__card" data-lp-inquiry="Other Message">
                 <i class="fas fa-building"></i>
-                <strong>Enterprise / custom</strong>
-                <span>10k+ users or SLA needs</span>
+                <strong>Running 10k+ subscribers?</strong>
+                <span>Custom SLA, migration &amp; priority NOC support</span>
             </a>
         </div>
         <div class="lp-contact lp-reveal" id="lp-contact-form">
@@ -69,7 +69,7 @@
             </div>
 
             <div class="lp-contact__form" data-nosnippet>
-                <h3>Send Us a Message</h3>
+                <h3>Tell us about your network</h3>
                 <?php if (session()->getFlashdata('success')): ?>
                     <div class="lp-alert lp-alert--success" role="alert"><?= esc(session()->getFlashdata('success')) ?></div>
                 <?php elseif (session()->getFlashdata('error')): ?>
@@ -100,7 +100,7 @@
                     </div>
                     <div class="lp-form-group">
                         <label for="message">Your Message *</label>
-                        <textarea id="message" name="message" placeholder="Tell us about your ISP…" required></textarea>
+                        <textarea id="message" name="message" placeholder="How many subscribers, which routers, and what's eating your billing time?" required></textarea>
                     </div>
                     <div class="lp-form-group">
                         <div class="g-recaptcha" data-sitekey="<?= esc(env('recaptcha.siteKey', ''), 'attr') ?>"></div>

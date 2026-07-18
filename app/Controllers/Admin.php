@@ -235,6 +235,9 @@ class Admin extends BaseController
                 ->where('role', 'admin')
                 ->orderBy('name', 'asc')
                 ->get()->getResult();
+            // Landing-page "Save N months" yearly-discount badge — platform-wide,
+            // super-admin editable (see Admin::savePricingSettings()).
+            $data['yearlyDiscountMonths'] = max(0, min(11, (int) getSetting('yearly_discount_months', 2, platformBrandingUserId())));
         }
         // log_message('info', 'User Data: ' . json_encode($data));
 
@@ -395,6 +398,33 @@ class Admin extends BaseController
         } else {
             return $this->response->setJSON(['success' => false]);
         }
+    }
+
+    /**
+     * Platform-wide "Save N months" yearly-discount config for the landing
+     * pricing toggle. Display-only — never used for real billing math. Route
+     * is already filtered role:super_admin (see Routes.php); the in-method
+     * check below is defense-in-depth, matching collectPlanTypeFields().
+     */
+    public function savePricingSettings()
+    {
+        if (getSession('user_role') !== 'super_admin') {
+            return $this->response->setJSON(['success' => false, 'errors' => ['user_role' => 'Not authorized.']]);
+        }
+
+        $validation = \Config\Services::validation();
+        $validation->setRules([
+            'yearly_discount_months' => 'required|integer|greater_than_equal_to[0]|less_than_equal_to[11]',
+        ]);
+
+        if (!$validation->withRequest($this->request)->run()) {
+            return $this->response->setJSON(['success' => false, 'errors' => $validation->getErrors()]);
+        }
+
+        $months = (int) $this->request->getPost('yearly_discount_months');
+        setSetting('yearly_discount_months', $months);
+
+        return $this->response->setJSON(['success' => true, 'yearly_discount_months' => $months]);
     }
 
     public function activatePackage($id)

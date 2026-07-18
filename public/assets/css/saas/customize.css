@@ -765,6 +765,14 @@ body.ipb.ipb-drawer-open {
   height: 16px;
   margin: 0;
 }
+.ipb-theme-field-hint {
+  display: block;
+  margin-top: 4px;
+  margin-left: 26px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
 .ipb-theme-io {
   display: flex;
   flex-wrap: wrap;

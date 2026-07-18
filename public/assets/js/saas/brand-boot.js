@@ -29,13 +29,17 @@
 
   var DEFAULT_THEME = {
     primary: "#f75803",
-    secondary: "#001f55",
+    secondary: "#1a0b38",
     radius: "12",
     density: "comfortable",
     tableDensity: "comfortable",
     fontScale: "md",
     sidebarCompact: false,
     reduceMotion: false,
+    // Stat cards tinted with their category color at rest, not just on
+    // hover — on by default per product decision; Theme Studio can flip
+    // this to "plain" to restore the quieter hover-only accent.
+    cardStyle: "tinted",
   };
 
   var LIGHT_STOPS = { 50: 96, 100: 91, 200: 82, 300: 70, 400: 58, 500: 47, 600: 39, 700: 32, 800: 26, 900: 21 };
@@ -116,6 +120,7 @@
     var density = t.density === "compact" ? "compact" : "comfortable";
     var tableDensity = t.tableDensity === "compact" ? "compact" : "comfortable";
     var fontScale = t.fontScale === "sm" || t.fontScale === "lg" ? t.fontScale : "md";
+    var cardStyle = t.cardStyle === "plain" ? "plain" : "tinted";
     return {
       primary: t.primary || DEFAULT_THEME.primary,
       secondary: t.secondary || DEFAULT_THEME.secondary,
@@ -125,6 +130,7 @@
       fontScale: fontScale,
       sidebarCompact: !!t.sidebarCompact,
       reduceMotion: !!t.reduceMotion,
+      cardStyle: cardStyle,
     };
   }
 
@@ -190,6 +196,7 @@
     el.setAttribute("data-density", theme.density || "comfortable");
     el.setAttribute("data-table-density", theme.tableDensity || "comfortable");
     el.setAttribute("data-font-scale", theme.fontScale || "md");
+    el.setAttribute("data-card-style", theme.cardStyle || "tinted");
     el.classList.toggle("ipb-sidebar-pref-compact", !!theme.sidebarCompact);
     el.classList.toggle("ipb-reduce-motion", !!theme.reduceMotion);
   }

@@ -1,7 +1,7 @@
 <?= $this->extend('layout/main-layout'); ?>
 
 <?= $this->section('css'); ?>
-<link rel="stylesheet" href="<?= base_url('assets/css/saas/subscription-page.css?v=2'); ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/saas/subscription-page.css?v=3'); ?>">
 <?= $this->endSection(); ?>
 
 <?= $this->section('content'); ?>
@@ -72,20 +72,32 @@ $kpiTone = $isExpired ? 'is-danger' : ($isExpiringSoon ? 'is-warn' : '');
 
     <div class="ipb-sub-kpis">
       <div class="ipb-sub-kpi <?= esc($kpiTone); ?>">
-        <span class="ipb-sub-kpi__label">Days remaining</span>
-        <span class="ipb-sub-kpi__value ipb-sub-kpi__value--accent"><?= (int) $daysLeft; ?> <small>days</small></span>
+        <span class="ipb-sub-kpi__ic" aria-hidden="true"><i class="fa fa-hourglass-half"></i></span>
+        <div class="ipb-sub-kpi__body">
+          <span class="ipb-sub-kpi__label">Days remaining</span>
+          <span class="ipb-sub-kpi__value ipb-sub-kpi__value--accent"><?= (int) $daysLeft; ?> <small>days</small></span>
+        </div>
       </div>
       <div class="ipb-sub-kpi">
-        <span class="ipb-sub-kpi__label">Current plan</span>
-        <span class="ipb-sub-kpi__value" style="font-size:1rem"><?= esc($packageName); ?></span>
+        <span class="ipb-sub-kpi__ic" aria-hidden="true"><i class="fa fa-<?= $isPayg ? 'bolt' : 'layer-group'; ?>"></i></span>
+        <div class="ipb-sub-kpi__body">
+          <span class="ipb-sub-kpi__label">Current plan</span>
+          <span class="ipb-sub-kpi__value" style="font-size:1rem"><?= esc($packageName); ?></span>
+        </div>
       </div>
       <div class="ipb-sub-kpi">
-        <span class="ipb-sub-kpi__label"><?= $isPayg ? 'Est. monthly' : 'Plan price'; ?></span>
-        <span class="ipb-sub-kpi__value">৳<?= number_format($monthlyEst, $isPayg ? 2 : 0); ?><?= $isPayg ? '' : ''; ?></span>
+        <span class="ipb-sub-kpi__ic" aria-hidden="true"><i class="fa fa-<?= $isPayg ? 'gauge-high' : 'tag'; ?>"></i></span>
+        <div class="ipb-sub-kpi__body">
+          <span class="ipb-sub-kpi__label"><?= $isPayg ? 'Est. monthly' : 'Plan price'; ?></span>
+          <span class="ipb-sub-kpi__value">৳<?= number_format($monthlyEst, $isPayg ? 2 : 0); ?></span>
+        </div>
       </div>
-      <div class="ipb-sub-kpi">
-        <span class="ipb-sub-kpi__label">Expires on</span>
-        <span class="ipb-sub-kpi__value" style="font-size:0.95rem"><?= date('d M Y', strtotime($details->will_expire)); ?></span>
+      <div class="ipb-sub-kpi <?= esc($kpiTone); ?>">
+        <span class="ipb-sub-kpi__ic" aria-hidden="true"><i class="fa fa-calendar-day"></i></span>
+        <div class="ipb-sub-kpi__body">
+          <span class="ipb-sub-kpi__label">Expires on</span>
+          <span class="ipb-sub-kpi__value" style="font-size:0.95rem"><?= date('d M Y', strtotime($details->will_expire)); ?></span>
+        </div>
       </div>
     </div>
 

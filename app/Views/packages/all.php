@@ -145,111 +145,96 @@
 
 <?= $this->section('script'); ?>
 <style>
-  :root {
-    --bg-color: #f5f7fb;
-    --text-color: #333;
-    --card-bg: #fff;
-    --border-color: #e2e8f0;
-    --header-bg: linear-gradient(135deg, #4f46e5, #06b6d4);
-    --primary-gradient: linear-gradient(135deg, #4f46e5, #06b6d4);
-    --danger-gradient: linear-gradient(135deg, #dc2626, #ef4444);
-    --success-gradient: linear-gradient(135deg, #16a34a, #22c55e);
-    --warning-gradient: linear-gradient(135deg, #d97706, #f59e0b);
-  }
-  .btn-primary {
-      background: var(--primary-gradient);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-brand, 0 4px 12px rgba(79, 70, 229, 0.4));
-    }
-
-
-  .action_btn {
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    cursor: pointer;
-    margin-right: 8px;
-    transition: all 0.3s ease;
-    border: none;
-    position: relative;
-    overflow: hidden;
-    z-index: 1;
-  }
-
-  .action-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s;
-    z-index: -1;
-  }
-
-  .action_btn:hover::before {
-    left: 100%;
-  }
-
-  .action_btn.update {
-    background: linear-gradient(135deg, #4f46e5, #06b6d4);
-    color: white;
-  }
-
-  .action_btn.update:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-2, 0 4px 8px rgba(79, 70, 229, 0.3));
-  }
+  /* Package list cells — themed to the tenant palette and dark-mode safe. Was
+     hardcoded indigo/cyan + #333/#fff, which ignored the brand color and turned
+     unreadable in dark mode; now everything routes through the saas tokens. */
+  .ipb-saas-list .datatable td { vertical-align: middle; }
 
   .package-name {
-    font-weight: 600;
-    color: var(--text-color);
+    font-weight: 700;
+    color: var(--text-primary, #1f2937);
+    letter-spacing: -0.01em;
   }
 
+  /* Bandwidth as a soft branded chip — scannable, not just colored text. */
   .bandwidth {
-    font-weight: 500;
-    color: #4f46e5;
+    display: inline-block;
+    font-weight: 700;
+    font-size: 12.5px;
+    color: var(--primary-600, #4f46e5);
+    background: var(--primary-50, rgba(79, 70, 229, .08));
+    border: 1px solid color-mix(in srgb, var(--primary-500, #4f46e5) 22%, transparent);
+    padding: 3px 11px;
+    border-radius: 8px;
   }
 
   .pricing {
-    font-weight: 600;
-    color: #16a34a;
+    font-weight: 700;
+    color: var(--success-600, #16a34a);
   }
 
-  .status_active {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    background-color: rgba(34, 197, 94, 0.15);
-    color: #16a34a;
-  }
-
-  .status_inactive {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    background-color: rgba(239, 68, 68, 0.15);
-    color: #dc2626;
-  }
-
+  /* Status / visibility pills: subtle tint + matching border + a leading dot. */
+  .status_active,
+  .status_inactive,
   .visibility {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    background-color: rgba(59, 130, 246, 0.15);
-    color: #2563eb;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    white-space: nowrap;
   }
+  .status_active::before,
+  .status_inactive::before,
+  .visibility::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  .status_active {
+    background: var(--success-50, rgba(34, 197, 94, .12));
+    color: var(--success-600, #16a34a);
+    border-color: color-mix(in srgb, var(--success-500, #22c55e) 26%, transparent);
+  }
+  .status_inactive {
+    background: var(--error-50, rgba(239, 68, 68, .12));
+    color: var(--error-600, #dc2626);
+    border-color: color-mix(in srgb, var(--error-500, #ef4444) 26%, transparent);
+  }
+  .visibility {
+    background: var(--info-50, rgba(59, 130, 246, .12));
+    color: var(--info-600, #2563eb);
+    border-color: color-mix(in srgb, var(--info-500, #3b82f6) 26%, transparent);
+  }
+
+  /* Action button follows the tenant brand (was a fixed indigo→cyan gradient). */
+  .action_btn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+  }
+  .action_btn.update {
+    background: linear-gradient(135deg, var(--primary-500, #4f46e5), var(--primary-600, #4338ca));
+    color: #fff;
+  }
+  .action_btn.update:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--primary-500, #4f46e5) 35%, transparent);
+    filter: brightness(1.04);
+  }
+
+  /* Gentle row hover for scanability. */
+  .ipb-saas-list .datatable tbody tr { transition: background .15s ease; }
+  .ipb-saas-list .datatable tbody tr:hover td { background: var(--surface-2, rgba(15, 23, 42, .025)); }
 </style>
 
 <script>

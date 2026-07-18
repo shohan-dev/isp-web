@@ -2,12 +2,8 @@
     <div class="lp-container">
         <div class="lp-section__header lp-reveal">
             <span class="lp-section__label">Core Features</span>
-            <h2 class="lp-section__title">Everything You Need to Run Your ISP</h2>
-            <p class="lp-section__desc">Comprehensive tools designed specifically for Internet Service Providers.</p>
-        </div>
-        <div class="lp-features-search lp-reveal">
-            <i class="fas fa-search"></i>
-            <input type="search" id="lp-feature-search" placeholder="Search features…" aria-label="Search features">
+            <h2 class="lp-section__title">One platform, from the ONU port to the ৳ in your account.</h2>
+            <p class="lp-section__desc">OLT and MikroTik on one side; billing, resellers, and BTRC-ready reports on the other. Everything an operator touches, nothing they don't.</p>
         </div>
         <div class="lp-features lp-stagger-children lp-reveal" id="lp-features-main">
             <div class="lp-feature lp-reveal-child" data-keywords="dashboard analytics business accounting">
@@ -81,7 +77,7 @@
         </div>
 
         <button type="button" class="lp-pricing-showmore lp-pricing-showmore--light" id="lp-features-showmore" aria-expanded="false" aria-controls="lp-features-extra">
-            <span>Show 6 more features</span>
+            <span>See the full toolset — 6 more modules</span>
             <i class="fas fa-chevron-down"></i>
         </button>
     </div>

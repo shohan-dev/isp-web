@@ -201,15 +201,26 @@ body.ipb .sidebar-menu > li > a:focus {
   color: #fff !important;
 }
 
+/* Bug fix: this used to force a solid `var(--primary-500)` background on
+   BOTH .active and .menu-open — a stale duplicate of the AdminLTE-era rule
+   layout.css already replaced with a quiet rgba(--primary-rgb,.14) tint +
+   sliding indicator rail. Because this file (per its header: "Final visual
+   authority. Loads last.") loads after layout.css with equal-or-higher
+   selector specificity, it was silently overriding that redesign, so the
+   sidebar never visually changed. Match layout.css's tint here instead of
+   re-declaring a competing color; .menu-open keeps no background (layout.css
+   already gives it just color:#fff — see the comment there). */
 body.ipb .sidebar-menu > li.active > a,
-body.ipb .sidebar-menu > li.menu-open > a,
 body.ipb .sidebar-menu > li.active > a:hover {
-  background: var(--primary-500) !important;
+  background: rgba(var(--primary-rgb), .14) !important;
   color: #fff !important;
 }
 
 body.ipb .sidebar-menu > li.active > a > i,
-body.ipb .sidebar-menu > li.active > a > .fa,
+body.ipb .sidebar-menu > li.active > a > .fa {
+  color: var(--primary-400) !important;
+}
+
 body.ipb .sidebar-menu > li.menu-open > a > i {
   color: #fff !important;
 }
@@ -1269,4 +1280,95 @@ body.ipb.fixed .right-side {
     min-width: 40px;
     min-height: 40px;
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   SweetAlert (vendor sweetalert v2) skin. The bundle self-injects its default
+   stylesheet at runtime, so its generic gray/blue buttons and dark-on-dark
+   text clash with the admin theme and read as "broken" — most visibly the
+   cancel button, which looked unstyled against the white card. Scoped under
+   body.ipb (0,2,0) to beat the injected defaults (.swal-* = 0,1,0) on source
+   order, no !important. Token-driven, so it follows light/dark automatically.
+   Used by every delete-confirmation dialog across the panel.
+   ════════════════════════════════════════════════════════════════════════ */
+body.ipb .swal-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px -20px rgba(2, 6, 23, .45);
+  padding: 26px 26px 22px;
+}
+
+body.ipb .swal-title {
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 6px 0 2px;
+  padding: 0;
+}
+
+body.ipb .swal-text {
+  color: var(--text-secondary);
+  font-size: .9375rem;
+  line-height: 1.55;
+  text-align: center;
+  padding: 0 4px;
+}
+
+body.ipb .swal-footer {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 0;
+  border: 0;
+  text-align: center;
+}
+
+body.ipb .swal-button-container { margin: 0; }
+
+body.ipb .swal-button {
+  margin: 0;
+  padding: 10px 20px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  box-shadow: none;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .05s ease;
+}
+body.ipb .swal-button:active { transform: translateY(1px); }
+body.ipb .swal-button:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-500) 35%, transparent); }
+
+/* Cancel = secondary button (the one that looked unstyled). */
+body.ipb .swal-button--cancel {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+body.ipb .swal-button--cancel:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+/* Confirm = primary brand button. */
+body.ipb .swal-button--confirm {
+  background: var(--primary-500);
+  color: #fff;
+}
+body.ipb .swal-button--confirm:hover {
+  background: color-mix(in srgb, var(--primary-500) 88%, #000);
+}
+
+/* Danger (dangerMode:true) = destructive red. */
+body.ipb .swal-button--danger {
+  background: var(--error-500);
+  color: #fff;
+}
+body.ipb .swal-button--danger:hover {
+  background: color-mix(in srgb, var(--error-500) 88%, #000);
+}
+body.ipb .swal-button--danger:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--error-500) 35%, transparent);
 }

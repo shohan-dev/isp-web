@@ -1476,7 +1476,7 @@
                         border-radius: 5px;
                         border: 1px dashed #2ecc71;
                     ">
-                        <i class="fa fa-clock-o" style="margin-right: 5px;"></i>
+                        <i class="far fa-clock" style="margin-right: 5px;"></i>
                         ${user['time-limit'] || '30d'} 
                         <span style="color: var(--text-secondary, #666); font-weight: normal; margin-left: 5px;">
                             ${user['data-limit'] ? `| ${user['data-limit']} MB` : ''}
