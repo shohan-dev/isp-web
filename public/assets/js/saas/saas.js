@@ -328,6 +328,10 @@
     });
     menu.addEventListener("mouseleave", function () { moveTo(activeLi()); });
     window.addEventListener("resize", function () { moveTo(activeLi()); });
+
+    // Exposed for ipb-nav.js: after a partial-nav content swap, slide the rail
+    // to the new active row instead of a fresh (jump-cut) placement.
+    window.IpbNavIndicator = { sync: function () { moveTo(activeLi()); } };
   }
 
   function initSidebar() {
@@ -1214,6 +1218,21 @@
     jQuery(initDataTableDefaults);
     initAjaxCsrf();
   }
+
+  /* Exposed for ipb-nav.js: after a partial-nav content swap, re-derive the
+     sidebar active item/open sections/breadcrumbs and the rail position, and
+     re-scan the freshly-swapped content for wide tables. Deliberately does
+     NOT touch theme/palette/net-pulse — those are page-independent globals,
+     already correct, and re-running them would just be wasted work (or, for
+     the rail, an unwanted extra animation). */
+  window.IpbSaas = window.IpbSaas || {};
+  window.IpbSaas.afterContentSwap = function () {
+    syncSidebarActiveFromUrl();
+    if (window.IpbNavIndicator && typeof window.IpbNavIndicator.sync === "function") {
+      window.IpbNavIndicator.sync();
+    }
+    initTableScrollHints();
+  };
 
   document.addEventListener("DOMContentLoaded", function () {
     if (!bodyEl() || !bodyEl().classList.contains("ipb")) return;

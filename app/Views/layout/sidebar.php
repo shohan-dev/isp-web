@@ -94,7 +94,7 @@
 
         <!-- Logout (always shown) -->
         <li data-no-pin="1">
-          <a href="<?= route_to('route.logout'); ?>">
+          <a href="<?= route_to('route.logout'); ?>" data-full-reload="1">
             <i class="fa fa-sign-out"></i>
             <span>Logout</span>
           </a>
@@ -760,7 +760,7 @@
         <?php endif; ?>
 
         <li data-no-pin="1">
-          <a href="<?= route_to('route.logout'); ?>">
+          <a href="<?= route_to('route.logout'); ?>" data-full-reload="1">
             <i class="fa fa-sign-out"></i>
             <span>Logout</span>
           </a>

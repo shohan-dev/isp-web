@@ -11,6 +11,30 @@ if (!headers_sent()) {
     header("Cache-Control: post-check=0, pre-check=0", false);
     header("Pragma: no-cache");
 }
+
+/* Sidebar partial navigation (client half: public/assets/js/saas/ipb-nav.js).
+   The sidebar/header/footer are only ever rendered once and stay alive in the
+   browser for the whole session — every sidebar click after that asks for
+   this header and gets back just this page's title + its own css/content/
+   script sections as inert <template> fragments, instead of a full document.
+   That's what removes the full-document reparse/repaint ("the flick") on
+   every navigation; the client swaps only <main id="ipb-main">'s content.
+   `Vary` keeps this response from ever being confused, in any HTTP cache,
+   with the plain full-page response sidebar-prefetch.js warms for the same
+   URL. */
+if (!headers_sent()) {
+    header('Vary: X-IPB-Nav');
+}
+if (request()->getHeaderLine('X-IPB-Nav') === '1') {
+    $__ipbNavTitle = (!empty($title) ? $title . ' | ' : null) . getSetting('app_name') . ' Dashboard Panel';
+    ?>
+<template id="ipb-nav-title" data-title="<?= esc($__ipbNavTitle, 'attr'); ?>"></template>
+<template id="ipb-nav-css"><?= $this->renderSection('css'); ?></template>
+<template id="ipb-nav-content"><?= $this->renderSection('content'); ?></template>
+<template id="ipb-nav-script"><?= $this->renderSection('script'); ?></template>
+<?php
+    return;
+}
 ?>
 
 <!DOCTYPE html>
@@ -239,6 +263,9 @@ if (!headers_sent()) {
   <?= saas_js('saas.js') ?>
   <?= saas_js('sidebar-pins.js') ?>
   <?= saas_js('sidebar-prefetch.js') ?>
+  <?php if (!isset($isPublic) || !$isPublic): ?>
+    <?= saas_js('ipb-nav.js') ?>
+  <?php endif; ?>
   <?= saas_js('list-filters.js') ?>
   <?= saas_js('customize.js') ?>
   <?= saas_js('skeleton-swap.js') ?>
