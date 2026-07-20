@@ -1,25 +1,22 @@
 <?php
-// Assuming $details is an instance of a specific class, e.g., ResellerDetails
-
-/** @var \App\Entities\CustomerDetails $details */
+/** @var object $details */
 /** @var array $pppoe */
 /** @var string $router */
 /** @var string $router_name */
 /** @var array $usage */
-
-// If $details is a standard class object without a specific class, you can use:
-/** @var object $details */
+/** @var bool $mikrotik_pending */
 
 $pppoe = $pppoe ?? [];
 $router = $router ?? '--';
 $router_name = $router_name ?? '--';
 $usage = $usage ?? [];
+$mikrotik_pending = !empty($mikrotik_pending);
 
 $pppoeData = is_array($pppoe) ? $pppoe : [];
 $pppoeName = $pppoeData['name'] ?? '--';
 $pppoePassword = $pppoeData['password'] ?? '--';
 
-// If RouterOS API obfuscated the password, attempt to get the unmasked one from the local DB
+// Prefer unmasked password from local DB when RouterOS would have obfuscated it
 $routerPassData = function_exists('getRouterPassById') ? getRouterPassById($details->id) : null;
 if (is_array($routerPassData) && !empty($routerPassData['router_password']) && !preg_match('/^\*+$/', $routerPassData['router_password'])) {
     $pppoePassword = $routerPassData['router_password'];
@@ -27,7 +24,7 @@ if (is_array($routerPassData) && !empty($routerPassData['router_password']) && !
 
 $pppoeService = $pppoeData['service'] ?? '--';
 $pppoeProfile = $pppoeData['profile'] ?? '--';
-$pppoeDisabled = $pppoeData['disabled'] ?? 'true';
+$pppoeDisabled = $pppoeData['disabled'] ?? null;
 
 ?>
 
@@ -36,27 +33,29 @@ $pppoeDisabled = $pppoeData['disabled'] ?? 'true';
 
 <?= $this->section('css'); ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-<link rel="stylesheet" href="<?= base_url('assets/css/saas/customers-details.css?v=18'); ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/saas/customers-details.css?v=19'); ?>">
 <?= $this->endSection('css'); ?>
 
 <?= $this->section('content'); ?>
 
 <?php
 $isOffline = ($details->conn_status === 'disconn');
-$userPkgTop = getUserPackage($details->id);
+$userPkgTop = $user_package ?? (function_exists('getUserPackage') ? getUserPackage($details->id) : null);
 $pkgArrayTop = is_object($userPkgTop) ? get_object_vars($userPkgTop) : (array) $userPkgTop;
 $packageNameTop = $pkgArrayTop['package_name'] ?? '--';
 $displayPriceTop = !empty($pkgArrayTop['selling_price']) ? $pkgArrayTop['selling_price'] : (!empty($pkgArrayTop['price']) ? $pkgArrayTop['price'] : null);
-$areaTop = !empty(getUserArea($details->id)) ? getUserArea($details->id) : null;
+$areaTop = $user_area ?? null;
 $areaLabel = $areaTop ? esc($areaTop->area_name) . ' (' . esc($areaTop->area_code) . ')' : '--';
 $subAreaLabel = '--';
-if (!empty($ConnDetails) && isset($ConnDetails[0]['sub_area_id'])) {
+$subAreaObj = $user_sub_area ?? null;
+if ($subAreaObj) {
+  $subAreaLabel = esc($subAreaObj->area_name) . ' (' . esc($subAreaObj->area_code) . ')';
+} elseif (!empty($ConnDetails) && isset($ConnDetails[0]['sub_area_id'])) {
   $subArea = getUserSubArea($ConnDetails[0]['sub_area_id']);
   $subAreaLabel = !empty($subArea) ? esc($subArea->area_name) . ' (' . esc($subArea->area_code) . ')' : '--';
 }
-$checkResult = isMacBound($details->id);
-$macText = $checkResult['status'] ? $checkResult['mac'] : 'Not Bound';
-$macBound = !empty($checkResult['status']);
+$macText = 'Checking…';
+$macBound = false;
 $subLink = base_url('subscription/' . $details->id);
 $expireDate = !empty($details->will_expire) ? new DateTime($details->will_expire) : null;
 $today = new DateTime();
@@ -132,9 +131,9 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
             <span class="cd-chip"><i class="bi bi-geo-alt"></i> <?= $areaTop ? esc($areaTop->area_name) : '--'; ?></span>
             <span class="cd-chip"><i class="bi bi-box-seam"></i> <?= esc($packageNameTop); ?></span>
           </div>
-          <span id="macStatusBadge" class="cd-mac <?= $macBound ? 'is-bound' : 'is-unbound'; ?>">
-            <i class="bi <?= $macBound ? 'bi-link-45deg' : 'bi-unlink'; ?>"></i>
-            MAC: <?= esc($macText); ?>
+          <span id="macStatusBadge" class="cd-mac is-loading">
+            <i class="bi bi-hourglass-split"></i>
+            MAC: Checking…
           </span>
         </div>
       </div>
@@ -272,19 +271,19 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
               <i class="bi bi-arrow-clockwise"></i> Kick
             </a>
           </div>
-          <div class="cd-session-banner <?= $sessionLive ? 'is-online' : 'is-offline'; ?>">
+          <div class="cd-session-banner <?= $sessionLive ? 'is-online' : 'is-offline'; ?>" id="cdSessionBanner">
             <div>
-              <h4><?= $sessionLive ? 'Session active' : 'No active session'; ?></h4>
-              <p><?= $sessionLive ? 'Customer is connected on PPPoE right now.' : 'Customer is not connected at the moment.'; ?></p>
+              <h4 id="cdSessionTitle"><?= $mikrotik_pending ? 'Checking session…' : ($sessionLive ? 'Session active' : 'No active session'); ?></h4>
+              <p id="cdSessionSub"><?= $mikrotik_pending ? 'Loading live status from MikroTik.' : ($sessionLive ? 'Customer is connected on PPPoE right now.' : 'Customer is not connected at the moment.'); ?></p>
             </div>
-            <span class="cd-pill <?= $sessionLive ? 'is-online' : 'is-offline'; ?>">
-              <?= $sessionLive ? 'Connected' : 'Disconnected'; ?>
+            <span class="cd-pill <?= $sessionLive ? 'is-online' : 'is-offline'; ?>" id="cdSessionPill">
+              <?= $mikrotik_pending ? 'Loading' : ($sessionLive ? 'Connected' : 'Disconnected'); ?>
             </span>
           </div>
           <div class="cd-session-metrics">
             <div class="cd-session-metric">
               <span>Duration</span>
-              <strong><?= !empty($active_session['uptime']) ? esc($active_session['uptime']) : '--'; ?></strong>
+              <strong id="cdSessionUptime"><?= !empty($active_session['uptime']) ? esc($active_session['uptime']) : ($mikrotik_pending ? '…' : '--'); ?></strong>
             </div>
             <div class="cd-session-metric">
               <span>Optical signal</span>
@@ -292,11 +291,11 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
             </div>
             <div class="cd-session-metric">
               <span>Last logout</span>
-              <strong><?= !empty($pppoe['last-logged-out']) ? esc($pppoe['last-logged-out']) : '--'; ?></strong>
+              <strong id="cdLastLogout"><?= !empty($pppoe['last-logged-out']) ? esc($pppoe['last-logged-out']) : ($mikrotik_pending ? '…' : '--'); ?></strong>
             </div>
             <div class="cd-session-metric">
               <span>Last MAC</span>
-              <strong><?= !empty($pppoe['last-caller-id']) ? esc($pppoe['last-caller-id']) : '--'; ?></strong>
+              <strong id="cdLastMac"><?= !empty($pppoe['last-caller-id']) ? esc($pppoe['last-caller-id']) : ($mikrotik_pending ? '…' : '--'); ?></strong>
             </div>
             <div class="cd-session-metric">
               <span>OLT last seen</span>
@@ -337,34 +336,34 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
           <div class="cd-card-body">
             <div class="cd-info-grid">
               <div class="cd-mini"><span>Router</span><strong><?= esc($router); ?></strong></div>
-              <div class="cd-mini"><span>Router name</span><strong><?= esc($router_name); ?></strong></div>
-              <div class="cd-mini"><span>PPPoE secret</span><strong><?= esc($pppoeName); ?></strong></div>
-              <div class="cd-mini"><span>Password</span><strong><?= esc($pppoePassword); ?></strong></div>
-              <div class="cd-mini"><span>Profile</span><strong><?= esc($pppoeProfile); ?></strong></div>
-              <div class="cd-mini"><span>Service</span><strong><?= esc($pppoeService); ?></strong></div>
+              <div class="cd-mini"><span>Router name</span><strong id="cdRouterVendor"><?= esc($router_name); ?></strong></div>
+              <div class="cd-mini"><span>PPPoE secret</span><strong id="cdPppoeName"><?= esc($pppoeName); ?></strong></div>
+              <div class="cd-mini"><span>Password</span><strong id="cdPppoePass"><?= esc($pppoePassword); ?></strong></div>
+              <div class="cd-mini"><span>Profile</span><strong id="cdPppoeProfile"><?= esc($pppoeProfile); ?></strong></div>
+              <div class="cd-mini"><span>Service</span><strong id="cdPppoeService"><?= esc($pppoeService); ?></strong></div>
             </div>
 
             <div id="ping-results-box" class="ping-results-box">
-              <span id="pingResult-<?= $pppoeName; ?>" class="ping-result-text">Not checked</span>
-              <small id="pingStats-<?= $pppoeName; ?>" class="ping-stats-text"></small>
+              <span id="pingResult-<?= esc($pppoeName, 'attr'); ?>" class="ping-result-text">Not checked</span>
+              <small id="pingStats-<?= esc($pppoeName, 'attr'); ?>" class="ping-stats-text"></small>
             </div>
 
             <?php if (userHasPermission('customer', 'update_conn')): ?>
               <div class="ipb-conn-control-title">Connection control</div>
-              <div class="ipb-conn-control">
+              <div class="ipb-conn-control" id="cdConnControl">
                 <span class="ipb-conn-control-label">Enable / disable internet access</span>
-                <?php
-                if (!empty($pppoeData) && $pppoeData !== '--' && isset($pppoeData['disabled'])):
-                  $status = ($pppoeData['disabled'] === 'false') ? 'active' : 'inactive';
-                  $is_checked = ($pppoeData['disabled'] === 'false') ? 'checked="checked"' : null;
+                <?php if ($mikrotik_pending): ?>
+                  <span class="ipb-offline-pill" id="cdConnPending"><i class="fa fa-spinner fa-spin"></i> Loading…</span>
+                <?php elseif ($pppoeDisabled !== null):
+                  $status = ($pppoeDisabled === 'false') ? 'active' : 'inactive';
+                  $is_checked = ($pppoeDisabled === 'false') ? 'checked="checked"' : null;
                   echo '<div class="ipb-switch material-switch">'
                     . '<input id="conn_status_' . $details->id . '" name="conn_status" type="checkbox" value="enable" data-status="' . $status . '" ' . $is_checked . ' />'
                     . '<label for="conn_status_' . $details->id . '" class="label-success"></label>'
                     . '</div>';
                 else:
                   echo '<span class="ipb-offline-pill">Router offline</span>';
-                endif;
-                ?>
+                endif; ?>
               </div>
             <?php endif; ?>
           </div>
@@ -492,13 +491,100 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
     }
   }
 
+  let userName = <?= json_encode($pppoeName) ?>;
+  let callerid = <?= json_encode($callerid ?? '') ?>;
+  const mikrotikPending = <?= $mikrotik_pending ? 'true' : 'false' ?>;
+  const canUpdateConn = <?= userHasPermission('customer', 'update_conn') ? 'true' : 'false' ?>;
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value == null || value === '' ? '--' : String(value);
+  }
+
+  function applyMikrotikInfo(data) {
+    const online = !!(data && data.online);
+    const pppoe = (data && data.pppoe) || {};
+    const session = (data && data.active_session) || null;
+
+    const banner = document.getElementById('cdSessionBanner');
+    const pill = document.getElementById('cdSessionPill');
+    if (banner) {
+      banner.className = 'cd-session-banner ' + (online ? 'is-online' : 'is-offline');
+    }
+    setText('cdSessionTitle', online ? 'Session active' : (data && data.offline ? 'Router offline' : 'No active session'));
+    setText('cdSessionSub', online
+      ? 'Customer is connected on PPPoE right now.'
+      : (data && data.offline ? (data.error || 'Unable to reach MikroTik.') : 'Customer is not connected at the moment.'));
+    if (pill) {
+      pill.className = 'cd-pill ' + (online ? 'is-online' : 'is-offline');
+      pill.textContent = online ? 'Connected' : (data && data.offline ? 'Offline' : 'Disconnected');
+    }
+    setText('cdSessionUptime', session && session.uptime ? session.uptime : '--');
+    setText('cdLastLogout', pppoe['last-logged-out'] || '--');
+    setText('cdLastMac', pppoe['last-caller-id'] || (session && session['caller-id']) || '--');
+
+    if (pppoe.name) {
+      userName = pppoe.name;
+      setText('cdPppoeName', pppoe.name);
+      const audit = document.querySelector('a.cd-more-item[href*="pppoe_name="]');
+      if (audit) {
+        try {
+          const u = new URL(audit.href, window.location.origin);
+          u.searchParams.set('pppoe_name', pppoe.name);
+          audit.href = u.pathname + u.search;
+        } catch (e) {}
+      }
+    }
+    if (pppoe.password && !/^\*+$/.test(pppoe.password)) setText('cdPppoePass', pppoe.password);
+    if (pppoe.profile) setText('cdPppoeProfile', pppoe.profile);
+    if (pppoe.service) setText('cdPppoeService', pppoe.service);
+
+    if (data && data.callerid) callerid = data.callerid;
+
+    if (canUpdateConn) {
+      const slot = document.getElementById('cdConnControl');
+      if (slot) {
+        const pending = document.getElementById('cdConnPending');
+        if (pending) pending.remove();
+        const existing = slot.querySelector('.ipb-switch, .ipb-offline-pill');
+        if (existing) existing.remove();
+        if (data && data.ok && pppoe.disabled != null) {
+          const status = pppoe.disabled === 'false' ? 'active' : 'inactive';
+          const checked = pppoe.disabled === 'false' ? ' checked' : '';
+          const wrap = document.createElement('div');
+          wrap.className = 'ipb-switch material-switch';
+          wrap.innerHTML = '<input id="conn_status_' + userId + '" name="conn_status" type="checkbox" value="enable" data-status="' + status + '"' + checked + ' />'
+            + '<label for="conn_status_' + userId + '" class="label-success"></label>';
+          slot.appendChild(wrap);
+        } else {
+          const pillOff = document.createElement('span');
+          pillOff.className = 'ipb-offline-pill';
+          pillOff.textContent = 'Router offline';
+          slot.appendChild(pillOff);
+        }
+      }
+    }
+  }
+
+  function loadMikrotikInfo() {
+    return fetch('<?= route_to('route.customer.getMikrotikInfo'); ?>?user_id=' + encodeURIComponent(userId), {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(function (res) { return res.json(); })
+      .then(applyMikrotikInfo)
+      .catch(function () {
+        applyMikrotikInfo({ ok: false, offline: true, error: 'Failed to load MikroTik status', online: false });
+      });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
+    // Parallel: MAC check + MikroTik live + OLT (OLT kicked from jQuery ready below too)
     macAction('check');
+    if (mikrotikPending) loadMikrotikInfo();
   });
 
   const routerId = "<?= $details->router_id ?>";
-  const userName = <?= json_encode($pppoeName) ?>;
-  const callerid = "<?= $callerid ?? '' ?>";
   const resultId = 'pingResult-' + userName;
 
   function refreshOltData() {

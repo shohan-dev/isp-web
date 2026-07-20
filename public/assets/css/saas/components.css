@@ -952,6 +952,22 @@ body.ipb[data-theme="dark"] .ipb-loading-overlay { background: rgba(10, 16, 30, 
 /* when our overlay is up, suppress DataTables' own centred box so they don't double */
 .ipb .is-loading .dataTables_processing { display: none !important; }
 
+/* Skeleton is the load cue — never stack the centred ::after spinner on top of it
+   (customer lists use IpbFilters skeletonOnly; :has() covers any leftover .is-loading). */
+.ipb .is-loading:has(.ipb-skeleton-row)::after,
+.ipb .is-loading:has(.ipb-skeleton)::after {
+  display: none !important;
+  content: none !important;
+  animation: none !important;
+}
+.ipb .is-loading:has(.ipb-skeleton-row) > table > tbody,
+.ipb .is-loading:has(.ipb-skeleton-row) .dataTables_scrollBody tbody,
+.ipb .is-loading:has(.ipb-skeleton) > table > tbody,
+.ipb .is-loading:has(.ipb-skeleton) .dataTables_scrollBody tbody {
+  opacity: 1;
+  pointer-events: none;
+}
+
 /* Reduced motion: base.css already freezes the shimmer, but a frozen gradient
    reads as a stray diagonal — flatten it to a flat tint so it looks intentional. */
 @media (prefers-reduced-motion: reduce) {

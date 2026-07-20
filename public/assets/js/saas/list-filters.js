@@ -188,8 +188,10 @@
     if (!$wrap.length) $wrap = $tableNode.closest(".table-responsive, .box-body, .box");
 
     // ── loading feedback: 150ms delay before showing, 400ms minimum once shown (04 §5) ──
+    // skeletonOnly: customer lists — skeleton / existing rows only; never the centred spinner.
     var LOAD_DELAY = 150, LOAD_MIN = 400;
     var showTimer = null, hideTimer = null, shownAt = 0;
+    var skeletonOnly = !!(opts && opts.skeletonOnly);
 
     function injectSkeletonIfEmpty() {
       // Only for a first/empty load — if real rows are present we just dim them.
@@ -197,6 +199,8 @@
       if (!$tbody.length) return;
       var empty = $tbody.find("tr").length === 0 || $tbody.find("td.dataTables_empty").length > 0;
       if (!empty) return;
+      // Prefer keeping server-rendered skeleton rows if already present.
+      if ($tbody.find("tr.ipb-skeleton-row, .ipb-skeleton").length) return;
       var cols = $tableNode.find("thead th").length || 5;
       var html = "";
       for (var r = 0; r < 8; r++) {
@@ -212,13 +216,25 @@
       showTimer = null;
       shownAt = Date.now();
       injectSkeletonIfEmpty();
-      $wrap.addClass("is-loading").attr("aria-busy", "true");
+      // Never add .is-loading when skeletonOnly — that class paints the ::after spinner.
+      $wrap.attr("aria-busy", "true");
+      if (!skeletonOnly) $wrap.addClass("is-loading");
     }
     function reallyHide() {
       hideTimer = null;
       $wrap.removeClass("is-loading").attr("aria-busy", "false");
     }
     function setLoading(on) {
+      if (skeletonOnly) {
+        // No delay/min spinner chrome — keep skeleton or current rows as the only cue.
+        if (on) {
+          injectSkeletonIfEmpty();
+          $wrap.attr("aria-busy", "true");
+        } else {
+          $wrap.attr("aria-busy", "false");
+        }
+        return;
+      }
       if (on) {
         if (showTimer || $wrap.hasClass("is-loading")) return;
         if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }

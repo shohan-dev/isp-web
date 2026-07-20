@@ -801,6 +801,10 @@ class Dashboard extends BaseController
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
+        ignore_user_abort(false);
+        if (connection_aborted()) {
+            return $this->response->setStatusCode(499)->setBody('');
+        }
 
         $cacheKey = 'bw_usage_' . (int) $userId . '_' . preg_replace('/[^A-Za-z0-9]/', '', $routerId);
         if (($cached = cache($cacheKey)) !== null) {
@@ -904,6 +908,10 @@ class Dashboard extends BaseController
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
+        ignore_user_abort(false);
+        if (connection_aborted()) {
+            return $this->response->setStatusCode(499)->setBody('');
+        }
 
         helper('flag');
         $dashCacheKey = 'dash_sadmin_' . $userId;
@@ -932,6 +940,10 @@ class Dashboard extends BaseController
 
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
+        }
+        ignore_user_abort(false);
+        if (connection_aborted()) {
+            return $this->response->setStatusCode(499)->setBody('');
         }
 
         $cacheKey = 'sadmin_dashboard_charts_data_user_' . $userId;

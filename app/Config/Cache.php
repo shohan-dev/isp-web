@@ -21,6 +21,18 @@ class Cache extends BaseConfig
             $this->handler       = 'file';
             $this->backupHandler = 'file';
         }
+
+        // ':' is a safe Redis namespace separator, but FileHandler concatenates
+        // the prefix straight into a filesystem path. On Windows/NTFS a colon
+        // in a filename creates an Alternate Data Stream: writeFile() "succeeds"
+        // against a stray base file, then chmod() throws "No such file or
+        // directory" — caught, but still logged with a full stack trace on
+        // EVERY cache write. userHasPermission()/getSetting() call this dozens
+        // of times per admin page render, so this alone was enough synchronous
+        // log I/O to make customers/expired_index/dashboard feel like they hang.
+        if ($this->handler === 'file' || $this->backupHandler === 'file') {
+            $this->prefix = str_replace(':', '_', $this->prefix);
+        }
     }
 
     /**

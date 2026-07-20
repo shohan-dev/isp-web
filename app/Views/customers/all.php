@@ -464,40 +464,39 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       return;
     }
 
-    let routerOptions = '<select id="swal-router-select" class="form-control" style="width: 100%; border-radius: 8px; height: 40px; margin-top: 10px;">';
-    routerOptions += '<option value="">-- Select Router --</option>';
-    <?php if (isset($routers) && !empty($routers)): ?>
-      <?php foreach ($routers as $r): ?>
-        routerOptions += '<option value="<?= $r->id ?>"><?= esc($r->name) ?></option>';
-      <?php endforeach; ?>
-    <?php endif; ?>
-    routerOptions += '</select>';
+    function openChangeRouterSwal(routers) {
+      let routerOptions = '<select id="swal-router-select" class="form-control" style="width: 100%; border-radius: 8px; height: 40px; margin-top: 10px;">';
+      routerOptions += '<option value="">-- Select Router --</option>';
+      (routers || []).forEach(function (r) {
+        routerOptions += '<option value="' + r.id + '">' + $('<div>').text(r.name || '').html() + '</option>';
+      });
+      routerOptions += '</select>';
 
-    swal({
-      title: "Change Router",
-      text: "Select a new router for " + ids.length + " selected customers:",
-      content: {
-        element: "div",
-        attributes: {
-          innerHTML: routerOptions
-        }
-      },
-      buttons: {
-        cancel: "Cancel",
-        confirm: {
-          text: "Confirm Change",
-          closeModal: false,
-          className: "swal-button--router"
-        }
-      },
-    }).then((willChange) => {
-      if (willChange) {
-        const routerId = $('#swal-router-select').val();
-        if (!routerId) {
-          swal.stopLoading();
-          swal("Error", "Please select a router.", "error");
-          return;
-        }
+      swal({
+        title: "Change Router",
+        text: "Select a new router for " + ids.length + " selected customers:",
+        content: {
+          element: "div",
+          attributes: {
+            innerHTML: routerOptions
+          }
+        },
+        buttons: {
+          cancel: "Cancel",
+          confirm: {
+            text: "Confirm Change",
+            closeModal: false,
+            className: "swal-button--router"
+          }
+        },
+      }).then((willChange) => {
+        if (willChange) {
+          const routerId = $('#swal-router-select').val();
+          if (!routerId) {
+            swal.stopLoading();
+            swal("Error", "Please select a router.", "error");
+            return;
+          }
 
         $.ajax({
           url: '<?= route_to('route.customer.change_router') ?>',
@@ -520,8 +519,23 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
             swal("Couldn't change router", "The router didn't accept the update. Check it's online and try again.", "error");
           }
         });
-      }
-    });
+        }
+      });
+    }
+
+    if (window.__ipbModalLookups && window.__ipbModalLookups.routers) {
+      openChangeRouterSwal(window.__ipbModalLookups.routers);
+      return;
+    }
+    fetch('<?= route_to('route.customer.modalLookups'); ?>', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        window.__ipbModalLookups = data || {};
+        openChangeRouterSwal((data && data.routers) || []);
+      })
+      .catch(function () {
+        swal("Error", "Could not load routers.", "error");
+      });
   });
 </script>
 
@@ -575,6 +589,11 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
     var ipbCustFilters = null;
 
+    // SPA re-entry: destroy any leftover instance before re-init.
+    if ($.fn.dataTable.isDataTable('.datatable')) {
+      try { $('.datatable').DataTable().clear().destroy(true); } catch (e) {}
+    }
+
     const table = $('.datatable').DataTable({
       serverSide: true,
       processing: false,
@@ -588,13 +607,14 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         lengthMenu: "Show _MENU_",
         info: "Showing _START_ to _END_ of _TOTAL_",
         paginate: { previous: "Prev", next: "Next" },
-        // processing intentionally omitted — inherits the branded loadingHtml spinner (04 §6)
+        // processing:false — skeleton tbody is the only load cue (no centred spinner)
         emptyTable: <?= json_encode($customerEmptyHtml) ?>,
         zeroRecords: <?= json_encode($customerZeroHtml) ?>
       },
       ajax: {
         url: '<?= route_to("route.customer.fetch"); ?>',
         type: 'POST',
+        timeout: 60000,
         data: function (d) {
           d.status = status;
           d.area_filter = $('#filter-area').val();
@@ -606,6 +626,26 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         },
         beforeSend: function (req) {
           req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
+        },
+        error: function (xhr, error) {
+          // Navigating away aborts the XHR — keep skeleton briefly; don't toast.
+          if (error === 'abort') return;
+          // Without this, a failed/timed-out fetch leaves the skeleton tbody forever
+          // (processing:false + no draw) — "stuck on Loading / no data".
+          var cols = $('.datatable thead th').length || 14;
+          var msg = error === 'timeout'
+            ? 'Request timed out. Check your connection and retry.'
+            : 'Could not load customers. Please retry.';
+          $('.datatable tbody').html(
+            '<tr class="odd"><td valign="top" colspan="' + cols + '" class="dataTables_empty">' +
+            '<div class="ipb-empty ipb-dt-empty">' +
+            '<div class="ipb-empty-icon"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i></div>' +
+            '<div class="ipb-empty-title">Load failed</div>' +
+            '<div class="ipb-empty-sub">' + msg + '</div>' +
+            '<div class="ipb-empty-action"><button type="button" class="btn btn-primary btn-sm" id="ipb-dt-retry">Retry</button></div>' +
+            '</div></td></tr>'
+          );
+          if (window.tata) tata.error('Load failed', msg);
         }
       },
       columns: [
@@ -637,81 +677,13 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       pageLength: 25,
       drawCallback: function () {
         const api = this.api();
-        const rows = api.rows({
-          page: 'current'
-        }).nodes();
 
-        const routerMap = {}; // router_id => [pppoe_ids]
-        const cellMap = {}; // router_id => {pppoe_id: cell}
-        const statusColIdx = <?php echo userHasPermission('customer', 'delete') ? 11 : 10; ?>;
-
-        $(rows).each((i, row) => {
-          const data = api.row(row).data();
-          if (!data || !data.pppoe_secret || !data.router_id) return;
-
-          if (!routerMap[data.router_id]) {
-            routerMap[data.router_id] = [];
-            cellMap[data.router_id] = {};
-          }
-
-          routerMap[data.router_id].push(data.pppoe_secret);
-          // Use DataTables cell API so hidden columns do not break status updates
-          cellMap[data.router_id][data.pppoe_secret] = {
-            rowNode: row,
-            tr: $(row)
-          };
-        });
-
-        // One Promise per router — update cells when each responds
-        const routerPromises = Object.keys(routerMap).map(function(rId) {
-          return new Promise(function(resolve) {
-            $.ajax({
-              url: "<?= route_to('route.getPppoeStatus'); ?>",
-              type: "POST",
-              data: { router_id: rId, pppoe_ids: routerMap[rId] },
-              headers: { "<?= csrf_header() ?>": "<?= csrf_hash() ?>" },
-              success: function(response) {
-                for (const rid in response) {
-                  const routerData = response[rid];
-                  if (routerData.error) continue;
-                  for (const pppoeId in routerData) {
-                    if (!cellMap[rid] || !cellMap[rid][pppoeId]) continue;
-                    const isOnline = routerData[pppoeId] === true;
-                    const color = isOnline ? "var(--success-600, #15803d)" : "var(--error-600, #b91c1c)";
-                    const bg    = isOnline ? "var(--success-100, #dcfce7)" : "var(--error-100, #fee2e2)";
-                    const label = isOnline ? "Online"  : "Offline";
-
-                    const cellNode = api.cell(cellMap[rid][pppoeId].rowNode, statusColIdx).node();
-                    if (cellNode) {
-                      $(cellNode).html(
-                        `<span style="background:${bg}; color:${color}; padding:2px 8px; border-radius:50px; font-weight:500;">${label}</span>`
-                      );
-                    }
-                    cellMap[rid][pppoeId].tr.attr('data-live-status', isOnline ? 'online' : 'offline');
-                  }
-                }
-              },
-              complete: resolve   // always resolve so Promise.all never hangs
-            });
-          });
-        });
-
-        // ── After ALL routers respond, filter ONLY rows that have live data ──
-        // Rows with no PPPoE/router (no data-live-status) are NEVER hidden.
-        Promise.all(routerPromises).then(function() {
-          const statusFilter = $('#filter-connection-status').val(); // 'active'|'inactive'|''
-          if (statusFilter) {
-            const wantOnline = (statusFilter === 'active');
-            $('.datatable tbody tr[data-live-status]').each(function() {
-              const rowOnline = ($(this).attr('data-live-status') === 'online');
-              $(this).toggle(wantOnline === rowOnline);
-            });
-          } else {
-            $('.datatable tbody tr').show();
-          }
-          if (ipbCustFilters) ipbCustFilters.updateBadge();
-        });
-
+        // Live MikroTik PPPoE polling used to run here (1 POST per router, up to
+        // ~15s each). On `php spark serve` (single-threaded) those requests
+        // blocked the next sidebar nav — /customers came back empty and
+        // /dashboard stuck on Loading. DB `activity`/`conn_status` is already
+        // rendered in the conn_status column; live refresh is not required for
+        // the list to be usable.
         if (window.IpbCustomersList) IpbCustomersList.bindRowTooltips(api);
       },
 
@@ -725,10 +697,15 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
     });
 
+    $(document).on('click', '#ipb-dt-retry', function () {
+      table.ajax.reload();
+    });
+
     if (window.IpbFilters) {
       ipbCustFilters = IpbFilters.bind(table, {
         storageKey: 'ipb_filters_customers_all',
         root: '#customer-filter-bar',
+        skeletonOnly: true,
         onUpdateBadge: function (api, $root, $badge) {
           if (!$badge || !$badge.length) return;
           try {
@@ -997,9 +974,33 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       resellerSelect.id = 'reseller-select';
       resellerSelect.className = 'swal-content__input';
       resellerSelect.style.width = '100%';
-      resellerSelect.innerHTML = `<option value="">Select reseller</option><?php foreach ($resellers as $r): ?><option value="<?= $r->id ?>"><?= htmlspecialchars($r->name) ?></option><?php endforeach; ?>`;
+      resellerSelect.innerHTML = '<option value="">Select reseller</option>';
       resellerWrap.appendChild(resellerSelect);
       transferContainer.appendChild(resellerWrap);
+
+      function fillResellerOptions(resellers) {
+        resellerSelect.innerHTML = '<option value="">Select reseller</option>';
+        (resellers || []).forEach(function (r) {
+          var opt = document.createElement('option');
+          opt.value = r.id;
+          opt.textContent = r.name || '';
+          resellerSelect.appendChild(opt);
+        });
+      }
+
+      function ensureModalLookups() {
+        if (window.__ipbModalLookups && window.__ipbModalLookups.resellers) {
+          fillResellerOptions(window.__ipbModalLookups.resellers);
+          return Promise.resolve(window.__ipbModalLookups);
+        }
+        return fetch('<?= route_to('route.customer.modalLookups'); ?>', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            window.__ipbModalLookups = data || {};
+            fillResellerOptions((data && data.resellers) || []);
+            return data;
+          });
+      }
 
       // --- Package select ---
       var packageSelect = document.createElement('select');
@@ -1070,6 +1071,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         loadPackages('<?= base_url('reseller/resellerpackages/json') ?>/' + sel);
       });
 
+      ensureModalLookups().catch(function () { /* empty list is ok */ }).then(function () {
       swal({ title: 'Transfer Customers', text: 'Select destination and package:', content: transferContainer, buttons: { cancel: 'Cancel', confirm: { text: 'Transfer', closeModal: false } }, dangerMode: true })
       .then(function(confirmed) {
         if (!confirmed) return;
@@ -1100,6 +1102,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
           success: function(result) { swal.close(); tata.success('Customers transferred', result.response); $('.datatable').DataTable().ajax.reload(null, false); },
           error: function(response) { var r = jQuery.parseJSON(response.responseText); swal.close(); tata.error("Couldn't transfer customers", r.response); }
         });
+      });
       });
     });
 

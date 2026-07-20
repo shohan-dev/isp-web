@@ -1045,6 +1045,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       url: "<?= base_url('api/dashboard/sadmin-data') ?>",
       method: "GET",
       dataType: "json",
+      timeout: 45000,
       success: function(response) {
         if (response.status !== 'success') {
           console.error('Failed to load Super Admin cards:', response.message);
@@ -1142,6 +1143,27 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       },
       error: function(xhr, status, error) {
         console.error('Error fetching Super Admin card metrics:', error);
+        var failedText = status === 'parsererror'
+          ? 'Session expired — refresh'
+          : (status === 'timeout' ? 'Timed out' : '—');
+        [
+          'card_users_active', 'card_users_new', 'card_users_inactive', 'card_expired_inactive',
+          'card_customers_payment_total', 'card_customers_payment_pending', 'card_total_packages',
+          'card_total_area', 'card_employee_active', 'card_employee_inactive',
+          'card_employee_payment_received', 'card_employees_payment_pending',
+          'card_router_active', 'card_router_inactive', 'card_all_resellers',
+          'card_customers_payment_received', 'card_customers_Expayment_total'
+        ].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el && (el.textContent === '0' || el.textContent === '' || el.classList.contains('is-loading'))) {
+            el.textContent = failedText;
+          }
+        });
+        if (window.tata) {
+          tata.error('Dashboard', status === 'timeout'
+            ? 'Card metrics timed out. Refresh the page.'
+            : 'Could not load card metrics.');
+        }
       }
     });
   });

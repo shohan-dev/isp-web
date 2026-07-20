@@ -10,6 +10,10 @@
  * then re-runs the sidebar sync (active item, open section, rail position,
  * breadcrumbs) so only "the indication" moves — never the sidebar itself.
  *
+ * Heavy routes (/dashboard, /customers*) always do a full document reload —
+ * their DataTables / dashboard AJAX would otherwise leave php spark serve
+ * (single-threaded) wedged after SPA abort, so the next page stuck on Loading.
+ *
  * Anything that doesn't fit this path — forms, non-GET, off-site links, new
  * tab, downloads, logout, or any response that isn't the partial shape we
  * expect (session expired -> redirected to the login page, a 404/500, etc.)
@@ -19,6 +23,12 @@
  */
 (function (window, document) {
   "use strict";
+
+  /** In-flight jQuery XHRs started while a page is mounted. On partial nav we
+   *  abort only the *previous* generation so a just-started request for the
+   *  new page is never killed by a second teardown. */
+  var ajaxPool = [];
+  var navGeneration = 0;
 
   function ready(fn) {
     if (document.readyState !== "loading") fn();
@@ -33,6 +43,18 @@
     }
   }
 
+  /** Data-heavy admin pages: full reload only (clean request cycle). */
+  function needsFullReload(href) {
+    try {
+      var path = new URL(href, window.location.href).pathname.replace(/\/+$/, "") || "/";
+      if (path === "/dashboard") return true;
+      if (path === "/customers" || path.indexOf("/customers/") === 0) return true;
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   function eligible(a) {
     if (!a) return false;
     if (a.closest("[data-full-reload]")) return false;
@@ -42,13 +64,63 @@
     if (!href || href === "#") return false;
     if (href.indexOf("javascript:") === 0 || href.indexOf("mailto:") === 0 || href.indexOf("tel:") === 0) return false;
     if (!sameOrigin(href)) return false;
+    // Let the browser handle heavy routes — do not intercept.
+    if (needsFullReload(href)) return false;
     return true;
   }
 
-  /** Scripts arriving via fetch/DOMParser/importNode are inert by spec (never
-   *  auto-execute). Re-creating each one with createElement + a copy of its
-   *  attributes/text, then appending, is the standard, minimal way to force
-   *  the browser to actually run it. */
+  function trackAjax() {
+    if (!window.jQuery || window.IpbAjaxPoolBound) return;
+    window.IpbAjaxPoolBound = true;
+    window.jQuery.ajaxPrefilter(function (_options, _original, jqXHR) {
+      jqXHR._ipbNavGen = navGeneration;
+      ajaxPool.push(jqXHR);
+      jqXHR.always(function () {
+        var i = ajaxPool.indexOf(jqXHR);
+        if (i !== -1) ajaxPool.splice(i, 1);
+      });
+    });
+  }
+
+  /**
+   * Abort only XHRs from generations older than the new one, then destroy
+   * DataTables still living under #ipb-main. Called once per swap.
+   */
+  function teardownMain() {
+    var dyingGen = navGeneration;
+    navGeneration += 1;
+
+    var kept = [];
+    while (ajaxPool.length) {
+      var xhr = ajaxPool.pop();
+      if (xhr && xhr._ipbNavGen === dyingGen) {
+        try {
+          xhr.abort();
+        } catch (e) {}
+      } else if (xhr) {
+        kept.push(xhr);
+      }
+    }
+    ajaxPool = kept;
+
+    if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.dataTable) return;
+    var $ = window.jQuery;
+    var $main = $("#ipb-main");
+    if (!$main.length) return;
+
+    $main.find("table").each(function () {
+      if ($.fn.dataTable.isDataTable(this)) {
+        try {
+          $(this).DataTable().clear().destroy(true);
+        } catch (e) {
+          try {
+            $(this).DataTable().destroy(true);
+          } catch (e2) {}
+        }
+      }
+    });
+  }
+
   function execScripts(root) {
     if (!root) return;
     root.querySelectorAll("script").forEach(function (old) {
@@ -57,13 +129,17 @@
         s.setAttribute(old.attributes[i].name, old.attributes[i].value);
       }
       s.text = old.textContent;
+      s.setAttribute("data-ipb-nav-script", "1");
       document.body.appendChild(s);
     });
   }
 
-  /** Adds any page-specific <link>/<style> the destination page carries in
-   *  its own css section, skipping ones already present (by href / text) so
-   *  repeat visits to the same page don't pile up duplicate tags. */
+  function pruneStaleScripts() {
+    document.querySelectorAll("script[data-ipb-nav-script='1']").forEach(function (s) {
+      if (s.parentNode) s.parentNode.removeChild(s);
+    });
+  }
+
   function mergeCss(fragment) {
     if (!fragment) return;
     fragment.querySelectorAll("link[rel=stylesheet], style").forEach(function (node) {
@@ -79,14 +155,6 @@
     });
   }
 
-  /** @returns {boolean} true if `html` was our expected partial shape and got
-   *  applied; false means the caller should fall back to a hard navigation.
-   *
-   *  `href`/`push` are threaded through so the URL is updated (pushState)
-   *  BEFORE afterContentSwap() runs — IpbSidebarBoot.sync() and
-   *  syncSidebarActiveFromUrl() both figure out "which link is active" by
-   *  reading window.location.href, so if that still pointed at the page the
-   *  user clicked FROM, the highlight/indicator never moved to the new item. */
   function applyPartial(html, href, push) {
     var mainEl = document.getElementById("ipb-main");
     if (!mainEl) return false;
@@ -94,6 +162,10 @@
     var doc = new DOMParser().parseFromString(html, "text/html");
     var contentTpl = doc.getElementById("ipb-nav-content");
     if (!contentTpl || !contentTpl.content) return false;
+
+    // Single teardown per swap (before wipe) — avoids racing a just-started XHR.
+    teardownMain();
+    pruneStaleScripts();
 
     mergeCss(doc.getElementById("ipb-nav-css") && doc.getElementById("ipb-nav-css").content);
 
@@ -106,7 +178,7 @@
 
     var scriptTpl = doc.getElementById("ipb-nav-script");
     execScripts(scriptTpl && scriptTpl.content);
-    execScripts(mainEl); // defensive: a stray <script> inside the content section itself
+    execScripts(mainEl);
 
     mainEl.scrollTop = 0;
     window.scrollTo(0, 0);
@@ -121,10 +193,17 @@
   }
 
   function navigateTo(href, push) {
+    if (needsFullReload(href)) {
+      window.location.href = href;
+      return;
+    }
+
     if (window.IpbNetPulse && typeof window.IpbNetPulse.start === "function") {
       window.IpbNetPulse.start();
     }
 
+    // Do not teardown here — wait until applyPartial so we only abort once,
+    // right before swapping content (prevents double-abort races).
     fetch(href, {
       headers: { "X-IPB-Nav": "1" },
       credentials: "same-origin",
@@ -143,8 +222,6 @@
         if (window.IpbNetPulse && typeof window.IpbNetPulse.done === "function") {
           window.IpbNetPulse.done();
         }
-        // Safety net: session expiry, permission errors, a dropped connection,
-        // or any shape we didn't expect all land here as a normal hard nav.
         window.location.href = href;
       });
   }
@@ -154,9 +231,11 @@
     if (!document.getElementById("ipb-main")) return;
     if (!window.fetch || !window.DOMParser || !window.history || !history.pushState) return;
 
+    trackAjax();
+
     document.addEventListener("click", function (e) {
       if (e.defaultPrevented || e.button !== 0) return;
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; // let "open in new tab" through
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 
       var a = e.target.closest && e.target.closest(".sidebar-menu a[href]");
       if (!a || !eligible(a)) return;
@@ -166,7 +245,12 @@
     });
 
     window.addEventListener("popstate", function () {
-      navigateTo(window.location.href, false);
+      var href = window.location.href;
+      if (needsFullReload(href)) {
+        window.location.reload();
+        return;
+      }
+      navigateTo(href, false);
     });
   });
 })(window, document);

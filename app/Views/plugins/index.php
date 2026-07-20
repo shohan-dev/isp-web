@@ -3,8 +3,7 @@
 <?= $this->section('css'); ?>
 <style>
     :root {
-        --plp-radius-sm: 8px;
-        --plp-radius-md: 16px;
+        --plp-radius-md: 12px;
         --plp-ease: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
@@ -18,13 +17,14 @@
     .plugins-lp {
         font-family: var(--font-sans);
         color: var(--text-primary);
+        font-size: var(--text-base);
     }
 
     /* ── Layout ── */
     .plp-layout {
         display: grid;
-        grid-template-columns: 272px 1fr;
-        gap: 32px;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 20px;
         align-items: start;
     }
     @media (max-width: 900px) {
@@ -37,20 +37,22 @@
         border: 1px solid var(--border);
         border-radius: var(--plp-radius-md);
         box-shadow: var(--shadow-1);
-        padding: 24px;
+        padding: 16px;
         position: sticky;
-        top: 24px;
+        top: 16px;
     }
     .plp-sidebar__head {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 18px;
+        margin-bottom: 12px;
     }
     .plp-sidebar__head h2 {
-        font-size: 1.1875rem;
-        font-weight: 800;
-        color: var(--text-primary);
+        font-size: var(--text-xs);
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--text-muted);
         margin: 0;
     }
 
@@ -63,14 +65,14 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        border-radius: 10px;
+        gap: 8px;
+        padding: 10px 12px;
+        border-radius: 8px;
         color: var(--text-secondary) !important;
         text-decoration: none;
         font-weight: 600;
-        font-size: 0.9375rem;
-        transition: all 0.2s var(--plp-ease);
+        font-size: var(--text-md);
+        transition: background 0.15s var(--plp-ease), color 0.15s var(--plp-ease);
     }
     .plp-cat-link:hover { background: var(--surface-2); color: var(--text-primary) !important; text-decoration: none; }
     .plp-cat-link.is-active {
@@ -78,9 +80,9 @@
         color: #fff !important;
     }
     .plp-cat-badge {
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         font-weight: 700;
-        padding: 2px 9px;
+        padding: 2px 8px;
         border-radius: 999px;
         background: var(--surface-2);
         color: var(--text-secondary);
@@ -90,150 +92,241 @@
         background: rgba(255, 255, 255, 0.22);
         color: #fff;
     }
+    .plp-cat-link i {
+        width: 18px;
+        text-align: center;
+        color: var(--text-muted);
+        flex-shrink: 0;
+        font-size: var(--text-base);
+    }
+    .plp-cat-link.is-active i,
+    .plp-cat-link:hover i {
+        color: inherit;
+    }
+    .plp-cat-link span.plp-cat-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
 
     @media (max-width: 900px) {
-        .plp-sidebar__card { position: static; padding: 16px; }
+        .plp-sidebar__card { position: static; padding: 14px; }
         .plp-cat-list {
             flex-direction: row;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            gap: 8px;
-            padding-bottom: 4px;
+            gap: 6px;
+            padding-bottom: 2px;
             scrollbar-width: thin;
         }
         .plp-cat-link {
             flex-shrink: 0;
             border-radius: 999px;
             border: 1px solid var(--border);
-            padding: 9px 16px;
+            padding: 8px 14px;
+            font-size: var(--text-base);
         }
         .plp-cat-link.is-active { border-color: var(--primary-500); }
     }
 
-    /* ── Cards grid ── */
-    .plp-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
-        gap: 24px;
+    /* ── Main column: toolbar + card grid ── */
+    .plp-main {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-width: 0;
     }
 
+    .plp-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .plp-search {
+        position: relative;
+        flex: 1 1 320px;
+        max-width: 480px;
+    }
+    .plp-search i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        font-size: var(--text-base);
+        pointer-events: none;
+    }
+    .plp-search input {
+        width: 100%;
+        padding: 11px 14px 11px 40px;
+        border-radius: var(--radius, 10px);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-primary);
+        font-size: var(--text-input);
+        transition: border-color 0.2s var(--plp-ease), box-shadow 0.2s var(--plp-ease);
+    }
+    .plp-search input::placeholder { color: var(--text-muted); }
+    .plp-search input:focus {
+        outline: none;
+        border-color: var(--primary-500);
+        box-shadow: var(--shadow-focus, 0 0 0 3px rgba(var(--primary-rgb), 0.15));
+    }
+    .plp-result-count {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+
+    /*
+     * 2-column card grid (minmax 380px → ~2 wide cards on desktop).
+     * Type uses design-system px tokens — rem looked zoomed-out under AdminLTE.
+     */
+    .plp-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+        gap: 16px;
+    }
+    .plp-card.is-hidden { display: none; }
+
     @keyframes plp-fade-up {
-        from { opacity: 0; transform: translateY(14px); }
+        from { opacity: 0; transform: translateY(6px); }
         to { opacity: 1; transform: translateY(0); }
     }
     .plp-card {
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: var(--plp-radius-md);
-        padding: 28px;
-        position: relative;
+        padding: 18px;
         display: flex;
         flex-direction: column;
-        transition: transform 0.25s var(--plp-ease), box-shadow 0.25s var(--plp-ease), border-color 0.25s var(--plp-ease);
-        animation: plp-fade-up 0.4s var(--plp-ease) both;
+        gap: 12px;
+        min-height: 0;
+        overflow: hidden;
+        isolation: isolate;
+        transition: box-shadow 0.2s var(--plp-ease), border-color 0.2s var(--plp-ease);
+        animation: plp-fade-up 0.3s var(--plp-ease) both;
     }
     .plp-card:hover {
-        transform: translateY(-3px);
         box-shadow: var(--shadow-2);
         border-color: var(--primary-300, var(--border));
     }
+
+    .plp-card__top {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        min-width: 0;
+    }
+
+    .plp-card__media {
+        width: 56px;
+        height: 56px;
+        flex: 0 0 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        padding: 8px;
+    }
+    .plp-card__media img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: center;
+    }
+    .plp-card__media i {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--tone-color, var(--primary-500)) 12%, transparent);
+        color: var(--tone-color, var(--primary-500));
+        font-size: 22px;
+        line-height: 1;
+    }
+    .plp-card__media[data-tone="mobile"]   { --tone-color: var(--data-4); }
+    .plp-card__media[data-tone="vas"]      { --tone-color: var(--data-2); }
+    .plp-card__media[data-tone="network"]  { --tone-color: var(--data-5); }
+    .plp-card__media[data-tone="sms"]      { --tone-color: var(--data-6); }
+    .plp-card__media[data-tone="payment"]  { --tone-color: var(--data-1); }
+    .plp-card__media[data-tone="hardware"] { --tone-color: var(--data-8); }
+
+    .plp-card__heading {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding-top: 2px;
+    }
+
+    .plp-card .plp-card__title {
+        font-size: var(--text-lg);
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.3;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .plp-card__category {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 100%;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--tone-color, var(--primary-600));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .plp-card__category i { font-size: var(--text-xs); opacity: 0.85; }
+    .plp-card__category[data-tone="mobile"]   { --tone-color: var(--data-4); }
+    .plp-card__category[data-tone="vas"]      { --tone-color: var(--data-2); }
+    .plp-card__category[data-tone="network"]  { --tone-color: var(--data-5); }
+    .plp-card__category[data-tone="sms"]      { --tone-color: var(--data-6); }
+    .plp-card__category[data-tone="payment"]  { --tone-color: var(--data-1); }
+    .plp-card__category[data-tone="hardware"] { --tone-color: var(--data-8); }
+
     .plp-card__badge {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        z-index: 2;
-        padding: 5px 13px;
-        border-radius: 999px;
-        font-size: 0.75rem;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: var(--text-xs);
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.04em;
+        line-height: 1.2;
+        margin-top: 2px;
     }
     .plp-card__badge--free { background: var(--success-50); color: var(--success-600); }
     .plp-card__badge--paid { background: var(--primary-50); color: var(--primary-600); }
 
-    .plp-card__actions {
-        position: absolute;
-        top: 14px;
-        left: 14px;
-        z-index: 3;
-        display: flex;
-        gap: 6px;
-        opacity: 0;
-        transition: opacity 0.25s var(--plp-ease);
-    }
-    .plp-card:hover .plp-card__actions,
-    .plp-card:focus-within .plp-card__actions {
-        opacity: 1;
-    }
-    .plp-icon-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        color: #fff;
-        cursor: pointer;
-        box-shadow: var(--shadow-1);
-        transition: transform 0.2s var(--plp-ease);
-    }
-    .plp-icon-btn:hover { transform: scale(1.08); }
-    .plp-icon-btn--edit { background: var(--info-500); }
-    .plp-icon-btn--delete { background: var(--error-500); }
-
-    .plp-card__image {
-        height: 138px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background:
-            radial-gradient(130% 110% at 50% 0%, rgba(var(--primary-rgb), 0.10), transparent 60%),
-            var(--surface-2);
-        border-radius: var(--plp-radius-sm);
-        margin-bottom: 18px;
-        overflow: hidden;
-        padding: 14px;
-    }
-    .plp-card__image img { width: 100%; height: 100%; object-fit: contain; object-position: center; }
-    /* Empty placeholder: a branded icon chip so a plugin without artwork still
-       reads as intentional, not a small glyph lost in a big grey slab. */
-    .plp-card__image i {
-        width: 56px;
-        height: 56px;
-        display: grid;
-        place-items: center;
-        border-radius: 16px;
-        background: rgba(var(--primary-rgb), 0.10);
-        border: 1px solid rgba(var(--primary-rgb), 0.22);
-        color: var(--primary-500);
-        font-size: 1.5rem;
-        opacity: 1;
-    }
-
-    .plp-card__cycle {
-        font-size: 0.875rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: var(--primary-600);
-        margin-bottom: 10px;
-    }
-    .plp-card .plp-card__title {
-        font-size: 1.3125rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        line-height: 1.3;
-        margin-bottom: 10px;
-    }
     .plp-card__desc {
-        font-size: 0.9375rem;
+        font-size: var(--text-md);
         color: var(--text-secondary);
-        line-height: 1.6;
+        line-height: 1.5;
         margin: 0;
-        flex-grow: 1;
+        flex: 1 1 auto;
         display: -webkit-box;
         -webkit-line-clamp: 3;
         line-clamp: 3;
@@ -241,34 +334,64 @@
         overflow: hidden;
     }
 
-    /* Touch devices: action icons must stay visible (no hover to reveal them),
-       and at a comfortable 40-44px tap target, not the 32px hover-only size. */
-    @media (hover: none), (max-width: 1024px) {
-        .plp-card__actions { opacity: 1; }
-        .plp-icon-btn { width: 40px; height: 40px; font-size: 15px; }
+    .plp-card__footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: auto;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
     }
+
+    .plp-card__price {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: var(--text-lg);
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+        min-width: 0;
+    }
+    .plp-card__price-cycle {
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+
+    .plp-card__actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+    .plp-icon-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        color: #fff;
+        cursor: pointer;
+        box-shadow: var(--shadow-1);
+        transition: transform 0.15s var(--plp-ease);
+    }
+    .plp-icon-btn:hover { transform: scale(1.06); }
+    .plp-icon-btn--edit { background: var(--info-500); }
+    .plp-icon-btn--delete { background: var(--error-500); }
 
     @media (max-width: 767px) {
-        .plp-grid { gap: 16px; }
-        .plp-card { padding: 18px; border-radius: 14px; }
-        .plp-card__image { height: 130px; margin-bottom: 14px; }
-        .plp-card__title { font-size: 1.0625rem; }
-        .plp-icon-btn { width: 44px; height: 44px; }
-    }
-
-    .plp-empty {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: 56px 24px;
-        background: var(--surface);
-        border: 1px dashed var(--border);
-        border-radius: var(--plp-radius-md);
-    }
-    .plp-empty img { width: 140px; opacity: 0.5; margin-bottom: 16px; }
-    .plp-empty h3 {
-        font-weight: 700;
-        color: var(--text-secondary);
-        margin: 0;
+        .plp-grid {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        .plp-card { padding: 16px; }
+        .plp-card__media { width: 52px; height: 52px; flex-basis: 52px; }
+        .plp-icon-btn { width: 40px; height: 40px; }
     }
 
     /* ── Modal polish (Bootstrap 3 modal, behavior untouched) ── */
@@ -350,7 +473,7 @@
                         <li aria-current="page"><span>Plugins &amp; Addons</span></li>
                     </ol>
                 </nav>
-                <h1>Plugins &amp; Addons</h1>
+                <h1>Plugins &amp; Addons <small>Enable, price and manage the integrations available to ISPs</small></h1>
             </div>
             <?php if (getSession('user_role') === 'super_admin'): ?>
             <div class="ipb-page-actions">
@@ -361,6 +484,29 @@
             <?php endif; ?>
         </div>
 
+        <?php
+            // Category → sidebar icon + card-placeholder/chip tone. Keys must match
+            // the category strings in Plugins::buildCatalog() exactly. Anything not
+            // listed (a category typed into a future migration, or none yet) falls
+            // back to a neutral puzzle-piece icon / brand tint rather than erroring.
+            $categoryIcons = [
+                'All addons'             => 'fa-th-large',
+                "Mobile Application's"   => 'fa-mobile-screen',
+                'VAS'                     => 'fa-star',
+                'Network & Monitoring'   => 'fa-network-wired',
+                'SMS Gateway API'        => 'fa-comment-dots',
+                'Payment Gateway (API)'  => 'fa-credit-card',
+                'Hardware Integration'  => 'fa-microchip',
+            ];
+            $categoryTones = [
+                "Mobile Application's"   => 'mobile',
+                'VAS'                     => 'vas',
+                'Network & Monitoring'   => 'network',
+                'SMS Gateway API'        => 'sms',
+                'Payment Gateway (API)'  => 'payment',
+                'Hardware Integration'  => 'hardware',
+            ];
+        ?>
         <div class="plp-layout">
             <!-- Sidebar Categories -->
             <aside class="plp-sidebar">
@@ -368,56 +514,73 @@
                     <div class="plp-sidebar__head">
                         <h2>Categories</h2>
                     </div>
-                    <nav class="plp-cat-list">
+                    <nav class="plp-cat-list" aria-label="Plugin categories">
                         <?php foreach($category_counts as $name => $count): ?>
-                            <a href="<?= route_to('route.plugins.admin') ?>?category=<?= urlencode($name) ?>"
-                               class="plp-cat-link <?= $active_category === $name ? 'is-active' : '' ?>">
-                                <span><?= $name ?></span>
-                                <span class="plp-cat-badge"><?= $count ?></span>
+                            <?php $isActive = $active_category === $name; ?>
+                            <a href="<?= esc(route_to('route.plugins.admin'), 'attr') ?>?category=<?= urlencode($name) ?>"
+                               class="plp-cat-link <?= $isActive ? 'is-active' : '' ?>"
+                               <?= $isActive ? 'aria-current="page"' : '' ?>>
+                                <span class="plp-cat-name">
+                                    <i class="fa <?= esc($categoryIcons[$name] ?? 'fa-puzzle-piece', 'attr') ?>" aria-hidden="true"></i>
+                                    <?= esc($name) ?>
+                                </span>
+                                <span class="plp-cat-badge"><?= (int) $count ?></span>
                             </a>
                         <?php endforeach; ?>
                     </nav>
                 </div>
             </aside>
 
-            <!-- Plugin Cards -->
-            <div class="plp-grid">
-                <?php if(empty($plugins)): ?>
-                    <div class="plp-empty">
-                        <img src="<?= base_url('assets/img/no-data.svg') ?>" alt="">
-                        <h3>No plugins found in this category</h3>
+            <div class="plp-main">
+                <!-- Search + result count -->
+                <div class="plp-toolbar">
+                    <div class="plp-search">
+                        <i class="fa fa-magnifying-glass" aria-hidden="true"></i>
+                        <input type="search" id="pluginSearch" placeholder="Search plugins by name or description&hellip;" aria-label="Search plugins">
                     </div>
-                <?php else: ?>
-                    <?php $i = 0; foreach($plugins as $plugin): $i++; ?>
-                        <div class="plugin-card plp-card" style="animation-delay: <?= min($i * 0.05, 0.4) ?>s">
-                            <?php if (getSession('user_role') === 'super_admin'): ?>
-                            <div class="plp-card__actions">
-                                <button class="plp-icon-btn plp-icon-btn--edit edit-plugin-btn"
-                                        data-id="<?= $plugin['id'] ?>"
-                                        data-title="<?= htmlspecialchars($plugin['title']) ?>"
-                                        data-category="<?= htmlspecialchars($plugin['category']) ?>"
-                                        data-desc="<?= htmlspecialchars($plugin['description']) ?>"
-                                        data-price="<?= htmlspecialchars($plugin['price_type']) ?>"
-                                        data-amount="<?= htmlspecialchars((string) ($plugin['price'] ?? '')) ?>"
-                                        data-cycle="<?= htmlspecialchars($plugin['billing_cycle']) ?>"
-                                        aria-label="Edit plugin">
-                                    <i class="fa fa-edit"></i>
-                                </button>
-                                <button class="plp-icon-btn plp-icon-btn--delete delete-plugin-btn" data-id="<?= $plugin['id'] ?>" aria-label="Delete plugin">
-                                    <i class="fa fa-trash"></i>
-                                </button>
-                            </div>
-                            <?php endif; ?>
+                    <span class="plp-result-count" id="pluginCount" aria-live="polite">
+                        <?= count($plugins) ?> plugin<?= count($plugins) === 1 ? '' : 's' ?>
+                    </span>
+                </div>
 
+                <!-- Plugin Cards -->
+                <div class="plp-grid" id="pluginGrid">
+                    <?php if(empty($plugins)): ?>
+                        <?php
+                            // Inlined rather than view('components/empty-state', [...]): that
+                            // helper always resolves the SHARED CodeIgniter\View\View instance
+                            // (Services::renderer()), and setData() merges into its tempData
+                            // buffer without isolating nested calls. Since this file is itself
+                            // mid-render inside $this->extend('layout/main-layout'), a nested
+                            // call passing 'title' overwrites the outer $title CI4 reads for
+                            // <title> right after — confirmed live: it silently retitled the
+                            // browser tab to this block's title on every load. Same markup as
+                            // components/empty-state.php's .ipb-empty contract, just inline.
+                        ?>
+                        <div class="ipb-empty">
+                            <div class="ipb-empty-icon"><i class="fa <?= esc($categoryIcons[$active_category] ?? 'fa-puzzle-piece', 'attr') ?>" aria-hidden="true"></i></div>
+                            <div class="ipb-empty-title">No plugins in this category</div>
+                            <div class="ipb-empty-sub">Pick another category from the left, or add the first plugin here.</div>
+                            <?php if (getSession('user_role') === 'super_admin'): ?>
+                                <div class="ipb-empty-action">
+                                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addPluginModal">
+                                        <i class="fa fa-plus" aria-hidden="true"></i> Add Plugin
+                                    </button>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <?php $i = 0; foreach($plugins as $plugin): $i++; ?>
                             <?php
                                 $priceType = (string) ($plugin['price_type'] ?? '');
+                                $isFree = strtolower($priceType) === 'free';
                                 $imgPath = $plugin['image'] ?? null;
                                 if ($imgPath && !str_starts_with($imgPath, 'assets/')) {
                                     $imgPath = 'assets/img/plugins_images/' . $imgPath;
                                 }
                                 $descRaw = (string) ($plugin['description'] ?? '');
-                                if (mb_strlen($descRaw) > 110) {
-                                    $descCut = mb_substr($descRaw, 0, 110);
+                                if (mb_strlen($descRaw) > 140) {
+                                    $descCut = mb_substr($descRaw, 0, 140);
                                     $lastSpace = mb_strrpos($descCut, ' ');
                                     $descShort = ($lastSpace !== false && $lastSpace > 0)
                                         ? mb_substr($descCut, 0, $lastSpace) . '...'
@@ -426,30 +589,88 @@
                                     $descShort = $descRaw;
                                 }
                                 $priceAmount = $plugin['price'] ?? null;
-                                $amountFormatted = ($priceAmount !== null && $priceAmount !== '')
+                                $amountFormatted = ($priceAmount !== null && $priceAmount !== '' && (float) $priceAmount > 0)
                                     ? '৳' . rtrim(rtrim(number_format((float) $priceAmount, 2), '0'), '.')
                                     : null;
-                                $priceLineLabel = strtolower($priceType) === 'free' ? 'Free' : ($amountFormatted ?? $priceType);
-                                $cycleText = strtolower((string) ($plugin['billing_cycle'] ?? ''));
+                                $cycleText = trim((string) ($plugin['billing_cycle'] ?? ''));
+                                // Price line: amount when set, else Free/Paid label. Cycle as muted suffix.
+                                if ($amountFormatted !== null) {
+                                    $priceLabel = $amountFormatted;
+                                } elseif ($isFree) {
+                                    $priceLabel = 'Free';
+                                } else {
+                                    $priceLabel = $priceType !== '' ? $priceType : '—';
+                                }
+                                $categoryName = (string) ($plugin['category'] ?? '');
+                                $catIcon = $categoryIcons[$categoryName] ?? 'fa-puzzle-piece';
+                                $catTone = $categoryTones[$categoryName] ?? '';
+                                $searchIndex = mb_strtolower($plugin['title'] . ' ' . $categoryName . ' ' . $descRaw);
                             ?>
-                            <div class="plp-card__badge <?= strtolower($priceType) === 'free' ? 'plp-card__badge--free' : 'plp-card__badge--paid' ?>"><?= esc($priceType) ?></div>
+                            <div class="plugin-card plp-card" style="animation-delay: <?= min($i * 0.05, 0.4) ?>s" data-search="<?= esc($searchIndex, 'attr') ?>">
+                                <div class="plp-card__top">
+                                    <div class="plp-card__media" data-tone="<?= esc($catTone, 'attr') ?>">
+                                        <?php if($imgPath && file_exists(FCPATH . $imgPath)): ?>
+                                            <img src="<?= esc(base_url($imgPath), 'attr') ?>" alt="<?= esc($plugin['title'] ?? '') ?>">
+                                        <?php else: ?>
+                                            <i class="fa <?= esc($catIcon, 'attr') ?>" aria-hidden="true"></i>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="plp-card__heading">
+                                        <h3 class="plp-card__title"><?= esc($plugin['title'] ?? '') ?></h3>
+                                        <?php if ($categoryName !== ''): ?>
+                                            <span class="plp-card__category" data-tone="<?= esc($catTone, 'attr') ?>">
+                                                <i class="fa <?= esc($catIcon, 'attr') ?>" aria-hidden="true"></i>
+                                                <?= esc($categoryName) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <span class="plp-card__badge <?= $isFree ? 'plp-card__badge--free' : 'plp-card__badge--paid' ?>"><?= esc($priceType) ?></span>
+                                </div>
 
-                            <div class="plp-card__image">
-                                <?php if($imgPath && file_exists(FCPATH . $imgPath)): ?>
-                                    <img src="<?= esc(base_url($imgPath), 'attr') ?>" alt="<?= esc($plugin['title'] ?? '') ?>">
-                                <?php else: ?>
-                                    <i class="fa fa-puzzle-piece" aria-hidden="true"></i>
-                                <?php endif; ?>
-                            </div>
+                                <p class="plp-card__desc"><?= esc($descShort) ?></p>
 
-                            <div class="plp-card__cycle">
-                                <?= esc($priceLineLabel) ?><?= $cycleText !== '' ? ' &middot; ' . esc($cycleText) : '' ?>
+                                <div class="plp-card__footer">
+                                    <div class="plp-card__price">
+                                        <span><?= esc($priceLabel) ?></span>
+                                        <?php if ($cycleText !== ''): ?>
+                                            <span class="plp-card__price-cycle"><?= esc($cycleText) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if (getSession('user_role') === 'super_admin'): ?>
+                                    <div class="plp-card__actions">
+                                        <button class="plp-icon-btn plp-icon-btn--edit edit-plugin-btn"
+                                                data-id="<?= $plugin['id'] ?>"
+                                                data-title="<?= htmlspecialchars($plugin['title']) ?>"
+                                                data-category="<?= htmlspecialchars($plugin['category']) ?>"
+                                                data-desc="<?= htmlspecialchars($plugin['description']) ?>"
+                                                data-price="<?= htmlspecialchars($plugin['price_type']) ?>"
+                                                data-amount="<?= htmlspecialchars((string) ($plugin['price'] ?? '')) ?>"
+                                                data-cycle="<?= htmlspecialchars($plugin['billing_cycle']) ?>"
+                                                aria-label="Edit plugin">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button class="plp-icon-btn plp-icon-btn--delete delete-plugin-btn" data-id="<?= $plugin['id'] ?>" aria-label="Delete plugin">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-                            <h3 class="plp-card__title"><?= esc($plugin['title'] ?? '') ?></h3>
-                            <p class="plp-card__desc"><?= esc($descShort) ?></p>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+
+                    <!-- Client-side "no search results" state — hidden unless a search query matches
+                         nothing. Renders unconditionally on every load (JS just toggles display),
+                         so this MUST NOT be a nested view() call — see the comment on the other
+                         .ipb-empty block above for why that clobbers the page's <title>. -->
+                    <div class="plp-search-empty" id="pluginSearchEmpty" style="display:none; grid-column: 1 / -1;">
+                        <div class="ipb-empty">
+                            <div class="ipb-empty-icon"><i class="fa fa-magnifying-glass" aria-hidden="true"></i></div>
+                            <div class="ipb-empty-title">No plugins match your search</div>
+                            <div class="ipb-empty-sub">Try a different name or clear the search box.</div>
                         </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -652,6 +873,9 @@
                             if (response.success) {
                                 card.fadeOut(300, function() {
                                     $(this).remove();
+                                    const idx = pluginCards.indexOf(card[0]);
+                                    if (idx !== -1) pluginCards.splice(idx, 1);
+                                    applyPluginSearch();
                                 });
                                 tata.success('Plugin deleted', response.message);
                             } else {
@@ -662,6 +886,34 @@
                 }
             });
         });
+
+        // Search / filter — client-side, the catalogue is small enough that a
+        // round-trip to the server for every keystroke would be pure overhead.
+        const pluginSearchInput = document.getElementById('pluginSearch');
+        const pluginGrid = document.getElementById('pluginGrid');
+        const pluginCountEl = document.getElementById('pluginCount');
+        const pluginSearchEmptyEl = document.getElementById('pluginSearchEmpty');
+        const pluginCards = pluginGrid ? Array.from(pluginGrid.querySelectorAll('.plp-card')) : [];
+
+        function applyPluginSearch() {
+            const query = (pluginSearchInput ? pluginSearchInput.value : '').trim().toLowerCase();
+            let visible = 0;
+            pluginCards.forEach(function (card) {
+                const isMatch = query === '' || (card.dataset.search || '').includes(query);
+                card.classList.toggle('is-hidden', !isMatch);
+                if (isMatch) visible++;
+            });
+            if (pluginCountEl) {
+                pluginCountEl.textContent = visible + ' plugin' + (visible === 1 ? '' : 's');
+            }
+            if (pluginSearchEmptyEl) {
+                pluginSearchEmptyEl.style.display = (query !== '' && visible === 0) ? '' : 'none';
+            }
+        }
+
+        if (pluginSearchInput && pluginCards.length) {
+            pluginSearchInput.addEventListener('input', applyPluginSearch);
+        }
 
         // Tata notifications for flash data
         <?php if(session()->getFlashdata('success')): ?>

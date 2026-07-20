@@ -508,7 +508,14 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       return window.IpbCustomersList ? IpbCustomersList.colVisible(key) : true;
     };
 
+    // SPA re-entry: destroy any leftover instance before re-init.
+    if ($.fn.dataTable.isDataTable('.datatable')) {
+      try { $('.datatable').DataTable().clear().destroy(true); } catch (e) {}
+    }
+
     const table = $('.datatable').DataTable({
+      // Skeleton tbody is the load cue (same as all.php). processing:true would
+      // stack the branded "Loading..." box on top of the skeleton.
       processing: false,
       serverSide: true,
       scrollX: false,
@@ -520,15 +527,34 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       ajax: {
         url: '<?= route_to("route.customer.expired_fetch"); ?>',
         type: 'POST',
-
-        beforeSend: function (req) {
-          req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
-        },
+        timeout: 30000,
         data: function(d) {
           d.area_filter = $('#filter-area').val();
           d.package_filter = $('#filter-package').val();
           d.connection_filter = $('#filter-connection-status').val();
           d.acc_status_filter = $('#filter-acc-status').val();
+          d.<?= csrf_token() ?> = '<?= csrf_hash() ?>';
+        },
+        beforeSend: function (req) {
+          req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
+        },
+        error: function (xhr, error) {
+          // Navigating away aborts the XHR — keep skeleton briefly; don't toast.
+          if (error === 'abort') return;
+          var cols = $('.datatable thead th').length || 14;
+          var msg = error === 'timeout'
+            ? 'Request timed out. Check your connection and retry.'
+            : 'Could not load expired customers. Please retry.';
+          $('.datatable tbody').html(
+            '<tr class="odd"><td valign="top" colspan="' + cols + '" class="dataTables_empty">' +
+            '<div class="ipb-empty ipb-dt-empty">' +
+            '<div class="ipb-empty-icon"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i></div>' +
+            '<div class="ipb-empty-title">Load failed</div>' +
+            '<div class="ipb-empty-sub">' + msg + '</div>' +
+            '<div class="ipb-empty-action"><button type="button" class="btn btn-primary btn-sm" id="ipb-dt-retry">Retry</button></div>' +
+            '</div></td></tr>'
+          );
+          if (window.tata) tata.error('Load failed', msg);
         }
       },
       columns: [
@@ -563,86 +589,19 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       pageLength: 25,
       drawCallback: function () {
         const api = this.api();
-        const rows = api.rows({
-          page: 'current'
-        }).nodes();
-
-        const routerMap = {}; // router_id => [pppoe_ids]
-        const cellMap = {}; // router_id => {pppoe_id: cell}
-
-        $(rows).each((i, row) => {
-          const data = api.row(row).data();
-          // console.log("Row Data:", data);
-          if (!data || !data.pppoe_secret || !data.router_id) return;
-
-          if (!routerMap[data.router_id]) {
-            routerMap[data.router_id] = [];
-            cellMap[data.router_id] = {};
-          }
-
-          routerMap[data.router_id].push(data.pppoe_secret);
-          cellMap[data.router_id][data.pppoe_secret] = { rowNode: row };
-        });
-
-        const statusColIdx = <?php echo userHasPermission('customer', 'delete') ? 11 : 10; ?>;
-
-        // Make 1 request per router
-        for (const routerId in routerMap) {
-          $.ajax({
-            url: "<?= route_to('route.getPppoeStatus'); ?>",
-            type: "POST",
-            data: {
-              router_id: routerId,
-              pppoe_ids: routerMap[routerId]
-            },
-            headers: {
-              "<?= csrf_header() ?>": "<?= csrf_hash() ?>"
-            },
-            success: function (response) {
-              console.log("Full Response:", response);
-
-              for (const routerId in response) {
-                const routerData = response[routerId];
-
-                // Handle router connection error
-                if (routerData.error) {
-                  // console.warn("Router", routerId, "Error:", routerData.error);
-                  // // Optionally mark all PPPoE cells for this router as "Error"
-                  // for (const pppoeId in cellMap[routerId]) {
-                  //   cellMap[routerId][pppoeId].html(
-                  //     `<span style="background:var(--error-50, #fef2f2); color:var(--error-600, #b91c1c); padding:2px 8px; border-radius:50px; font-weight:500;">Error</span>`
-                  //   );
-                  // }
-                  continue;
-                }
-
-                // Loop PPPoE IDs
-                for (const pppoeId in routerData) {
-                  const isOnline = routerData[pppoeId] === true;
-                  const color = isOnline ? "var(--success-600, #15803d)" : "var(--error-600, #b91c1c)";
-                  const bg = isOnline ? "var(--success-100, #dcfce7)" : "var(--error-100, #fee2e2)";
-                  const label = isOnline ? "Online" : "Offline";
-
-                  if (cellMap[routerId] && cellMap[routerId][pppoeId]) {
-                    var cellNode = api.cell(cellMap[routerId][pppoeId].rowNode, statusColIdx).node();
-                    if (cellNode) {
-                      $(cellNode).html(
-                        `<span style="background:${bg}; color:${color}; padding:2px 8px; border-radius:50px; font-weight:500;">${label}</span>`
-                      );
-                    }
-                  }
-                }
-              }
-            }
-
-          });
-        }
+        // No live MikroTik poll — see customers/all.php drawCallback comment.
+        // Blocking PPPoE status calls starved php spark serve and left the next
+        // sidebar page empty / stuck on Loading.
         if (window.IpbCustomersList) IpbCustomersList.bindRowTooltips(api);
       },
       initComplete: function () {
         if (window.IpbCustomersList) IpbCustomersList.initColumnPicker(this.api());
       }
 
+    });
+
+    $(document).on('click', '#ipb-dt-retry', function () {
+      table.ajax.reload();
     });
 
     function applyFilters() {

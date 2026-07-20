@@ -1124,6 +1124,10 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
             $routes->get('get-mikrotik-info', 'Customer::get_mikrotik_info', [
                 'as' => 'route.customer.getMikrotikInfo'
             ]);
+            $routes->get('modal-lookups', 'Customer::modal_lookups', [
+                'as' => 'route.customer.modalLookups',
+                'filter' => 'permissioncheck:customer,read',
+            ]);
 
 
             $routes->get('edit/(:num)', 'Customer::edit/$1', [
