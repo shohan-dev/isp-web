@@ -147,9 +147,11 @@ $routes->group('admins', function ($routes) {
 
     $routes->get('contactfetch', 'Admin::contactfetch', [
         'as' => 'route.contact.fetch',
+        'filter' => 'role:super_admin',
     ]);
     $routes->post('contactfetchall', 'Admin::contactfetchall', [
         'as' => 'route.contact.fetchall',
+        'filter' => 'role:super_admin',
     ]);
     $routes->delete('contactdelete', 'Admin::contactdelete', [
         'as' => 'route.contactdelete',
@@ -1098,6 +1100,10 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
                         'as' => 'route.customer.subscription',
                         'filter' => 'permissioncheck:customer,update_subscription',
                     ]);
+                    $routes->get('get-mikrotik-info/(:num)', 'Customer::get_subscription_mikrotik_info/$1', [
+                        'as' => 'route.customer.getSubscriptionMikrotikInfo',
+                        'filter' => 'permissioncheck:customer,update_subscription',
+                    ]);
                     $routes->get('reseller/(:num)', 'Customer::Resellersubscription/$1', [
                         'as' => 'route.customer.Resellersubscription',
                         'filter' => 'permissioncheck:customer,update_subscription',
@@ -1123,6 +1129,10 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
             ]);
             $routes->get('get-mikrotik-info', 'Customer::get_mikrotik_info', [
                 'as' => 'route.customer.getMikrotikInfo'
+            ]);
+            $routes->get('get-edit-mikrotik-info/(:num)', 'Customer::get_edit_mikrotik_info/$1', [
+                'as' => 'route.customer.getEditMikrotikInfo',
+                'filter' => 'permissioncheck:customer,update',
             ]);
             $routes->get('modal-lookups', 'Customer::modal_lookups', [
                 'as' => 'route.customer.modalLookups',
@@ -1168,6 +1178,10 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
             $routes->post('fetch', 'CustomerPayment::fetch', [
                 'as' => 'route.customer.payment.fetch',
+                'filter' => 'permissioncheck:customer_payment,read',
+            ]);
+            $routes->post('fetch-totals', 'CustomerPayment::fetchTotals', [
+                'as' => 'route.customer.payment.fetch_totals',
                 'filter' => 'permissioncheck:customer_payment,read',
             ]);
             $routes->get('user/(:num)', 'CustomerPayment::user_index/$1', [
@@ -1505,6 +1519,10 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
                 'as' => 'route.sms.getuser',
                 'filter' => 'permissioncheck:sms_message,create',
             ]);
+            $routes->get('search-recipients', 'Sms::searchRecipients', [
+                'as' => 'route.sms.searchrecipients',
+                'filter' => 'permissioncheck:sms_message,create',
+            ]);
             $routes->post('get-customer-details', 'Sms::getCustomerDetails', [
                 'as' => 'route.sms.getcustomerdetails',
                 'filter' => 'permissioncheck:sms_message,create',
@@ -1531,6 +1549,11 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
             $routes->get('new', 'VoiceSms::new', [
                 'as' => 'route.voice-sms.new',
+                // 'filter' => 'permissioncheck:sms_message,create',
+            ]);
+
+            $routes->get('search-recipients', 'VoiceSms::searchRecipients', [
+                'as' => 'route.voicesms.searchrecipients',
                 // 'filter' => 'permissioncheck:sms_message,create',
             ]);
 
@@ -1621,6 +1644,11 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
                 'filter' => 'permissioncheck:routers,read',
             ]);
 
+            $routes->get('get-details-info/(:num)', 'Routers::get_router_details_info/$1', [
+                'as' => 'route.routers.getDetailsInfo',
+                'filter' => 'permissioncheck:routers,read',
+            ]);
+
             $routes->get('load-traffic/(:num)', 'Routers::loadTraffic/$1', [
                 'as' => 'route.routers.load_traffic',
                 // 'filter' => 'permissioncheck:routers,read',
@@ -1654,6 +1682,11 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
             $routes->get('sync/(:num)', 'Routers::sync/$1', [
                 'as' => 'route.routers.sync',
+                'filter' => 'permissioncheck:routers,sync',
+            ]);
+
+            $routes->get('get-sync-secrets/(:num)', 'Routers::get_router_sync_secrets/$1', [
+                'as' => 'route.routers.getSyncSecrets',
                 'filter' => 'permissioncheck:routers,sync',
             ]);
 

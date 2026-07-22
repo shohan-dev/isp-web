@@ -65,19 +65,19 @@ class Tenants extends BaseController
             return $deny;
         }
 
-        $status = $this->request->getGet('status');
-        $q      = trim((string) $this->request->getGet('q'));
+        $status  = $this->request->getGet('status');
+        $q       = trim((string) $this->request->getGet('q'));
+        $perPage = (int) ($this->request->getGet('per_page') ?? 25);
 
-        $builder = $this->tenants->builder();
-        $builder->select('tenants.*, users.name as owner_name, users.email as owner_email, users.mobile as owner_mobile, users.subscription_status as owner_subscription, users.status as owner_status');
-        $builder->join('users', 'users.id = tenants.owner_user_id', 'left');
+        $this->tenants->select('tenants.*, users.name as owner_name, users.email as owner_email, users.mobile as owner_mobile, users.subscription_status as owner_subscription, users.status as owner_status');
+        $this->tenants->join('users', 'users.id = tenants.owner_user_id', 'left');
 
         if (in_array($status, ['active', 'suspended'], true)) {
-            $builder->where('tenants.status', $status);
+            $this->tenants->where('tenants.status', $status);
         }
 
         if ($q !== '') {
-            $builder->groupStart()
+            $this->tenants->groupStart()
                 ->like('tenants.name', $q)
                 ->orLike('tenants.slug', $q)
                 ->orLike('users.email', $q)
@@ -86,8 +86,8 @@ class Tenants extends BaseController
                 ->groupEnd();
         }
 
-        $builder->orderBy('tenants.id', 'DESC');
-        $rows = $builder->get()->getResult();
+        $this->tenants->orderBy('tenants.id', 'DESC');
+        $rows = $this->tenants->paginate($perPage);
 
         $stats = [
             'total'     => (int) $this->tenants->builder()->countAllResults(),
@@ -96,12 +96,18 @@ class Tenants extends BaseController
             'unlinked'  => $this->countUnlinkedSAdmins(),
         ];
 
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         return view('tenants/index', [
             'title'   => 'Tenant Portals',
             'tenants' => $rows,
+            'pager'   => $this->tenants->pager,
             'stats'   => $stats,
             'status'  => $status,
             'q'       => $q,
+            'perPage' => $perPage,
             'baseDomain' => tenantBaseDomain(),
         ]);
     }

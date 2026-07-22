@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('css'); ?>
 <style>
@@ -80,6 +81,8 @@
   $(document).ready(function() {
 
     $('.datatable').DataTable({
+      serverSide: true,
+      processing: true,
       ajax: {
         url: '<?= route_to("route.useraccess.custom.fetch"); ?>',
         type: 'post',

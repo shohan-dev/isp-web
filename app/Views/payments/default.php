@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 <?= $this->section('content'); ?>
 
 <!-- Content Wrapper. Contains page content -->
@@ -85,6 +86,10 @@
   $(document).ready(function() {
 
     $('.datatable').DataTable({
+      // Skeleton tbody is the load cue (same as customers/all.php). processing:true
+      // would stack the branded "Loading..." box on top of the skeleton.
+      processing: false,
+      serverSide: true,
       ajax: {
         url: '<?= route_to("route.payment.fetch"); ?>',
         type: 'post',

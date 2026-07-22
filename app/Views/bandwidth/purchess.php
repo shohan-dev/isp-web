@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('css'); ?>
 <link rel="stylesheet" href="<?= base_url('assets/css/saas/bandwidth-pages.css?v=1'); ?>">

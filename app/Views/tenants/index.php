@@ -67,6 +67,12 @@
               <option value="active" <?= ($status ?? '') === 'active' ? 'selected' : ''; ?>>Active</option>
               <option value="suspended" <?= ($status ?? '') === 'suspended' ? 'selected' : ''; ?>>Suspended</option>
             </select>
+            <label class="sr-only" for="tenantPerPage">Per page</label>
+            <select id="tenantPerPage" name="per_page" class="form-control" style="min-width:100px">
+              <?php foreach ([10, 25, 50, 100] as $n): ?>
+                <option value="<?= $n; ?>" <?= (int) ($perPage ?? 25) === $n ? 'selected' : ''; ?>><?= $n; ?></option>
+              <?php endforeach; ?>
+            </select>
             <button type="submit" class="btn btn-default"><i class="fa fa-search" aria-hidden="true"></i> Filter</button>
             <?php if (!empty($q) || !empty($status)): ?>
               <a href="<?= route_to('route.tenants'); ?>" class="btn btn-link">Clear</a>
@@ -160,6 +166,7 @@
               </tbody>
             </table>
           </div>
+          <?= $pager->links() ?>
         <?php endif; ?>
       </div>
     </div>

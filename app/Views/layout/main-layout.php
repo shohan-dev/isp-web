@@ -25,10 +25,42 @@ if (!headers_sent()) {
 if (!headers_sent()) {
     header('Vary: X-IPB-Nav');
 }
+
+/* Page-load-performance audit Part 2 (A3): ApexCharts (475KB) + DataTables
+   (188KB) used to load on every single page, though only a minority of views
+   actually use them. A view opts in by declaring a "needsDataTable" and/or
+   "needsApexCharts" section (any non-empty content) before this layout
+   renders — see e.g. app/Views/customers/allInactive.php. renderSection()
+   echoes-and-clears its buffer, so each section name is read exactly once,
+   here — computed BEFORE the X-IPB-Nav branch below, because sidebar
+   partial-navigation (ipb-nav.js) never re-runs the <head>/end-of-body shell
+   that would otherwise gate these <script> tags. The shell only loads once
+   per browser session; a page reached later purely via a partial-nav click
+   (not a full reload) needs ipb-nav.js itself to load a missing library on
+   demand — see the "ipb-nav-assets" template below and its handling in
+   ipb-nav.js's applyPartial(). Getting this wrong silently breaks DataTables/
+   ApexCharts on any page whose library wasn't already loaded by whatever
+   page happened to be this session's first full load — never skip this. */
+ob_start();
+$this->renderSection('needsDataTable');
+$__needsDataTable = ob_get_clean() !== '';
+
+ob_start();
+$this->renderSection('needsApexCharts');
+$__needsApexCharts = ob_get_clean() !== '';
+
 if (request()->getHeaderLine('X-IPB-Nav') === '1') {
     $__ipbNavTitle = (!empty($title) ? $title . ' | ' : null) . getSetting('app_name') . ' Dashboard Panel';
     ?>
 <template id="ipb-nav-title" data-title="<?= esc($__ipbNavTitle, 'attr'); ?>"></template>
+<template id="ipb-nav-assets"
+  data-datatable="<?= $__needsDataTable ? '1' : '0' ?>"
+  data-datatable-css="<?= base_url('assets/vendor/datatable/dataTables.min.css?v=1') ?>"
+  data-datatable-js="<?= base_url('assets/vendor/datatable/dataTables.min.js?v=1') ?>"
+  data-datatable-js2="<?= base_url('assets/vendor/datatable/dataTables.bootstrap.min.js') ?>"
+  data-apexcharts="<?= $__needsApexCharts ? '1' : '0' ?>"
+  data-apexcharts-js="<?= base_url('assets/vendor/apexcharts/apexcharts.min.js') ?>"
+></template>
 <template id="ipb-nav-css"><?= $this->renderSection('css'); ?></template>
 <template id="ipb-nav-content"><?= $this->renderSection('content'); ?></template>
 <template id="ipb-nav-script"><?= $this->renderSection('script'); ?></template>
@@ -58,7 +90,9 @@ if (request()->getHeaderLine('X-IPB-Nav') === '1') {
   <link rel="stylesheet" href="<?= base_url('assets/vendor/fontawesome/all.min.css'); ?>">
 
   <!-- Datatable -->
+  <?php if ($__needsDataTable): ?>
   <link rel="stylesheet" href="<?= base_url('assets/vendor/datatable/dataTables.min.css?v=1') ?>">
+  <?php endif; ?>
 
   <!-- Select2 -->
   <link rel="stylesheet" href="<?= base_url('assets/vendor/select2/select2.min.css'); ?>">
@@ -241,9 +275,10 @@ if (request()->getHeaderLine('X-IPB-Nav') === '1') {
   <script src="<?= base_url('assets/vendor/bootstrap/js/bootstrap.min.js'); ?>"></script>
 
   <!-- Datatable -->
+  <?php if ($__needsDataTable): ?>
   <script src="<?= base_url('assets/vendor/datatable/dataTables.min.js?v=1') ?>"></script>
-
   <script src="<?= base_url('assets/vendor/datatable/dataTables.bootstrap.min.js'); ?>"></script>
+  <?php endif; ?>
 
   <!-- TataJs + premium toast theme -->
   <script src="<?= base_url('assets/vendor/tatajs/tata.js'); ?>"></script>
@@ -253,7 +288,9 @@ if (request()->getHeaderLine('X-IPB-Nav') === '1') {
   <script src="<?= base_url('assets/vendor/select2/select2.full.min.js'); ?>"></script>
 
   <!-- ChartJS -->
+  <?php if ($__needsApexCharts): ?>
   <script src="<?= base_url('assets/vendor/apexcharts/apexcharts.min.js'); ?>"></script>
+  <?php endif; ?>
 
   <!-- Sweet Alert -->
   <script src="<?= base_url('assets/vendor/sweetalert/sweetalert.min.js'); ?>"></script>

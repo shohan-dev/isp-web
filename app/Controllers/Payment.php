@@ -44,35 +44,44 @@ class Payment extends BaseController
         // $userType = getSession('user_role') === 'admin' ? 'admin' : getSession('user_role');
         $role = session()->get('user_role');
         $userId = getSession('user_id');
+
+        // Read-only grid; session is only read above, never written.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         if ($role === 'user') {
             $data = $this->payment_model->builder()
-                ->select('*')
+                ->select('payments.*, paid_to_user.name as paid_to_name, paid_to_user.role as paid_to_role')
+                ->join('users as paid_to_user', 'paid_to_user.id = payments.paid_to', 'left')
                 ->where([
-                    'user_id' => getSession('user_id'),
-                    'paidby' => getSession('user_id'),
+                    'payments.user_id' => $userId,
+                    'payments.paidby' => $userId,
                 ])
-                ->orderBy('id', 'desc');
+                ->orderBy('payments.id', 'desc');
         } elseif ($role === 'admin') {
             $data = $this->payment_model->builder()
-                ->select('*')
+                ->select('payments.*, paid_to_user.name as paid_to_name, paid_to_user.role as paid_to_role')
+                ->join('users as paid_to_user', 'paid_to_user.id = payments.paid_to', 'left')
                 ->groupStart()
-                    ->where('user_id', $userId)
-                    ->orWhere('paidby', $userId)
-                    ->orWhere('admin_id', $userId)
-                    ->orWhere('paid_to', $userId)
+                    ->where('payments.user_id', $userId)
+                    ->orWhere('payments.paidby', $userId)
+                    ->orWhere('payments.admin_id', $userId)
+                    ->orWhere('payments.paid_to', $userId)
                 ->groupEnd()
-                ->orderBy('id', 'desc');
+                ->orderBy('payments.id', 'desc');
         } else {
             $data = $this->payment_model->builder()
-                ->select('*')
+                ->select('payments.*, paid_to_user.name as paid_to_name, paid_to_user.role as paid_to_role')
+                ->join('users as paid_to_user', 'paid_to_user.id = payments.paid_to', 'left')
                 ->groupStart() // first OR group
-                ->orWhere('paidby', $userId)
+                ->orWhere('payments.paidby', $userId)
                 ->groupEnd()
                 ->orGroupStart() // second OR group
-                ->where('admin_id', $userId)
-                ->orWhere('paid_to', $userId)
+                ->where('payments.admin_id', $userId)
+                ->orWhere('payments.paid_to', $userId)
                 ->groupEnd()
-                ->orderBy('id', 'desc');
+                ->orderBy('payments.id', 'desc');
         }
         //'user_type' => $userType
         $datatables = new DataTablesCodeIgniter4($data);
@@ -94,12 +103,11 @@ class Payment extends BaseController
             return !empty($value) ? date('d.m.Y', strtotime($value)) : '--';
         });
 
-        $datatables->format('paid_to', function ($value) {
-            if (!empty($value)) {
-                $user = getUserById($value);
-                return $user ? $user->name . ' (' . ucwords($user->role ?? '') . ')' : '--';
+        $datatables->format('paid_to', function ($value, $row) {
+            if (empty($row->paid_to_name)) {
+                return '--';
             }
-            return '--';
+            return $row->paid_to_name . ' (' . ucwords($row->paid_to_role ?? '') . ')';
         });
 
 

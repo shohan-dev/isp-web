@@ -119,7 +119,7 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
     // public function init(Scheduler $schedule)
     // {
     //     log_message('debug', 'Cron job page "manage-user" was accessed.');
-        
+
 
     //    // $schedule->url(base_url('cron/manage-user'))->everyMinute(5);
 
@@ -136,6 +136,31 @@ class CronJob extends \Daycry\CronJob\Config\CronJob
     //     $schedule->url(base_url('cron/send-notification'))->cron('8 14 * * *');
 
     // }
+
+    /**
+     * Page-load-performance audit, Axis 4: `php spark db:indexes` /
+     * `db:retention` (app/Commands/DbIndexes.php, DbRetention.php) existed but
+     * had no active schedule entry, so a post-restore index drift on
+     * user_data_usage (300k+ rows) could sit unnoticed indefinitely and
+     * user_data_usage grows +1 row/customer/day forever with nothing pruning
+     * it. Neither command is destructive to run repeatedly (both are
+     * documented as idempotent/safe to re-run), so schedule them as a
+     * defensive, self-healing sweep rather than relying on someone
+     * remembering to run them by hand after a restore/import.
+     *
+     * `spark cron:run` (this package's own scheduler tick — see the `command`
+     * type task above, run via the system crontab, e.g. `* * * * *`) is what
+     * actually fires these; this method only registers what to run and when.
+     */
+    public function init(Scheduler $schedule)
+    {
+        // Low-traffic hour; idempotent even if it overlaps a request.
+        $schedule->command('db:retention')->daily('3:00am')->named('db-retention-daily');
+
+        // Weekly safety net for index drift (e.g. after a raw DB restore/import
+        // that skips migrations) — `db:indexes` no-ops if nothing is missing.
+        $schedule->command('db:indexes')->sundays('3:15am')->named('db-indexes-weekly');
+    }
 }
 
 

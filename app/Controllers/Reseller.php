@@ -475,6 +475,76 @@ class Reseller extends BaseController
             $details = getUserById($userId);
             $userId = $details->admin_id;
         }
+
+        // Release the file-session lock early (read-only grid; session is only
+        // read above, never written).
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        // Preload per-reseller client counts in bulk instead of 4 countAllResults()
+        // calls per row inside the DataTables closures below. Resellers-per-admin
+        // is a small, bounded set, so one extra pass over this admin's own
+        // reseller ids is cheap regardless of how many rows the grid renders.
+        $db = \Config\Database::connect();
+        $resellerIds = $this->user_model->builder()
+            ->select('id')
+            ->where('role', 'resellerAdmin')
+            ->where('admin_id', $userId)
+            ->get()
+            ->getResultArray();
+        $resellerIds = array_column($resellerIds, 'id');
+
+        $clientsRunning = $clientsEnabled = $clientsDisabled = $clientsLeft = [];
+        if (!empty($resellerIds)) {
+            $currentTime = date('Y-m-d H:i:s');
+
+            $clientsRunning = array_column(
+                $db->table('users')->select('admin_id, COUNT(*) as cnt')
+                    ->whereIn('admin_id', $resellerIds)
+                    ->where('role', 'user')
+                    ->groupBy('admin_id')->get()->getResultArray(),
+                'cnt',
+                'admin_id'
+            );
+
+            $clientsEnabled = array_column(
+                $db->table('users')->select('admin_id, COUNT(*) as cnt')
+                    ->whereIn('admin_id', $resellerIds)
+                    ->where('role', 'user')
+                    ->where('subscription_status', 'active')
+                    ->where('will_expire >', $currentTime)
+                    ->where('conn_status', 'conn')
+                    ->groupBy('admin_id')->get()->getResultArray(),
+                'cnt',
+                'admin_id'
+            );
+
+            $clientsDisabled = array_column(
+                $db->table('users')->select('admin_id, COUNT(*) as cnt')
+                    ->whereIn('admin_id', $resellerIds)
+                    ->where('role', 'user')
+                    ->where('will_expire <', $currentTime)
+                    ->groupStart()
+                        ->where('conn_status !=', 'disconn')
+                        ->orWhere('conn_status', null)
+                    ->groupEnd()
+                    ->groupBy('admin_id')->get()->getResultArray(),
+                'cnt',
+                'admin_id'
+            );
+
+            $clientsLeft = array_column(
+                $db->table('users')->select('admin_id, COUNT(*) as cnt')
+                    ->whereIn('admin_id', $resellerIds)
+                    ->where('role', 'user')
+                    ->where('conn_status', 'disconn')
+                    ->groupBy('admin_id')->get()->getResultArray(),
+                'cnt',
+                'admin_id'
+            );
+        }
+
         $data = $this->user_model->builder()
             ->select('*')
             ->where('role', 'resellerAdmin')
@@ -504,68 +574,37 @@ class Reseller extends BaseController
             return '<span class="ipb-pay-badge is-warning">Postpaid</span>';
         });
 
-        // Client counts
-        $datatables->addColumn('clients_running', function ($row) {
-            $db = \Config\Database::connect();
-            $total = $db->table('users')
-                ->where('admin_id', $row->id)
-                ->where('role', 'user')
-                ->countAllResults();
+        // Client counts (preloaded above, keyed by reseller id -> avoids N+1 countAllResults())
+        $datatables->addColumn('clients_running', function ($row) use ($clientsRunning) {
+            $total = (int) ($clientsRunning[$row->id] ?? 0);
             return '<span style="display:inline-block;min-width:32px;padding:4px 10px;background:#6c757d;color:#fff;border-radius:20px;font-size:13px;font-weight:700;text-align:center;">'. $total .'</span>';
         });
 
-        $datatables->addColumn('clients_enabled', function ($row) {
-            $db = \Config\Database::connect();
-            $currentTime = date('Y-m-d H:i:s');
-            $count = $db->table('users')
-                ->where('admin_id', $row->id)
-                ->where('role', 'user')
-                ->where('subscription_status', 'active')
-                ->where('will_expire >', $currentTime)
-                ->where('conn_status', 'conn')
-                ->countAllResults();
+        $datatables->addColumn('clients_enabled', function ($row) use ($clientsEnabled) {
+            $count = (int) ($clientsEnabled[$row->id] ?? 0);
             return '<span style="display:inline-block;min-width:32px;padding:4px 10px;background:#28a745;color:#fff;border-radius:20px;font-size:13px;font-weight:700;text-align:center;">'. $count .'</span>';
         });
 
-        $datatables->addColumn('clients_disabled', function ($row) {
-            $db = \Config\Database::connect();
-            $currentTime = date('Y-m-d H:i:s');
-            $count = $db->table('users')
-                ->where('admin_id', $row->id)
-                ->where('role', 'user')
-                ->where('will_expire <', $currentTime)
-                ->groupStart()
-                    ->where('conn_status !=', 'disconn')
-                    ->orWhere('conn_status', null)
-                ->groupEnd()
-                ->countAllResults();
+        $datatables->addColumn('clients_disabled', function ($row) use ($clientsDisabled) {
+            $count = (int) ($clientsDisabled[$row->id] ?? 0);
             return '<span style="display:inline-block;min-width:32px;padding:4px 10px;background:#dc3545;color:#fff;border-radius:20px;font-size:13px;font-weight:700;text-align:center;">'. $count .'</span>';
         });
 
-        $datatables->addColumn('clients_left', function ($row) {
-            $db = \Config\Database::connect();
-            $inactive = $db->table('users')
-                ->where('admin_id', $row->id)
-                ->where('role', 'user')
-                ->where('conn_status', 'disconn')
-                ->countAllResults();
+        $datatables->addColumn('clients_left', function ($row) use ($clientsLeft) {
+            $inactive = (int) ($clientsLeft[$row->id] ?? 0);
             return '<span style="display:inline-block;min-width:32px;padding:4px 10px;background:#6f42c1;color:#fff;border-radius:20px;font-size:13px;font-weight:700;text-align:center;">'. $inactive .'</span>';
         });
 
-        // Remaining Fund
+        // Remaining Fund — base query already selects users.*, so $row->fund is free
         $datatables->addColumn('remaining_fund', function ($row) {
-            $db = \Config\Database::connect();
-            $resellerRow = $db->table('users')->select('fund')->where('id', $row->id)->get()->getRow();
-            $fund = $resellerRow->fund ?? 0;
+            $fund = $row->fund ?? 0;
             $color = $fund < 0 ? '#dc3545' : '#28a745';
             return '<span style="color:'.$color.';font-weight:bold;font-size:13px;">'. number_format((float)$fund, 2) .'</span>';
         });
 
         // Reseller Enabled toggle (renamed to toggle_reseller to avoid except() conflict)
         $datatables->addColumn('toggle_reseller', function ($row) {
-            $db = \Config\Database::connect();
-            $r = $db->table('users')->select('status')->where('id', $row->id)->get()->getRow();
-            $isActive = isset($r->status) && ($r->status === 'active');
+            $isActive = isset($row->status) && ($row->status === 'active');
             $onOff = $isActive ? 'ON' : 'OFF';
             $color = $isActive ? '#155724' : '#721c24';
             $bg    = $isActive ? '#d4edda' : '#f8d7da';
@@ -574,14 +613,10 @@ class Reseller extends BaseController
         });
 
         // Fund Enabled toggle (renamed to toggle_fund to avoid except() conflict)
+        // fund_enabled is nullable/optional on older rows; base select('*') already
+        // brings it back when the column exists, so no per-row query is needed.
         $datatables->addColumn('toggle_fund', function ($row) {
-            $db = \Config\Database::connect();
-            $fundExists = $db->fieldExists('fund_enabled', 'users');
-            $isEnabled = true;
-            if ($fundExists) {
-                $r = $db->table('users')->select('fund_enabled')->where('id', $row->id)->get()->getRow();
-                $isEnabled = isset($r->fund_enabled) ? (bool)$r->fund_enabled : true;
-            }
+            $isEnabled = isset($row->fund_enabled) ? (bool)$row->fund_enabled : true;
             $onOff = $isEnabled ? 'ON' : 'OFF';
             $color = $isEnabled ? '#155724' : '#721c24';
             $bg    = $isEnabled ? '#d4edda' : '#f8d7da';
@@ -959,44 +994,75 @@ class Reseller extends BaseController
         $userId = session()->get('user_id');
         $userole = session()->get('user_role');
 
+        // employee -> resolve to their admin's tenant id, same convention as
+        // Reseller::fetch() / Reseller::paymentindex().
+        if ($userole === 'employee') {
+            $details = getUserById($userId);
+            $userId = $details->admin_id ?? $userId;
+        }
+
         // Get filter inputs from the request
         $reseller = $this->request->getPost('reseller');
         $status = $this->request->getPost('status');
         $fromDate = $this->request->getPost('fromDate');
         $toDate = $this->request->getPost('toDate');
 
-        // Build the initial query
-        // $data = $this->payment_model->builder()
-        //     ->select('*')
-        //     // ->where('user_type', 'user')
-        //     ->where('admin_id', $userId)
-        //     ->orwhere('paidby', $userId)
-        //     ->orderBy('id', 'desc');
+        // SECURITY FIX: this previously had NO admin_id/paidby scoping when no
+        // filters were supplied (just user_type='reseller'), leaking payments
+        // across every tenant on the platform. super_admin is the platform
+        // owner and is intentionally unscoped here, same precedent as
+        // canManageReseller() above. Every other role (admin/resellerAdmin/
+        // employee-resolved-to-admin) is restricted to its own tenant.
+        $isPlatformOwner = strtolower((string) $userole) === 'super_admin';
 
         $data = $this->payment_model->builder()
-            ->select('*');
+            ->select('payments.*, paid_to_user.name as paid_to_name, paid_to_user.role as paid_to_role')
+            ->join('users as paid_to_user', 'paid_to_user.id = payments.paid_to', 'left');
 
-        // Apply filters based on the input values
+        if (!$isPlatformOwner) {
+            $data->groupStart()
+                ->where('payments.admin_id', $userId)
+                ->orWhere('payments.paidby', $userId)
+                ->groupEnd();
+        }
+
+        // Apply filters based on the input values. The reseller filter is only
+        // honored when it is actually one of the caller's own resellers (or the
+        // caller is the platform owner) — otherwise a crafted `reseller` id
+        // could be used to pivot into another tenant's payments.
         if (!empty($reseller)) {
-            $data->where('admin_id', $reseller)
-                ->orwhere('paidby', $reseller);
+            $resellerAllowed = $isPlatformOwner || (bool) $this->user_model
+                ->where(['id' => $reseller, 'role' => 'resellerAdmin', 'admin_id' => $userId])
+                ->first();
+
+            if ($resellerAllowed) {
+                $data->groupStart()
+                    ->where('payments.admin_id', $reseller)
+                    ->orWhere('payments.paidby', $reseller)
+                    ->groupEnd();
+            }
         }
 
         if (!empty($status)) {
-            $data->where('status', $status);
+            $data->where('payments.status', $status);
         }
 
         if (!empty($fromDate) && !empty($toDate)) {
-            $data->where('DATE(created_at) >=', $fromDate)
-                ->where('DATE(created_at) <=', $toDate);
+            $data->where('DATE(payments.created_at) >=', $fromDate)
+                ->where('DATE(payments.created_at) <=', $toDate);
         }
         if (empty($reseller) && empty($status) && (empty($fromDate) && empty($toDate))) {
-            $data->where('user_type', 'reseller');
+            $data->where('payments.user_type', 'reseller');
         }
 
         // Ensure ordering after applying filters
-        $data->orderBy('id', 'desc');
+        $data->orderBy('payments.id', 'desc');
 
+        // Release the file-session lock early (read-only grid; session is only
+        // read above, never written).
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
 
         // Generate DataTables with the filtered data
         $datatables = new DataTablesCodeIgniter4($data);
@@ -1010,7 +1076,6 @@ class Reseller extends BaseController
         }
 
         $datatables->addColumn('customer', function ($row) {
-            $userId = session()->get('user_id');
             return getUserById($row->user_id)->name ?? '--';
         });
 
@@ -1022,10 +1087,14 @@ class Reseller extends BaseController
             return !empty($value) ? date('d.m.Y', strtotime($value)) : '--';
         });
 
-        $datatables->format('paid_to', function ($value) {
-            return !empty($value) ?
-                getUserById($value)->name . ' (' . ucwords(getUserById($value)->role ?? '') . ')' ?? '--' :
-                '--';
+        // Single JOIN instead of two getUserById() calls per row for the same id.
+        $datatables->format('paid_to', function ($value, $row) {
+            if (empty($value)) {
+                return '--';
+            }
+            $name = $row->paid_to_name ?? null;
+            $role = $row->paid_to_role ?? '';
+            return !empty($name) ? $name . ' (' . ucwords($role) . ')' : '--';
         });
 
         $datatables->format('method_trx', function ($value) {
@@ -1056,7 +1125,7 @@ class Reseller extends BaseController
             });
         }
 
-        $datatables->except(['id', 'user_id', 'user_type']);
+        $datatables->except(['id', 'user_id', 'user_type', 'paid_to_name', 'paid_to_role']);
         $datatables->asObject();
         $datatables->generate();
 

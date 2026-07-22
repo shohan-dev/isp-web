@@ -31,16 +31,10 @@
             <div class="form-group">
               <label>Customer <sup class="text-danger">*</sup></label>
               <select name="send_to[]" id="send_to" class="form-control" multiple="multiple" style="width:100%">
-                <?php if (empty($customers)): ?>
-                  <option value="">No customer found!</option>
-                <?php else: ?>
-                  <option value="all">All Customers</option>
-                  <?php foreach ($customers as $c): ?>
-                    <option value="<?= $c->id ?>"><?= esc($c->name) ?> <?= !empty($c->mobile) ? '('.$c->mobile.')' : '' ?></option>
-                  <?php endforeach; ?>
-                <?php endif; ?>
+                <option value="all">All Customers</option>
               </select>
               <small id="send_to-error" class="error text-danger"></small>
+              <small class="text-muted">Start typing a name or mobile number to search customers.</small>
             </div>
 
             <div class="form-group">
@@ -209,19 +203,46 @@
   let currentTemplateBody = '';
   let previewRequestCount = 0;
 
+  // Recipient picker is remote/ajax-backed (bounded LIMIT server-side) instead of
+  // inlining every active customer's <option> into the page HTML.
   $('#send_to').select2({
     placeholder: 'Select target customer(s)…',
     allowClear: true,
     width: '100%',
-    closeOnSelect: false
+    closeOnSelect: false,
+    minimumInputLength: 0,
+    ajax: {
+      url: '<?= route_to("route.sms.searchrecipients"); ?>',
+      dataType: 'json',
+      delay: 250,
+      data: function(params) {
+        return { q: params.term || '', area: $('select[name="area"]').val() };
+      },
+      processResults: function(data) {
+        return { results: data.results || [] };
+      },
+      cache: true
+    }
   });
 
-  // Handle pre-selected customer IDs from URL
+  // Handle pre-selected customer IDs from URL — fetch their labels so Select2
+  // (in ajax mode) has {id, text} Option objects to render before any search runs.
   const urlParams = new URLSearchParams(window.location.search);
   const preSelectedIds = urlParams.get('ids');
   if (preSelectedIds) {
-    const idsArray = preSelectedIds.split(',');
-    $('#send_to').val(idsArray).trigger('change');
+    const idsArray = preSelectedIds.split(',').filter(id => id !== 'all');
+    if (idsArray.length) {
+      fetchCustomerDetails(idsArray, function() {
+        idsArray.forEach(function(id) {
+          const d = customerDetailsCache[id] || {};
+          const label = (d.CustomerName || ('User #' + id)) + (d.Mobile ? ' (' + d.Mobile + ')' : '');
+          if (!$('#send_to').find('option[value="' + id + '"]').length) {
+            $('#send_to').append(new Option(label, id, true, true));
+          }
+        });
+        $('#send_to').trigger('change');
+      });
+    }
   }
 
   function replacePlaceholders(text, data) {
@@ -336,18 +357,11 @@
     updatePreview();
   });
 
+  // Area filter is passed as part of every ajax search request (see select2 data()
+  // above) — changing it just clears the current picks so stale-area selections
+  // aren't sent, then lets the next search re-query scoped to the new area.
   $('select[name="area"]').change(function() {
-    const area = $(this).val();
-    $.ajax({
-      url: '<?= route_to("route.sms.getuser"); ?>',
-      type: 'POST',
-      data: { area },
-      headers: { '<?= csrf_header() ?>': '<?= csrf_hash() ?>' },
-      success: function(result) {
-        $('#send_to').html(result.response).trigger('change');
-      },
-      error: function() { $('#send_to').html('<option value="">--Select--</option>').trigger('change'); },
-    });
+    $('#send_to').val(null).trigger('change');
   });
 
   $('#form').submit(function(e) {

@@ -164,23 +164,67 @@ class VoiceSms extends BaseController
     {
         $area_model = model('App\Models\Area');
         $userId = session()->get('user_id');
-        $userRole = session()->get('user_role');
-        $user_model = model('App\Models\User');
 
-        if ($userRole === 'super_admin') {
-            $customers = $user_model->where(['role' => 'admin', 'status' => 'active'])->findAll();
-        } else {
-            $customers = $user_model->where(['role' => 'user', 'status' => 'active'])->where('admin_id', $userId)->findAll();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
         }
 
+        // Recipient picker is Select2 remote-search backed (searchRecipients()) instead of
+        // inlining every active customer into the HTML — see HIGH severity perf finding.
         $data = [
             'title' => 'New Voice SMS',
             'area' => $area_model->where('user_id', $userId)->findAll(),
-            'customers' => $customers,
             'voice_messages' => $this->voice_model->getMessagesForAdmin($userId),
         ];
 
         return view('voice_sms/new', $data);
+    }
+
+    /**
+     * Voice Sms
+     * @action: Remote search for the recipient picker (Select2 ajax source).
+     * Bounded LIMIT instead of dumping every active customer into the page.
+     */
+    public function searchRecipients()
+    {
+        $userId = session()->get('user_id');
+        $userRole = session()->get('user_role');
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $user_model = model('App\Models\User');
+
+        $term = trim((string) ($this->request->getGet('q') ?? $this->request->getGet('term') ?? ''));
+        $areaId = $this->request->getGet('area');
+
+        if ($userRole === 'super_admin') {
+            $builder = $user_model->where(['role' => 'admin', 'status' => 'active']);
+        } else {
+            $builder = $user_model->where(['role' => 'user', 'status' => 'active'])->where('admin_id', $userId);
+            if (!empty($areaId)) {
+                $builder->where('area_id', $areaId);
+            }
+        }
+
+        if ($term !== '') {
+            $builder->groupStart()
+                ->like('name', $term)
+                ->orLike('mobile', $term)
+                ->groupEnd();
+        }
+
+        $users = $builder->orderBy('name', 'asc')->findAll(30);
+
+        $results = array_map(function ($u) {
+            return [
+                'id'   => $u->id,
+                'text' => $u->name . (!empty($u->mobile) ? ' (' . $u->mobile . ')' : ''),
+            ];
+        }, $users);
+
+        return $this->response->setJSON(['results' => $results]);
     }
 
     public function create()

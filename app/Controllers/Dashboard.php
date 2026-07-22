@@ -606,20 +606,24 @@ class Dashboard extends BaseController
                 'statistics' => $this->statistics('employee', getSession('user_id')),
             ];
         } elseif ($role === 'user') {
-            set_time_limit(0);
-
+            // DB-only first paint — no synchronous MikroTik call here (used to be
+            // routerClient() + 2 RouterOS reads behind set_time_limit(0), able to
+            // hang this render indefinitely on a slow/offline router, on every
+            // customer login). The PPPoE name is already mirrored in the DB by
+            // provisioning, same source Customer::details() trusts for first paint.
             $details = $this->user_model->where(['id' => $id, 'role' => 'user'])->first();
             $ppoe = '';
             if (!empty($details)) {
-                $router_client = routerClient($details->router_id);
-                if (!is_array($router_client)) {
-                    $pppoe = getPPPoEUserUserId($router_client, $id);
-                    $pppoe_id = $pppoe[0]['.id'] ?? $details->pppoe_id ?? null;
-                    log_message('info', "PPPoE ID for User ID {$id}: {$pppoe_id}");
-                    $user_ppp = getPPPoEUser($router_client, $pppoe_id);
-                    $interface = getGetInput('interface') ?? null;
-                    $ppoe = $user_ppp[0]['name'] ?? '--';
-                }
+                $routerDataRow = model('App\Models\UserRouterDataModel')->where(['user_id' => $id])->first();
+                $ppoe = $routerDataRow->pppoe_secret ?? ($details->pppoe_id ?? '--');
+            }
+
+            // Release the file-session lock: everything below only reads session
+            // (getSession() reads $_SESSION, which stays populated after this
+            // call), so the customer's other in-flight requests (traffic poll,
+            // sidebar nav) stop queuing behind this render.
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
             }
 
             $data = [

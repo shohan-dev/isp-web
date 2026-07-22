@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('content'); ?>
 <?php
@@ -264,9 +265,38 @@ $paymentZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-ic
 <?= $this->section('script'); ?>
 <script>
   $(document).ready(function () {
+    // Filter params shared by the grid's own ajax.data() and the totals
+    // endpoint, so the stat cards always match what the table is showing.
+    function currentFilterParams() {
+      return {
+        paid_via: $('#paid_via').val(),
+        status: <?= json_encode($status); ?>,
+        fromDate: $('#fromDate').val(),
+        toDate: $('#toDate').val()
+      };
+    }
+
+    function loadTotals() {
+      $.ajax({
+        url: '<?= route_to("route.customer.payment.fetch_totals"); ?>',
+        type: 'post',
+        data: currentFilterParams(),
+        beforeSend: function (req) {
+          req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
+        },
+        success: function (result) {
+          var totals = result.response || {};
+          $('#totalAmount').text('৳' + (parseFloat(totals.total) || 0).toFixed(2));
+          $('#paidAmount').text('৳' + (parseFloat(totals.paid) || 0).toFixed(2));
+          $('#dueAmount').text('৳' + (parseFloat(totals.due) || 0).toFixed(2));
+        }
+      });
+    }
+
     var table = $('#customerPaymentsTable').DataTable({
       order: [],
-      processing: false,
+      processing: true,
+      serverSide: true,
       language: {
         emptyTable: <?= json_encode($paymentEmptyHtml) ?>,
         zeroRecords: <?= json_encode($paymentZeroHtml) ?>
@@ -275,10 +305,7 @@ $paymentZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-ic
         url: '<?= route_to("route.customer.payment.fetch"); ?>',
         type: 'post',
         data: function (d) {
-          d.paid_via = $('#paid_via').val();
-          d.status = <?= json_encode($status); ?>;
-          d.fromDate = $('#fromDate').val();
-          d.toDate = $('#toDate').val();
+          $.extend(d, currentFilterParams());
         },
         beforeSend: function (req) {
           req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
@@ -287,31 +314,14 @@ $paymentZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-ic
       columnDefs: [{
         targets: '_all',
         defaultContent: '-'
-      }],
-      drawCallback: function () {
-        var api = this.api();
-        var totalAmount = 0;
-        var paidAmount = 0;
-        var dueAmount = 0;
-
-        api.rows({ page: 'all' }).every(function () {
-          var row = this.data();
-          if (!row) return;
-          var amount = parseFloat(row.amount) || 0;
-          var st = $('<div>').html(row.status).text().trim().toLowerCase();
-          totalAmount += amount;
-          if (st === 'successful') paidAmount += amount;
-          else dueAmount += amount;
-        });
-
-        $('#totalAmount').text('৳' + totalAmount.toFixed(2));
-        $('#paidAmount').text('৳' + paidAmount.toFixed(2));
-        $('#dueAmount').text('৳' + dueAmount.toFixed(2));
-      }
+      }]
     });
+
+    loadTotals();
 
     $('#applyFilter').on('click', function () {
       table.ajax.reload();
+      loadTotals();
     });
 
     $('#clearFilter').on('click', function () {
@@ -319,6 +329,7 @@ $paymentZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-ic
       $('#fromDate').val('');
       $('#toDate').val('');
       table.ajax.reload();
+      loadTotals();
     });
 
     <?php if (userHasPermission('customer_payment', 'delete')): ?>

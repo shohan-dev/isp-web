@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsApexCharts'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('css'); ?>
 <?= saas_css('dashboard.css') ?>

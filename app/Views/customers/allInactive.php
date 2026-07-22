@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 <?php
 $areasForFilter = $areasForFilter ?? [];
 $packagesForFilter = $packagesForFilter ?? [];
