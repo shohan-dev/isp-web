@@ -30,6 +30,7 @@ $pppoeDisabled = $pppoeData['disabled'] ?? null;
 
 
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsApexCharts'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('css'); ?>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -749,9 +750,18 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
     initHistoricalChart();
 
     let bandwidthChart = false;
+    let trafficPollStopped = false;
     const rxArray = [0], txArray = [0], categoryArray = ["<?= gmdate('c'); ?>"];
 
+    // Navigating away via the sidebar swaps #ipb-main instead of reloading the
+    // document — without this flag the 2s live-traffic poll below would keep
+    // running (and hammering the router) forever.
+    (window.IpbPageTeardown = window.IpbPageTeardown || []).push(function () {
+      trafficPollStopped = true;
+    });
+
     function loadTrafic(interface = "") {
+      if (trafficPollStopped) return;
       $.ajax({
         url: `<?= route_to('route.routers.Usersload_Traffic', $details->router_id); ?>?interface=${interface}&pppoe_name=<?= rawurlencode($pppoeName); ?>`,
         type: 'GET',
@@ -780,6 +790,7 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
               fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } }
             };
             bandwidthChart = new ApexCharts(document.querySelector("#bandwidth_chart"), options);
+            window.IpbTheme.registerChart(bandwidthChart);
             bandwidthChart.render();
           } else if (result.data?.traffic) {
             rxArray.push(result.data.traffic.rxbyte);
@@ -789,9 +800,9 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
             bandwidthChart.updateSeries([{ data: rxArray }, { data: txArray }]);
             bandwidthChart.updateOptions({ xaxis: { categories: categoryArray } });
           }
-          setTimeout(() => loadTrafic(), 2000);
+          if (!trafficPollStopped) setTimeout(() => loadTrafic(), 2000);
         },
-        error: function () { setTimeout(() => loadTrafic(), 5000); }
+        error: function () { if (!trafficPollStopped) setTimeout(() => loadTrafic(), 5000); }
       });
     }
     loadTrafic();

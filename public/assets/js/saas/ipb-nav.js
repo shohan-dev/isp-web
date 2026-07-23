@@ -10,9 +10,16 @@
  * then re-runs the sidebar sync (active item, open section, rail position,
  * breadcrumbs) so only "the indication" moves — never the sidebar itself.
  *
- * Heavy routes (/dashboard, /customers*) always do a full document reload —
- * their DataTables / dashboard AJAX would otherwise leave php spark serve
- * (single-threaded) wedged after SPA abort, so the next page stuck on Loading.
+ * Every route goes through this path, including /dashboard and /customers*.
+ * Those used to be hard-excluded (full reload only) to dodge a `php spark
+ * serve` (single-threaded dev server) wedge on abort — but that server model
+ * isn't what runs in production (nginx + php-fpm, many workers), and the
+ * exclusion meant the two most-visited menu items always paid for a full
+ * document reload, i.e. exactly the sidebar "flick" this file exists to
+ * remove. teardownMain() below now aborts stale requests AND runs each page's
+ * registered IpbPageTeardown callbacks (dashboard's live-traffic poll, etc.),
+ * so pages with recurring timers/AJAX can join partial nav safely instead of
+ * being carved out wholesale.
  *
  * Anything that doesn't fit this path — forms, non-GET, off-site links, new
  * tab, downloads, logout, or any response that isn't the partial shape we
@@ -30,6 +37,14 @@
   var ajaxPool = [];
   var navGeneration = 0;
 
+  /** Convention for pages with state that outlives a single request (a
+   *  setInterval/recursive setTimeout poll, an ApexCharts instance holding a
+   *  window resize listener, ...): push a cleanup callback here and it runs
+   *  once, right before this page's content is torn down for the next one.
+   *    (window.IpbPageTeardown = window.IpbPageTeardown || []).push(fn);
+   *  Reset to [] after every swap — see teardownMain(). */
+  window.IpbPageTeardown = window.IpbPageTeardown || [];
+
   function ready(fn) {
     if (document.readyState !== "loading") fn();
     else document.addEventListener("DOMContentLoaded", fn);
@@ -38,18 +53,6 @@
   function sameOrigin(href) {
     try {
       return new URL(href, window.location.href).origin === window.location.origin;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /** Data-heavy admin pages: full reload only (clean request cycle). */
-  function needsFullReload(href) {
-    try {
-      var path = new URL(href, window.location.href).pathname.replace(/\/+$/, "") || "/";
-      if (path === "/dashboard") return true;
-      if (path === "/customers" || path.indexOf("/customers/") === 0) return true;
-      return false;
     } catch (e) {
       return false;
     }
@@ -64,8 +67,6 @@
     if (!href || href === "#") return false;
     if (href.indexOf("javascript:") === 0 || href.indexOf("mailto:") === 0 || href.indexOf("tel:") === 0) return false;
     if (!sameOrigin(href)) return false;
-    // Let the browser handle heavy routes — do not intercept.
-    if (needsFullReload(href)) return false;
     return true;
   }
 
@@ -83,10 +84,25 @@
   }
 
   /**
-   * Abort only XHRs from generations older than the new one, then destroy
-   * DataTables still living under #ipb-main. Called once per swap.
+   * Run any page-registered cleanup (recurring setInterval/setTimeout polls —
+   * see window.IpbPageTeardown above), destroy every ApexCharts instance the
+   * outgoing page registered via window.IpbTheme.registerChart(), abort only
+   * XHRs from generations older than the new one, then destroy DataTables
+   * still living under #ipb-main. Called once per swap.
    */
   function teardownMain() {
+    var callbacks = window.IpbPageTeardown || [];
+    window.IpbPageTeardown = [];
+    callbacks.forEach(function (fn) {
+      try {
+        fn();
+      } catch (e) {}
+    });
+
+    if (window.IpbTheme && typeof window.IpbTheme.destroyCharts === "function") {
+      window.IpbTheme.destroyCharts();
+    }
+
     var dyingGen = navGeneration;
     navGeneration += 1;
 
@@ -130,6 +146,11 @@
       }
       s.text = old.textContent;
       s.setAttribute("data-ipb-nav-script", "1");
+      // Dynamically inserted <script src> defaults to async; without this,
+      // customers-list.js (More menu) can finish AFTER the page's inline
+      // handlers — or never before the user clicks — leaving More-menu
+      // items looking dead (javascript:void(0) / button with no toggle).
+      if (s.src) s.async = false;
       document.body.appendChild(s);
     });
   }
@@ -153,6 +174,77 @@
       );
       if (!already) document.head.appendChild(document.importNode(node, true));
     });
+  }
+
+  /**
+   * Page-load-performance audit Part 2 (A3): DataTables/ApexCharts now load
+   * only on pages that declare they need them (see main-layout.php's
+   * needsDataTable/needsApexCharts sections) — but the shell (and those
+   * <script> tags) render exactly ONCE per browser session; a page reached
+   * later purely via this partial-nav path never re-runs that shell. If the
+   * session's first full load didn't need a library, a page that DOES need
+   * it — reached only by clicking a sidebar link — would otherwise find the
+   * library missing. This loads it on demand, once, before the swapped-in
+   * page's own script (e.g. a .DataTable() call) runs.
+   */
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      if (!src) { resolve(); return; }
+      var s = document.createElement("script");
+      s.src = src;
+      s.async = false; // preserve order relative to any script queued after it
+      s.onload = function () { resolve(); };
+      s.onerror = function () { reject(new Error("ipb-nav: failed to load " + src)); };
+      document.body.appendChild(s);
+    });
+  }
+
+  function loadStyle(href) {
+    return new Promise(function (resolve) {
+      if (!href) { resolve(); return; }
+      var already = Array.prototype.some.call(
+        document.head.querySelectorAll("link[rel=stylesheet]"),
+        function (existing) { return existing.getAttribute("href") === href; }
+      );
+      if (already) { resolve(); return; }
+      var l = document.createElement("link");
+      l.rel = "stylesheet";
+      l.href = href;
+      // A stylesheet failing to load shouldn't block the navigation — the
+      // table would just be unstyled, not broken.
+      l.onload = function () { resolve(); };
+      l.onerror = function () { resolve(); };
+      document.head.appendChild(l);
+    });
+  }
+
+  function ensureAssetsLoaded(doc) {
+    var tpl = doc.getElementById("ipb-nav-assets");
+    if (!tpl) return Promise.resolve();
+
+    var tasks = [];
+
+    if (
+      tpl.getAttribute("data-datatable") === "1" &&
+      !(window.jQuery && window.jQuery.fn && window.jQuery.fn.dataTable)
+    ) {
+      tasks.push(loadStyle(tpl.getAttribute("data-datatable-css")));
+      tasks.push(
+        loadScript(tpl.getAttribute("data-datatable-js")).then(function () {
+          return loadScript(tpl.getAttribute("data-datatable-js2"));
+        })
+      );
+    }
+
+    if (tpl.getAttribute("data-apexcharts") === "1" && !window.ApexCharts) {
+      tasks.push(loadScript(tpl.getAttribute("data-apexcharts-js")));
+    }
+
+    if (!tasks.length) return Promise.resolve();
+
+    // Best-effort: if a library genuinely fails to load, still swap the page —
+    // the page's own script may then throw, but that beats never navigating.
+    return Promise.all(tasks).catch(function () {});
   }
 
   function applyPartial(html, href, push) {
@@ -193,11 +285,6 @@
   }
 
   function navigateTo(href, push) {
-    if (needsFullReload(href)) {
-      window.location.href = href;
-      return;
-    }
-
     if (window.IpbNetPulse && typeof window.IpbNetPulse.start === "function") {
       window.IpbNetPulse.start();
     }
@@ -213,10 +300,13 @@
         return resp.text();
       })
       .then(function (html) {
-        if (!applyPartial(html, href, push)) throw new Error("ipb-nav: unexpected response shape");
-        if (window.IpbNetPulse && typeof window.IpbNetPulse.done === "function") {
-          window.IpbNetPulse.done();
-        }
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        return ensureAssetsLoaded(doc).then(function () {
+          if (!applyPartial(html, href, push)) throw new Error("ipb-nav: unexpected response shape");
+          if (window.IpbNetPulse && typeof window.IpbNetPulse.done === "function") {
+            window.IpbNetPulse.done();
+          }
+        });
       })
       .catch(function () {
         if (window.IpbNetPulse && typeof window.IpbNetPulse.done === "function") {
@@ -245,12 +335,7 @@
     });
 
     window.addEventListener("popstate", function () {
-      var href = window.location.href;
-      if (needsFullReload(href)) {
-        window.location.reload();
-        return;
-      }
-      navigateTo(href, false);
+      navigateTo(window.location.href, false);
     });
   });
 })(window, document);

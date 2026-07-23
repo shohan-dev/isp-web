@@ -1297,11 +1297,33 @@ body.ipb .swal-modal {
   border-radius: 16px;
   box-shadow: 0 24px 60px -20px rgba(2, 6, 23, .45);
   padding: 26px 26px 22px;
+  /* Vendor default is 478px; keep a stable desktop size so cards don't feel
+     tiny against a full-viewport overlay. */
+  width: min(480px, calc(100vw - 32px));
+}
+
+/* Vendor showSweetAlert animates scale(.4 → 1.15 → 1). That reads as the card
+   sitting far away / "zoomed out". Beat the injected keyframes (specificity
+   0,3,0 > vendor 0,2,0) with a short opacity + translate only. */
+body.ipb .swal-overlay--show-modal .swal-modal {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+  animation: ipbSwalIn 0.2s var(--ease-out, cubic-bezier(.3, .8, .4, 1)) both;
+  -webkit-animation: ipbSwalIn 0.2s var(--ease-out, cubic-bezier(.3, .8, .4, 1)) both;
+}
+@keyframes ipbSwalIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@-webkit-keyframes ipbSwalIn {
+  from { opacity: 0; -webkit-transform: translateY(10px); }
+  to   { opacity: 1; -webkit-transform: none; }
 }
 
 body.ipb .swal-title {
   color: var(--text-primary);
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 700;
   margin: 6px 0 2px;
   padding: 0;
@@ -1309,7 +1331,7 @@ body.ipb .swal-title {
 
 body.ipb .swal-text {
   color: var(--text-secondary);
-  font-size: .9375rem;
+  font-size: 1rem;
   line-height: 1.55;
   text-align: center;
   padding: 0 4px;
@@ -1372,3 +1394,138 @@ body.ipb .swal-button--danger:hover {
 body.ipb .swal-button--danger:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--error-500) 35%, transparent);
 }
+
+/* Destructive confirm card (delete customers) */
+body.ipb .swal-modal.ipb-swal-danger {
+  width: min(480px, calc(100vw - 32px));
+  padding: 28px 28px 24px;
+  text-align: center;
+  /* Inherit ipbSwalIn from the global rule — do not stack a second scale anim. */
+  animation: ipbSwalIn 0.2s var(--ease-out, cubic-bezier(.3, .8, .4, 1)) both;
+  -webkit-animation: ipbSwalIn 0.2s var(--ease-out, cubic-bezier(.3, .8, .4, 1)) both;
+}
+body.ipb .swal-modal.ipb-swal-danger .swal-content {
+  margin: 0;
+  padding: 0;
+}
+body.ipb .swal-modal.ipb-swal-danger .swal-footer {
+  margin-top: 24px;
+  gap: 10px;
+}
+body.ipb .swal-modal.ipb-swal-danger .swal-button--cancel {
+  min-width: 120px;
+  min-height: 44px;
+  font-size: 0.9375rem;
+}
+body.ipb .swal-modal.ipb-swal-danger .swal-button--danger {
+  min-width: 168px;
+  min-height: 44px;
+  font-size: 0.9375rem;
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--error-500) 55%, transparent);
+}
+body.ipb .swal-modal.ipb-swal-danger .swal-button--danger:hover {
+  box-shadow: 0 10px 24px -8px color-mix(in srgb, var(--error-500) 65%, transparent);
+}
+
+.ipb-confirm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  font-family: var(--font-sans);
+}
+.ipb-confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 18px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--error-100) 70%, #fff), var(--error-50));
+  color: var(--error-600);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 10px 24px -12px color-mix(in srgb, var(--error-500) 45%, transparent);
+}
+.ipb-confirm-icon i {
+  font-size: 28px;
+  line-height: 1;
+}
+.ipb-confirm-title {
+  margin: 0 0 12px;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+.ipb-confirm-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--error-50);
+  color: var(--error-700);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--error-300) 45%, transparent);
+}
+.ipb-confirm-count strong {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.ipb-confirm-body {
+  margin: 0 0 14px;
+  width: 100%;
+  max-width: none;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+.ipb-confirm-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface-hover, #f8fafc);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+.ipb-confirm-note i {
+  margin-top: 2px;
+  color: var(--warning-600, #b45309);
+  flex-shrink: 0;
+}
+
+body.ipb[data-theme="dark"] .ipb-confirm-icon,
+body.ipb.dark-mode .ipb-confirm-icon {
+  background: radial-gradient(circle at 30% 25%, var(--error-100), var(--error-50));
+  color: var(--error-600);
+}
+body.ipb[data-theme="dark"] .ipb-confirm-note,
+body.ipb.dark-mode .ipb-confirm-note {
+  background: color-mix(in srgb, var(--surface) 80%, #000);
+}
+
+@media (max-width: 480px) {
+  body.ipb .swal-modal.ipb-swal-danger .swal-footer {
+    flex-direction: column-reverse;
+  }
+  body.ipb .swal-modal.ipb-swal-danger .swal-button-container,
+  body.ipb .swal-modal.ipb-swal-danger .swal-button--cancel,
+  body.ipb .swal-modal.ipb-swal-danger .swal-button--danger {
+    width: 100%;
+  }
+}
+

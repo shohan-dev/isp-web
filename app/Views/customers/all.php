@@ -1,7 +1,14 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 <?php
 $areasForFilter = $areasForFilter ?? [];
 $packagesForFilter = $packagesForFilter ?? [];
+
+// Bulk actions (SMS / recharge / transfer / change-router / delete) all need
+// row checkboxes. Transfer is always in the More menu, so the select column
+// must always render — gating it on delete-only left those other actions
+// permanently stuck on "Please select at least one customer."
+$needsBulkSelect = true;
 
 $areaFilterOptions = [];
 foreach ($areasForFilter as $a) {
@@ -87,7 +94,14 @@ $customerListFilters = [
 ob_start();
 ?>
             <?php if (userHasPermission('customer', 'create')): ?>
-              <a href="javascript:void(0);" class="new-customer-btn ipb-tool-btn is-primary" title="New Customer" aria-label="New Customer">
+              <?php /* Real href, not javascript:void(0) — this button previously did
+                 nothing unless a chain of JS (jQuery loaded, ready handler ran,
+                 reached this binding, AJAX succeeded, response parsed) all completed.
+                 If any link in that chain broke, the click was a silent no-op. With a
+                 real href, a plain click — or any failure in the JS below — still
+                 navigates via the browser's native link behavior instead of doing
+                 nothing. */ ?>
+              <a href="<?= route_to('route.customer.new'); ?>" class="new-customer-btn ipb-tool-btn is-primary" title="New Customer" aria-label="New Customer">
                 <i class="fa fa-user-plus" aria-hidden="true"></i>
                 <span class="ipb-tool-label">New</span>
               </a>
@@ -118,30 +132,35 @@ ob_start();
                 <i class="fa fa-ellipsis-v" aria-hidden="true"></i>
               </button>
               <div class="ipb-cust-more-menu" id="ipbCustMoreMenu" hidden>
+                <?php /* JS-only actions use <button>, not <a href="javascript:void(0)">.
+                   void(0) is a silent no-op when the click handler fails to bind or throws —
+                   the click looks dead with no navigation fallback. Buttons have no href,
+                   so they never pretend to be links. Import Excel keeps a real href so a
+                   plain click still navigates if its AJAX guard fails. */ ?>
                 <?php if (userHasPermission('sms_message')): ?>
-                  <a href="javascript:void(0);" id="sms-choice-btn" class="ipb-cust-more-item">
+                  <button type="button" id="sms-choice-btn" class="ipb-cust-more-item">
                     <i class="fa fa-envelope" aria-hidden="true"></i><span>Send SMS / Voice</span>
-                  </a>
+                  </button>
                 <?php endif; ?>
                 <?php if (getSession('user_role') === 'resellerAdmin' || getSession('user_role') === 'admin'): ?>
-                  <a href="javascript:void(0);" id="updatePppoeBtn" class="ipb-cust-more-item">
+                  <button type="button" id="updatePppoeBtn" class="ipb-cust-more-item">
                     <i class="fa fa-sync" aria-hidden="true"></i><span>Update PPPoE IDs</span>
-                  </a>
-                  <a href="javascript:void(0);" id="change-router-btn" class="ipb-cust-more-item">
+                  </button>
+                  <button type="button" id="change-router-btn" class="ipb-cust-more-item">
                     <i class="fa fa-server" aria-hidden="true"></i><span>Change router</span>
-                  </a>
+                  </button>
                 <?php endif; ?>
                 <?php if (userHasPermission('customer', 'create')): ?>
-                  <a href="javascript:void(0);" class="import-excel-button ipb-cust-more-item">
+                  <a href="<?= route_to('route.customer.excel_index'); ?>" class="import-excel-button ipb-cust-more-item">
                     <i class="fa fa-file-excel" aria-hidden="true"></i><span>Import Excel</span>
                   </a>
-                  <a href="javascript:void(0);" class="update-all-btn ipb-cust-more-item">
+                  <button type="button" class="update-all-btn ipb-cust-more-item">
                     <i class="fa fa-pen-to-square" aria-hidden="true"></i><span>Recharge all</span>
-                  </a>
+                  </button>
                 <?php endif; ?>
-                <a href="javascript:void(0);" class="customer-transfer-button ipb-cust-more-item">
+                <button type="button" class="customer-transfer-button ipb-cust-more-item">
                   <i class="fa fa-right-left" aria-hidden="true"></i><span>Transfer</span>
-                </a>
+                </button>
                 <?php if (userHasPermission('customer', 'delete')): ?>
                   <button type="button" class="delete-btn ipb-cust-more-item is-danger">
                     <i class="fa fa-trash" aria-hidden="true"></i><span>Delete selected</span>
@@ -214,7 +233,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
             <caption class="sr-only">Customer list</caption>
             <thead class="text-nowrap">
               <tr>
-                <?php if (userHasPermission('customer', 'delete')): ?>
+                <?php if ($needsBulkSelect): ?>
                   <th scope="col" data-data="select" data-col="select" data-col-locked="1">
                     <input type="checkbox" class="form-check-input" id="select_all" aria-label="Select all">
                   </th>
@@ -241,7 +260,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
               // Uses the view() helper, not $this->include() — the latter is View::include(),
               // whose 2nd param is $options (cache/debug flags), not view data, so cols/rows
               // silently never reached the component and it fell back to its default of 5.
-              $customersSkeletonCols = 13 + (userHasPermission('customer', 'delete') ? 1 : 0);
+              $customersSkeletonCols = 13 + ($needsBulkSelect ? 1 : 0);
             ?>
             <?= view('components/skeleton-table', ['cols' => $customersSkeletonCols, 'rows' => 8]) ?>
           </table>
@@ -258,79 +277,35 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 <?= $this->section('css'); ?>
 <?= saas_css('customers-list.css') ?>
 <style>
-  /* MODAL CARD DESIGN BY USER */
-  .swal-modal {
-    border-radius: 18px !important;
-    padding: 30px 25px 25px !important;
-    width: 420px !important;
-    text-align: center !important;
-    position: relative !important;
-    box-shadow: var(--shadow-3, 0 20px 60px rgba(0, 0, 0, 0.15)) !important;
-  }
-
-  .swal-icon {
-    margin-top: 5px !important;
-    margin-bottom: 10px !important;
-  }
-
-  .swal-title {
-    font-size: 24px !important;
-    font-weight: 700 !important;
-    color: #1e293b !important;
-  }
-
-  .swal-text {
-    font-size: 15px !important;
-    color: #64748b !important;
-    margin-bottom: 25px !important;
-  }
-
-  .swal-footer {
-    display: flex !important;
-    justify-content: center !important;
-    gap: 15px !important;
-    margin-top: 10px !important;
-  }
-
-  .swal-button {
-    border-radius: 10px !important;
-    padding: 10px 26px !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    transition: all 0.2s ease !important;
-  }
-
+  /* Action-specific SweetAlert button accents only (SMS / router / voice).
+     Base modal / cancel / danger skin lives in overrides.css — do not
+     re-declare .swal-button--cancel as an absolute X here; that broke the
+     delete confirmation "No" button layout. */
   .swal-button--sms {
-    background: linear-gradient(45deg, #3b82f6, #2563eb) !important;
+    background: var(--info-600, #2563eb) !important;
     color: #fff !important;
   }
-
   .swal-button--sms:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+    background: color-mix(in srgb, var(--info-600, #2563eb) 88%, #000) !important;
   }
-
   .swal-button--router {
-    background: linear-gradient(45deg, #8b5cf6, #6d28d9) !important;
+    background: var(--primary-500) !important;
     color: #fff !important;
   }
-
   .swal-button--router:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3);
+    background: color-mix(in srgb, var(--primary-500) 88%, #000) !important;
   }
-
   .swal-button--voice {
-    background: linear-gradient(45deg, #06b6d4, #0891b2) !important;
+    background: #0891b2 !important;
     color: #fff !important;
   }
-
   .swal-button--voice:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 15px rgba(6, 182, 212, 0.3);
+    background: color-mix(in srgb, #0891b2 88%, #000) !important;
   }
 
-  .swal-button--cancel {
+  /* SMS choice modal still uses a corner dismiss (×). Scoped so it does not
+     affect Cancel on delete / transfer confirms. */
+  .swal-modal.ipb-swal-sms .swal-button--cancel {
     position: absolute !important;
     top: 12px !important;
     right: 12px !important;
@@ -338,8 +313,8 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
     height: 34px !important;
     border-radius: 50% !important;
     font-size: 18px !important;
-    background: #f1f5f9 !important;
-    color: #475569 !important;
+    background: var(--surface-hover, #f1f5f9) !important;
+    color: var(--text-secondary, #475569) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -347,37 +322,31 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
     border: none !important;
     z-index: 10 !important;
   }
-
-  .swal-button--cancel:hover {
-    background: #e2e8f0 !important;
-    color: #0f172a !important;
-  }
 </style>
 <?= $this->endSection('css'); ?>
 <?= $this->section('script'); ?>
-<script src="<?= base_url('assets/js/saas/customers-list.js?v=2'); ?>"></script>
+<script src="<?= base_url('assets/js/saas/customers-list.js?v=6'); ?>"></script>
 
 <script>
-  $('#updatePppoeBtn').on('click', function () {
-    // $('#updateResult').text('Updating...');
+  // Delegated + namespaced so SPA re-entry can rebind cleanly, and so a
+  // missing button (permission-gated) never throws the way a direct
+  // $('#updatePppoeBtn').on(...) / querySelector().addEventListener would.
+  $(document)
+    .off('click.ipbCustToolbar', '#updatePppoeBtn')
+    .on('click.ipbCustToolbar', '#updatePppoeBtn', function () {
     $('#circularLoader').addClass('is-visible');
 
     $.ajax({
-      url: '<?= route_to('route.routers.getRouterPassById') ?>', // your route here
+      url: '<?= route_to('route.routers.getRouterPassById') ?>',
       type: 'POST',
       dataType: 'json',
       data: {
-        '<?= csrf_token() ?>': '<?= csrf_hash() ?>' // CSRF token here
+        '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
       },
       success: function (response) {
         if (response.status === 'success') {
-          // console.log(response);
           tata.success('PPPoE IDs updated', response.response, {
             duration: 2000,
-            // onClose: () => {
-            //   // Redirect after the toast disappears
-            //   window. location.reload();
-            // }
           });
 
         } else {
@@ -388,7 +357,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
       },
       error: function (xhr, status, error) {
-        $('#updateResult').text('Error: ' + error);
+        tata.error('Update failed', error || "Couldn't reach the server. Please retry.");
       },
       complete: function () {
         $('#circularLoader').removeClass('is-visible');
@@ -396,7 +365,9 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
     });
   });
 
-  $(document).on('click', '#sms-choice-btn', function () {
+  $(document)
+    .off('click.ipbCustToolbar', '#sms-choice-btn')
+    .on('click.ipbCustToolbar', '#sms-choice-btn', function () {
     const selectedIds = $('.input-check-selected:checkbox:checked');
     const ids = [];
     $(selectedIds).each(function () {
@@ -412,6 +383,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       title: "Message Type",
       text: "Select the type of message you want to send",
       icon: "info",
+      className: "ipb-swal-sms",
       buttons: {
         cancel: {
           text: "×",
@@ -436,13 +408,11 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         const route = `<?= route_to('route.sms.new') ?>`;
         window.location.href = `${route}?ids=${encodeURIComponent(ids.join(','))}`;
       } else if (value === "voice") {
-        // Redirect to voice sms page
         const route = `<?= route_to('route.voice-sms.new') ?>`;
         window.location.href = `${route}?ids=${encodeURIComponent(ids.join(','))}`;
       }
     });
 
-    // JS Fix to move cancel button to top-right of modal
     setTimeout(() => {
       const cancelBtn = document.querySelector('.swal-button--cancel');
       const modal = document.querySelector('.swal-modal');
@@ -452,7 +422,9 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
     }, 10);
   });
 
-  $(document).on('click', '#change-router-btn', function () {
+  $(document)
+    .off('click.ipbCustToolbar', '#change-router-btn')
+    .on('click.ipbCustToolbar', '#change-router-btn', function () {
     const selectedIds = $('.input-check-selected:checkbox:checked');
     const ids = [];
     $(selectedIds).each(function () {
@@ -537,34 +509,374 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         swal("Error", "Could not load routers.", "error");
       });
   });
-</script>
 
-
-<script>
-  document.querySelector('.update-all-btn').addEventListener('click', function () {
-    const selectedIds = $('.input-check-selected:checkbox:checked');
+  $(document)
+    .off('click.ipbCustToolbar', '.update-all-btn')
+    .on('click.ipbCustToolbar', '.update-all-btn', function () {
+    const $selected = $('.input-check-selected:checkbox:checked');
     const ids = [];
-    $(selectedIds).each(function () {
+    $selected.each(function () {
       ids.push($(this).val());
     });
 
-    if (selectedIds.length === 0) {
-      alert('Please select at least one user to update.');
+    if (ids.length === 0) {
+      swal("Warning", "Please select at least one customer.", "warning");
       return;
     }
 
-    // Log the selected user IDs to the console
-    // console.log('Selected User IDs:', selectedIds);
-    // console.log('Selected User IDs:', selectedIds[0].value);
-
-    // Example: Redirect to a new page with selected user IDs as query string
-    const targetId = selectedIds.length > 0 ? selectedIds[0].value : 123; // Replace with dynamic ID if needed
+    const targetId = ids[0];
     const route = `<?= route_to('route.customer.subscription', 0) ?>`.replace('/0', '/' + targetId);
-
-    // Redirect to the route with the selected user IDs in query string
     window.location.href = `${route}?ids=${encodeURIComponent(ids.join(','))}`;
-
   });
+
+  // ---------------------------------------------------------------------------
+  // Bulk select + Transfer + Delete — bound OUTSIDE DataTable ready() so a
+  // table-init failure cannot kill these handlers. Also .off() un-namespaced
+  // legacy listeners left behind by SPA re-entry (those opened swal on the
+  // same click and got auto-dismissed, making Transfer/Delete look dead).
+  // ---------------------------------------------------------------------------
+  (function bindCustomerBulkActions() {
+    function selectedIds() {
+      var ids = [];
+      $('#customersTable tbody .input-check-selected:checkbox:checked').each(function () {
+        ids.push(String(this.value));
+      });
+      return ids;
+    }
+
+    function syncSelectAll() {
+      var $rows = $('#customersTable tbody .input-check-selected:checkbox');
+      var total = $rows.length;
+      var checked = $rows.filter(':checked').length;
+      var $all = $('#select_all');
+      if (!$all.length) return;
+      $all.prop('checked', total > 0 && checked === total);
+      $all.prop('indeterminate', checked > 0 && checked < total);
+    }
+
+    // Clear legacy + namespaced select handlers, then rebind.
+    $(document)
+      .off('click.ipbCustSelect change.ipbCustSelect click', '#select_all')
+      .off('click.ipbCustSelectRow change.ipbCustSelect click', '.input-check-selected')
+      .on('click.ipbCustSelect', '#select_all', function (e) {
+        // Keep DataTables from treating the header click as a sort.
+        e.stopPropagation();
+      })
+      .on('change.ipbCustSelect', '#select_all', function () {
+        var on = !!this.checked;
+        $('#customersTable tbody .input-check-selected').prop('checked', on);
+      })
+      .on('change.ipbCustSelectRow', '#customersTable tbody .input-check-selected', function () {
+        syncSelectAll();
+      });
+
+    // Re-sync header checkbox after every DataTables redraw.
+    $(document)
+      .off('draw.dt.ipbCustSelect')
+      .on('draw.dt.ipbCustSelect', '#customersTable', function () {
+        syncSelectAll();
+      });
+
+    // --- Transfer ---
+    $(document)
+      .off('click', '.customer-transfer-button')
+      .off('click.ipbCustTransfer', '.customer-transfer-button')
+      .on('click.ipbCustTransfer', '.customer-transfer-button', function (e) {
+        e.preventDefault();
+        // Close overflow menu; do not stopImmediatePropagation — that would
+        // block the menu's own close handler when bind order differs.
+        $('.ipb-cust-more').removeClass('is-open')
+          .find('.ipb-cust-more-menu').prop('hidden', true)
+          .end().find('.ipb-cust-more-btn').attr('aria-expanded', 'false');
+
+        var idsNow = selectedIds();
+        if (!idsNow.length) {
+          swal('Warning', 'Please select at least one customer.', 'warning');
+          return;
+        }
+
+        var isImpersonating = <?= session()->has('original_user') ? 'true' : 'false' ?>;
+        var originalAdminId = <?= session()->has('original_user') ? (int) session()->get('original_user')['user_id'] : 'null' ?>;
+        var userRole = '<?= session()->get('user_role') ?>';
+        var parentAdminId = <?= json_encode(isset($details) ? ($details->admin_id ?? null) : null) ?>;
+        var isDirectReseller = (userRole === 'resellerAdmin' || userRole === 'employee') && !isImpersonating;
+
+        // Defer past this click so SweetAlert's outside-click listener does not
+        // immediately dismiss the dialog.
+        setTimeout(function () {
+          var transferContainer = document.createElement('div');
+          transferContainer.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
+          var transferMode = 'reseller';
+
+          if (isImpersonating) {
+            var radioGroup = document.createElement('div');
+            radioGroup.style.cssText = 'display:flex;gap:16px;margin-bottom:4px;';
+            radioGroup.innerHTML =
+              '<label style="cursor:pointer"><input type="radio" name="transfer-mode" value="admin" style="margin-right:6px"> Transfer to Admin</label>' +
+              '<label style="cursor:pointer"><input type="radio" name="transfer-mode" value="reseller" checked style="margin-right:6px"> Transfer to Reseller</label>';
+            transferContainer.appendChild(radioGroup);
+          }
+
+          var resellerWrap = document.createElement('div');
+          var resellerSelect = document.createElement('select');
+          resellerSelect.id = 'reseller-select';
+          resellerSelect.className = 'swal-content__input';
+          resellerSelect.style.width = '100%';
+          resellerSelect.innerHTML = '<option value="">Select reseller</option>';
+          resellerWrap.appendChild(resellerSelect);
+          transferContainer.appendChild(resellerWrap);
+
+          function fillResellerOptions(resellers) {
+            resellerSelect.innerHTML = '<option value="">Select reseller</option>';
+            (resellers || []).forEach(function (r) {
+              var opt = document.createElement('option');
+              opt.value = r.id;
+              opt.textContent = r.name || '';
+              resellerSelect.appendChild(opt);
+            });
+          }
+
+          function ensureModalLookups() {
+            if (window.__ipbModalLookups && window.__ipbModalLookups.resellers) {
+              fillResellerOptions(window.__ipbModalLookups.resellers);
+              return Promise.resolve(window.__ipbModalLookups);
+            }
+            return fetch('<?= route_to('route.customer.modalLookups'); ?>', {
+              credentials: 'same-origin',
+              headers: { 'Accept': 'application/json' }
+            })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                window.__ipbModalLookups = data || {};
+                fillResellerOptions((data && data.resellers) || []);
+                return data;
+              });
+          }
+
+          var packageSelect = document.createElement('select');
+          packageSelect.id = 'package-select';
+          packageSelect.className = 'swal-content__input';
+          packageSelect.style.cssText = 'width:100%;display:none;';
+          packageSelect.disabled = true;
+          packageSelect.innerHTML = '<option value="">Select package</option>';
+          transferContainer.appendChild(packageSelect);
+
+          var packageNote = document.createElement('div');
+          packageNote.style.cssText = 'font-size:0.9em;color:#6b7280;display:none;';
+          packageNote.innerText = 'Select a package to assign to the transferred customer(s).';
+          transferContainer.appendChild(packageNote);
+
+          function loadPackages(url) {
+            packageSelect.innerHTML = '<option value="">Select package</option>';
+            packageSelect.disabled = true;
+            packageSelect.style.display = 'none';
+            packageNote.style.display = 'none';
+            $.ajax({
+              url: url, type: 'GET', dataType: 'json',
+              success: function (response) {
+                if (response.status !== 'success' || !Array.isArray(response.packages) || response.packages.length === 0) {
+                  swal('Error', 'No packages available for this destination.', 'error');
+                  return;
+                }
+                response.packages.forEach(function (pkg) {
+                  var opt = document.createElement('option');
+                  opt.value = pkg.id;
+                  opt.dataset.packageName = pkg.package_name;
+                  var displayPrice = (pkg.selling_price && pkg.selling_price !== '--' && pkg.selling_price !== 'null' && pkg.selling_price !== '')
+                    ? pkg.selling_price : pkg.price;
+                  opt.text = pkg.package_name + ' - ' + displayPrice + '৳';
+                  packageSelect.appendChild(opt);
+                });
+                packageSelect.disabled = false;
+                packageSelect.style.display = 'block';
+                packageNote.style.display = 'block';
+              },
+              error: function () { swal('Error', 'Failed to fetch packages.', 'error'); }
+            });
+          }
+
+          if (isImpersonating) {
+            transferContainer.querySelectorAll('[name="transfer-mode"]').forEach(function (radio) {
+              radio.addEventListener('change', function () {
+                transferMode = this.value;
+                if (transferMode === 'admin') {
+                  resellerWrap.style.display = 'none';
+                  loadPackages('<?= base_url('reseller/admin/packages/json') ?>');
+                } else {
+                  resellerWrap.style.display = 'block';
+                  packageSelect.innerHTML = '<option value="">Select package</option>';
+                  packageSelect.disabled = true;
+                  packageSelect.style.display = 'none';
+                  packageNote.style.display = 'none';
+                }
+              });
+            });
+          }
+
+          if (isDirectReseller) {
+            resellerWrap.style.display = 'none';
+            loadPackages('<?= base_url('reseller/admin/packages/json') ?>');
+          }
+
+          resellerSelect.addEventListener('change', function () {
+            var sel = this.value;
+            if (!sel) {
+              packageSelect.innerHTML = '<option value="">Select package</option>';
+              packageSelect.disabled = true;
+              packageSelect.style.display = 'none';
+              packageNote.style.display = 'none';
+              return;
+            }
+            loadPackages('<?= base_url('reseller/resellerpackages/json') ?>/' + sel);
+          });
+
+          ensureModalLookups().catch(function () {}).then(function () {
+            swal({
+              title: 'Transfer Customers',
+              text: 'Select destination and package:',
+              content: transferContainer,
+              buttons: { cancel: 'Cancel', confirm: { text: 'Transfer', closeModal: false } },
+              dangerMode: true
+            }).then(function (confirmed) {
+              if (!confirmed) return;
+
+              var isAdminTransfer = (isImpersonating && transferMode === 'admin') || isDirectReseller;
+              var resellerId = isAdminTransfer
+                ? (isDirectReseller ? parentAdminId : originalAdminId)
+                : resellerSelect.value;
+
+              if (!resellerId) { swal('Error', 'Please select a destination.', 'error'); return; }
+              var packageId = packageSelect.value;
+              if (!packageId) { swal('Error', 'Please select a package.', 'error'); return; }
+
+              var ids = selectedIds();
+              if (!ids.length) { swal('Error', 'Please select at least one customer.', 'error'); return; }
+
+              $.ajax({
+                url: '<?= route_to("route.customer.transfer") ?>',
+                type: 'POST',
+                data: {
+                  ids: ids,
+                  reseller_id: resellerId,
+                  package_id: packageId,
+                  package_name: packageSelect.options[packageSelect.selectedIndex].dataset.packageName,
+                  transfer_to_admin: isAdminTransfer ? '1' : '0'
+                },
+                headers: { '<?= csrf_header() ?>': '<?= csrf_hash() ?>' },
+                success: function (result) {
+                  swal.close();
+                  tata.success('Customers transferred', result.response);
+                  $('.datatable').DataTable().ajax.reload(null, false);
+                },
+                error: function (response) {
+                  var r;
+                  try { r = jQuery.parseJSON(response.responseText); }
+                  catch (err) {
+                    swal.close();
+                    tata.error("Couldn't transfer customers", "Something went wrong (status " + response.status + "). Please refresh and try again.");
+                    return;
+                  }
+                  swal.close();
+                  tata.error("Couldn't transfer customers", r.response);
+                }
+              });
+            });
+          });
+        }, 0);
+      });
+
+    <?php if (userHasPermission('customer', 'delete')): ?>
+    $(document)
+      .off('click', '.delete-btn')
+      .off('click.ipbCustDelete', '.delete-btn')
+      .on('click.ipbCustDelete', '.delete-btn', function (e) {
+        e.preventDefault();
+        $('.ipb-cust-more').removeClass('is-open')
+          .find('.ipb-cust-more-menu').prop('hidden', true)
+          .end().find('.ipb-cust-more-btn').attr('aria-expanded', 'false');
+
+        var idsNow = selectedIds();
+        if (!idsNow.length) {
+          swal('Warning', 'Please select at least one customer.', 'warning');
+          return;
+        }
+
+        setTimeout(function () {
+          var count = idsNow.length;
+          var card = document.createElement('div');
+          card.className = 'ipb-confirm-card';
+          card.innerHTML =
+            '<div class="ipb-confirm-icon" aria-hidden="true">' +
+              '<i class="fa fa-trash"></i>' +
+            '</div>' +
+            '<div class="ipb-confirm-title">Delete customers?</div>' +
+            '<div class="ipb-confirm-count">' +
+              '<strong>' + count + '</strong> selected' +
+            '</div>' +
+            '<p class="ipb-confirm-body">' +
+              'This permanently removes the selected customers from your account.' +
+            '</p>' +
+            '<p class="ipb-confirm-note">' +
+              '<i class="fa fa-exclamation-triangle" aria-hidden="true"></i>' +
+              '<span>If the router is online, matching PPPoE secrets are also removed from MikroTik.</span>' +
+            '</p>';
+
+          swal({
+            content: card,
+            className: 'ipb-swal-danger',
+            dangerMode: true,
+            buttons: {
+              cancel: {
+                text: 'Cancel',
+                value: null,
+                visible: true,
+                className: 'swal-button--cancel',
+                closeModal: true,
+              },
+              confirm: {
+                text: count === 1 ? 'Delete customer' : 'Delete ' + count + ' customers',
+                value: true,
+                closeModal: false,
+                className: 'swal-button--danger',
+              },
+            },
+          }).then(function (willDelete) {
+            if (!willDelete) return;
+
+            var ids = selectedIds();
+            if (!ids.length) {
+              swal.close();
+              swal('Warning', 'Please select at least one customer.', 'warning');
+              return;
+            }
+
+            $.ajax({
+              url: '<?= route_to("route.customer.delete"); ?>',
+              type: 'DELETE',
+              data: { ids: ids },
+              headers: { '<?= csrf_header() ?>': '<?= csrf_hash() ?>' },
+              success: function (result) {
+                swal.close();
+                tata.success('Customers deleted', result.response);
+                $('.datatable').DataTable().ajax.reload(null, false);
+              },
+              error: function (response) {
+                var result;
+                try { result = jQuery.parseJSON(response.responseText); }
+                catch (err) {
+                  swal.close();
+                  tata.error("Couldn't delete customers", "Something went wrong (status " + response.status + "). Please refresh and try again.");
+                  return;
+                }
+                swal.close();
+                tata.error("Couldn't delete customers", result.response);
+              }
+            });
+          });
+        }, 0);
+      });
+    <?php endif; ?>
+  })();
 </script>
 
 
@@ -594,13 +906,23 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       try { $('.datatable').DataTable().clear().destroy(true); } catch (e) {}
     }
 
-    const table = $('.datatable').DataTable({
+    // Everything below this block (.new-customer-btn, #select_all, .delete-btn,
+    // and every other handler through line ~1220) lives in this SAME
+    // synchronous $(document).ready() function, bound AFTER the DataTable
+    // call below. An uncaught exception constructing the DataTable used to
+    // abort the whole function — silently killing every button binding that
+    // follows, with no visible sign beyond a console error. try/catch this
+    // constructor so a table-init failure can't take the rest of the toolbar
+    // down with it.
+    let table = null;
+    try {
+      table = $('.datatable').DataTable({
       serverSide: true,
       processing: false,
       scrollX: false,
       autoWidth: false,
       order: [
-        [<?php echo userHasPermission('customer', 'delete') ? 1 : 0; ?>, 'desc']
+        [<?php echo $needsBulkSelect ? 1 : 0; ?>, 'desc']
       ],
       language: {
         search: "Search:",
@@ -649,8 +971,16 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         }
       },
       columns: [
-        <?php if (userHasPermission('customer', 'delete')): ?>
-                { data: "select", name: "select", orderable: false, searchable: false, visible: true, className: "ipb-c-select" },
+        <?php if ($needsBulkSelect): ?>
+                {
+                  data: "select",
+                  name: "select",
+                  orderable: false,
+                  searchable: false,
+                  visible: true,
+                  className: "ipb-c-select",
+                  render: function (data) { return data || ''; }
+                },
         <?php endif; ?>
         { data: "id", name: "users.id", orderable: true, searchable: true, visible: colVisible("id"), className: "ipb-c-id" },
         { data: "name", name: "users.name", orderable: true, searchable: true, visible: true, className: "ipb-c-name" },
@@ -695,10 +1025,14 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         if (window.IpbUI && window.IpbUI.staggerRows) window.IpbUI.staggerRows(document.getElementById('customersTable'));
       }
 
-    });
+      });
+    } catch (e) {
+      console.error('DataTable initialization failed:', e);
+      if (window.tata) tata.error('Failed to load customer table', 'Please refresh the page. If this keeps happening, contact support.');
+    }
 
     $(document).on('click', '#ipb-dt-retry', function () {
-      table.ajax.reload();
+      if (table) table.ajax.reload();
     });
 
     if (window.IpbFilters) {
@@ -811,93 +1145,122 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
     // Current user's role from server-side session
     const userRole = '<?= session()->get('user_role'); ?>';
 
-    $('.new-customer-btn').click(function () {
-      $.ajax({
-        url: '<?= route_to("route.customer.new"); ?>',
-        type: 'GET',
-        success: function (response) {
-          window.location.href = '<?= route_to("route.customer.new"); ?>';
-        },
-        error: function (response) {
-          // console.log("AJAX Error Response:", response.responseJSON.response);
-          const result = jQuery.parseJSON(response.responseText);
+    $('.new-customer-btn').click(function (e) {
+      // The href above is now the real destination. This handler only exists to
+      // show a nicer "you're at your limit" dialog instead of a raw JSON error
+      // page — so it has to preventDefault() to hold the click while it checks.
+      // Every previous version of this handler had some path that could leave
+      // the click looking like it silently did nothing (an unbound handler, an
+      // unguarded JSON.parse, an AJAX call that never resolved). This version
+      // guarantees one of two outcomes on every path, including ones that throw:
+      // either the limit-reached dialog shows, or the browser navigates for real.
+      e.preventDefault();
+      var targetUrl = this.href;
 
-          if (response.responseJSON && response.responseJSON.response.message) {
-            tata.error("Couldn't open new customer form", response.responseJSON.response.message);
-          }
+      try {
+        var navigated = false;
+        var goNow = function () {
+          if (navigated) return;
+          navigated = true;
+          window.location.href = targetUrl;
+        };
+        // Safety net: a hung request (dead connection, server not responding)
+        // must not leave the click looking like it did nothing forever.
+        var fallbackTimer = setTimeout(goNow, 4000);
 
-          if (response.responseJSON && response.responseJSON.response.limitReached === true) {
-            // Configure SweetAlert buttons based on user role
-            const swalButtons = userRole === 'admin' ? ["No", {
-              text: "Yes",
-              closeModal: false,
-            }] : ["No"];
+        $.ajax({
+          url: targetUrl,
+          type: 'GET',
+          success: function () {
+            clearTimeout(fallbackTimer);
+            goNow();
+          },
+          error: function (response) {
+            clearTimeout(fallbackTimer);
+            try {
+              var result = jQuery.parseJSON(response.responseText);
 
-            // Show SweetAlert confirmation
-            swal({
-              title: "Confirmation",
-              text: "You have reached your limit. Do you want to update your package?",
-              icon: 'warning',
-              dangerMode: true,
-              buttons: swalButtons,
-            }).then((willUpdate) => {
-              if (willUpdate && userRole === 'admin') {
-                // Redirect to the package update page if confirmed
-                window.location.href = '<?= route_to("Admin.packages"); ?>';
+              if (result && result.response && result.response.limitReached === true) {
+                var swalButtons = userRole === 'admin' ? ["No", {
+                  text: "Yes",
+                  closeModal: false,
+                }] : ["No"];
+
+                swal({
+                  title: "Confirmation",
+                  text: "You have reached your limit. Do you want to update your package?",
+                  icon: 'warning',
+                  dangerMode: true,
+                  buttons: swalButtons,
+                }).then((willUpdate) => {
+                  if (willUpdate && userRole === 'admin') {
+                    window.location.href = '<?= route_to("Admin.packages"); ?>';
+                  }
+                });
+                return;
               }
-            });
 
-          } else {
-            tata.error("Couldn't open new customer form", result.response);
+              if (result && result.response && result.response.message) {
+                tata.error("Couldn't open new customer form", result.response.message);
+                return;
+              }
+            } catch (parseErr) {
+              // Non-JSON (permission/CSRF/server-error HTML) — can't tell what
+              // happened, so fall through to goNow() rather than guess.
+            }
+            // Any error shape we didn't recognize above: still navigate rather
+            // than leave the click with no visible result.
+            goNow();
           }
-        }
-      });
+        });
+      } catch (outerErr) {
+        // $.ajax itself unavailable, or anything else unexpected — navigate
+        // directly rather than swallow the click.
+        window.location.href = targetUrl;
+      }
     });
 
-    $('.import-excel-button').click(function () {
-      $.ajax({
-        url: '<?= route_to("route.customer.excel_index"); ?>',
-        type: 'GET',
-        success: function (response) {
-          window.location.href = '<?= route_to("route.customer.excel_index"); ?>';
-        },
-        error: function (response) {
-          // console.log("AJAX Error Response:", response.responseJSON.response);
-          const result = jQuery.parseJSON(response.responseText);
+    $('.import-excel-button').click(function (e) {
+      // Real href is the destination; this handler only exists to surface a
+      // nicer permission/error toast. Same guarantee as .new-customer-btn:
+      // either show an error, or navigate for real — never silent no-op.
+      e.preventDefault();
+      var targetUrl = this.href;
+      try {
+        var navigated = false;
+        var goNow = function () {
+          if (navigated) return;
+          navigated = true;
+          window.location.href = targetUrl;
+        };
+        var fallbackTimer = setTimeout(goNow, 4000);
 
-          if (response.responseJSON && response.responseJSON.response.message) {
-            tata.error("Couldn't open Excel import", response.responseJSON.response.message);
+        $.ajax({
+          url: targetUrl,
+          type: 'GET',
+          success: function () {
+            clearTimeout(fallbackTimer);
+            goNow();
+          },
+          error: function (response) {
+            clearTimeout(fallbackTimer);
+            try {
+              var result = jQuery.parseJSON(response.responseText);
+              if (result && result.response && result.response.message) {
+                tata.error("Couldn't open Excel import", result.response.message);
+                return;
+              }
+              if (result && result.response) {
+                tata.error("Couldn't open Excel import", result.response);
+                return;
+              }
+            } catch (parseErr) {}
+            goNow();
           }
-
-          // if (response.responseJSON && response.responseJSON.response.limitReached === true) {
-          //   // Configure SweetAlert buttons based on user role
-          //   const swalButtons = userRole === 'admin'
-          //     ? ["No", {
-          //         text: "Yes",
-          //         closeModal: false,
-          //       }]
-          //     : ["No"];
-
-          //   // Show SweetAlert confirmation
-          //   swal({
-          //     title: "Confirmation",
-          //     text: "You have reached your limit. Do you want to update your package?",
-          //     icon: 'warning',
-          //     dangerMode: true,
-          //     buttons: swalButtons,
-          //   }).then((willUpdate) => {
-          //     if (willUpdate && userRole === 'admin') {
-          //       // Redirect to the package update page if confirmed
-          //       window.location.href = '<?= route_to("Admin.packages"); ?>';
-          //     }
-          //   });
-
-          // }
-          else {
-            tata.error("Couldn't open Excel import", result.response);
-          }
-        }
-      });
+        });
+      } catch (outerErr) {
+        window.location.href = targetUrl;
+      }
     });
 
 
@@ -944,255 +1307,11 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
     });
 
 
-    //Function for delete users
 
-    $(document).on('click', '.customer-transfer-button', function () {
-      var isImpersonating = <?= session()->has('original_user') ? 'true' : 'false' ?>;
-      var originalAdminId = <?= session()->has('original_user') ? (int) session()->get('original_user')['user_id'] : 'null' ?>;
-      var userRole = '<?= session()->get('user_role') ?>';
-      var parentAdminId = <?= $details->admin_id ?? 'null' ?>;
-      var isDirectReseller = (userRole === 'resellerAdmin' || userRole === 'employee') && !isImpersonating;
+    // Transfer / Delete / select-all handlers live in bindCustomerBulkActions()
+    // above (outside this ready) so DataTable init cannot swallow them.
 
-      var transferContainer = document.createElement('div');
-      transferContainer.style.cssText = 'display:flex;flex-direction:column;gap:12px;';
 
-      // --- Radio buttons (only when impersonating) ---
-      var transferMode = 'reseller'; // default
-
-      if (isImpersonating) {
-        var radioGroup = document.createElement('div');
-        radioGroup.style.cssText = 'display:flex;gap:16px;margin-bottom:4px;';
-        radioGroup.innerHTML = `
-          <label style="cursor:pointer"><input type="radio" name="transfer-mode" value="admin" style="margin-right:6px"> Transfer to Admin</label>
-          <label style="cursor:pointer"><input type="radio" name="transfer-mode" value="reseller" checked style="margin-right:6px"> Transfer to Reseller</label>`;
-        transferContainer.appendChild(radioGroup);
-      }
-
-      // --- Reseller select ---
-      var resellerWrap = document.createElement('div');
-      var resellerSelect = document.createElement('select');
-      resellerSelect.id = 'reseller-select';
-      resellerSelect.className = 'swal-content__input';
-      resellerSelect.style.width = '100%';
-      resellerSelect.innerHTML = '<option value="">Select reseller</option>';
-      resellerWrap.appendChild(resellerSelect);
-      transferContainer.appendChild(resellerWrap);
-
-      function fillResellerOptions(resellers) {
-        resellerSelect.innerHTML = '<option value="">Select reseller</option>';
-        (resellers || []).forEach(function (r) {
-          var opt = document.createElement('option');
-          opt.value = r.id;
-          opt.textContent = r.name || '';
-          resellerSelect.appendChild(opt);
-        });
-      }
-
-      function ensureModalLookups() {
-        if (window.__ipbModalLookups && window.__ipbModalLookups.resellers) {
-          fillResellerOptions(window.__ipbModalLookups.resellers);
-          return Promise.resolve(window.__ipbModalLookups);
-        }
-        return fetch('<?= route_to('route.customer.modalLookups'); ?>', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            window.__ipbModalLookups = data || {};
-            fillResellerOptions((data && data.resellers) || []);
-            return data;
-          });
-      }
-
-      // --- Package select ---
-      var packageSelect = document.createElement('select');
-      packageSelect.id = 'package-select';
-      packageSelect.className = 'swal-content__input';
-      packageSelect.style.cssText = 'width:100%;display:none;';
-      packageSelect.disabled = true;
-      packageSelect.innerHTML = '<option value="">Select package</option>';
-      transferContainer.appendChild(packageSelect);
-
-      var packageNote = document.createElement('div');
-      packageNote.style.cssText = 'font-size:0.9em;color:#6b7280;display:none;';
-      packageNote.innerText = 'Select a package to assign to the transferred customer(s).';
-      transferContainer.appendChild(packageNote);
-
-      function loadPackages(url) {
-        packageSelect.innerHTML = '<option value="">Select package</option>';
-        packageSelect.disabled = true;
-        packageSelect.style.display = 'none';
-        packageNote.style.display = 'none';
-        $.ajax({
-          url: url, type: 'GET', dataType: 'json',
-          success: function(response) {
-            if (response.status !== 'success' || !Array.isArray(response.packages) || response.packages.length === 0) {
-              swal('Error', 'No packages available for this destination.', 'error'); return;
-            }
-            response.packages.forEach(function(pkg) {
-              var opt = document.createElement('option');
-              opt.value = pkg.id;
-              opt.dataset.packageName = pkg.package_name;
-              var displayPrice = (pkg.selling_price && pkg.selling_price !== '--' && pkg.selling_price !== 'null' && pkg.selling_price !== '') ? pkg.selling_price : pkg.price;
-              opt.text = pkg.package_name + ' - ' + displayPrice + '৳';
-              packageSelect.appendChild(opt);
-            });
-            packageSelect.disabled = false;
-            packageSelect.style.display = 'block';
-            packageNote.style.display = 'block';
-          },
-          error: function() { swal('Error', 'Failed to fetch packages.', 'error'); }
-        });
-      }
-
-      // Auto-load admin packages if impersonating and admin mode is default... (we start on reseller mode)
-      if (isImpersonating) {
-        transferContainer.querySelector('[name="transfer-mode"]') && transferContainer.querySelectorAll('[name="transfer-mode"]').forEach(function(radio) {
-          radio.addEventListener('change', function() {
-            transferMode = this.value;
-            if (transferMode === 'admin') {
-              resellerWrap.style.display = 'none';
-              loadPackages('<?= base_url('reseller/admin/packages/json') ?>');
-            } else {
-              resellerWrap.style.display = 'block';
-              packageSelect.innerHTML = '<option value="">Select package</option>';
-              packageSelect.disabled = true; packageSelect.style.display = 'none'; packageNote.style.display = 'none';
-            }
-          });
-        });
-      }
-
-      if (isDirectReseller) {
-        resellerWrap.style.display = 'none';
-        loadPackages('<?= base_url('reseller/admin/packages/json') ?>');
-      }
-
-      resellerSelect.addEventListener('change', function() {
-        var sel = this.value;
-        if (!sel) { packageSelect.innerHTML = '<option value="">Select package</option>'; packageSelect.disabled = true; packageSelect.style.display = 'none'; packageNote.style.display = 'none'; return; }
-        loadPackages('<?= base_url('reseller/resellerpackages/json') ?>/' + sel);
-      });
-
-      ensureModalLookups().catch(function () { /* empty list is ok */ }).then(function () {
-      swal({ title: 'Transfer Customers', text: 'Select destination and package:', content: transferContainer, buttons: { cancel: 'Cancel', confirm: { text: 'Transfer', closeModal: false } }, dangerMode: true })
-      .then(function(confirmed) {
-        if (!confirmed) return;
-
-        var isAdminTransfer = (isImpersonating && transferMode === 'admin') || isDirectReseller;
-        var resellerId = isAdminTransfer ? (isDirectReseller ? parentAdminId : originalAdminId) : resellerSelect.value;
-
-        if (!resellerId) { swal('Error', 'Please select a destination.', 'error'); return; }
-
-        var packageId = packageSelect.value;
-        if (!packageId) { swal('Error', 'Please select a package.', 'error'); return; }
-
-        var selectedIds = [];
-        $('.input-check-selected:checkbox:checked').each(function() { selectedIds.push($(this).val()); });
-        if (selectedIds.length === 0) { swal('Error', 'Please select at least one customer.', 'error'); return; }
-
-        $.ajax({
-          url: '<?= route_to("route.customer.transfer") ?>',
-          type: 'POST',
-          data: {
-            ids: selectedIds,
-            reseller_id: resellerId,
-            package_id: packageId,
-            package_name: packageSelect.options[packageSelect.selectedIndex].dataset.packageName,
-            transfer_to_admin: isAdminTransfer ? '1' : '0'
-          },
-          headers: { '<?= csrf_header() ?>': '<?= csrf_hash() ?>' },
-          success: function(result) { swal.close(); tata.success('Customers transferred', result.response); $('.datatable').DataTable().ajax.reload(null, false); },
-          error: function(response) { var r = jQuery.parseJSON(response.responseText); swal.close(); tata.error("Couldn't transfer customers", r.response); }
-        });
-      });
-      });
-    });
-
-    <?php if (userHasPermission('customer', 'delete')): ?>
-
-      //check all checkbox function
-      $("#select_all").click(function () {
-
-        if (this.checked) {
-
-          $(".input-check-selected").each(function () {
-            this.checked = true;
-          });
-
-        } else {
-
-          $(".input-check-selected").each(function () {
-            this.checked = false;
-          });
-        }
-      });
-
-      $(document).on("click", ".input-check-selected:checkbox", function () {
-
-        if ($(".input-check-selected:checkbox:checked").length === $(".input-check-selected:checkbox").length) {
-
-          $("#select_all").prop("checked", true);
-
-        } else {
-
-          $("#select_all").prop("checked", false);
-        }
-      });
-
-      //Function for delete users
-      $(document).on('click', '.delete-btn', function () {
-        swal({
-          title: "Confirmation",
-          text: "Are you sure you want to delete the selected customers? If the router is active, this will also delete these PPPoE users from your MikroTik router.",
-          dangerMode: true,
-          icon: 'warning',
-          buttons: ["No", {
-            text: "Delete customers",
-            closeModal: false,
-          }],
-        }).then((willDelete) => {
-
-          if (willDelete) {
-
-            const selectedIds = $('.input-check-selected:checkbox:checked');
-
-            const ids = [];
-
-            $(selectedIds).each(function () {
-              ids.push($(this).val());
-            });
-
-            $.ajax({
-              url: '<?= route_to("route.customer.delete"); ?>',
-              type: 'DELETE',
-              data: {
-                ids
-              },
-              headers: {
-                '<?= csrf_header() ?>': '<?= csrf_hash() ?>',
-              },
-              success: function (result) {
-
-                swal.close();
-
-                tata.success('Customers deleted', result.response);
-
-                $('.datatable').DataTable().ajax.reload(null, false);
-              },
-
-              error: function (response) {
-
-                const result = jQuery.parseJSON(response.responseText);
-
-                swal.close();
-
-                tata.error("Couldn't delete customers", result.response);
-              }
-
-            });
-          }
-        });
-      });
-
-    <?php endif; ?>
 
   });
 </script>

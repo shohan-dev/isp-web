@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 <?= $this->section('content'); ?>
 
 <!-- Content Wrapper. Contains page content -->
@@ -91,10 +92,12 @@
   $(document).ready(function() {
 
     var table = $('.datatable').DataTable({
+      serverSide: true,
+      processing: true,
       ajax: {
         url: '<?= route_to("route.Reseller.fetch"); ?>',
           type: 'post',
-          
+
         beforeSend: function (req) {
             req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>',);
           }

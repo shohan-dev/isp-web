@@ -513,22 +513,28 @@ class Admin extends BaseController
         $userId = session()->get('user_id');
         $status = $this->request->getPost('status');
 
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
 
         if ($status === 'inactive') {
             $data = $this->user_model->builder()
-                ->select('*')
+                ->select('users.*, COALESCE(admin_packages.package_name, "--") as joined_package_name')
+                ->join('admin_packages', 'admin_packages.id = users.package_id', 'left')
                 ->where('role', 'admin')
                 ->where('subscription_status', 'inactive')
                 ->orderBy('id', 'desc');
         } elseif ($status === 'active') {
             $data = $this->user_model->builder()
-                ->select('*')
+                ->select('users.*, COALESCE(admin_packages.package_name, "--") as joined_package_name')
+                ->join('admin_packages', 'admin_packages.id = users.package_id', 'left')
                 ->where('role', 'admin')
                 ->where('subscription_status', 'active')
                 ->orderBy('id', 'desc');
         } else {
             $data = $this->user_model->builder()
-                ->select('*')
+                ->select('users.*, COALESCE(admin_packages.package_name, "--") as joined_package_name')
+                ->join('admin_packages', 'admin_packages.id = users.package_id', 'left')
                 ->where('role', 'admin')
 
                 ->orderBy('id', 'desc');
@@ -548,7 +554,7 @@ class Admin extends BaseController
 
         $datatables->addColumn('package', function ($row) {
 
-            return getAdminPackage($row->id)['package_name'] ?? '--';
+            return $row->joined_package_name ?? '--';
         });
 
 

@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('css'); ?>
 <link rel="stylesheet" href="<?= base_url('assets/css/saas/bandwidth-pages.css?v=6'); ?>">
@@ -390,24 +391,27 @@
 
 <script>
     const items = <?= json_encode($items, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+    // True grand total, computed in SQL by the controller (SUM over the full
+    // filtered result set, not a client-side reduce over loaded rows) so it
+    // stays correct regardless of how many rows are on the page.
+    const serverTotalAmount = <?= json_encode($totalAmount) ?>;
     let filteredData = []; // Store filtered data globally
     let isFilterApplied = false; // Track filter state
 
     function calculateTodayAmount(data) {
         const today = new Date().toISOString().slice(0, 10);
         let todayTotal = 0;
-        let total = 0;
         data.forEach(row => {
             const reqDate = row.requisition_date;
-            total += parseFloat(row.total_amount || 0);
             if (reqDate === today) {
                 todayTotal += parseFloat(row.total_amount || 0);
             }
         });
 
-        // Update UI
+        // Update UI. "Total amount" (#totalAmount) is set separately from the
+        // server-computed SQL sum (serverTotalAmount / response.totalAmount),
+        // not summed here from currently-loaded rows.
         $('#todayAmount').text('৳' + todayTotal.toFixed(2));
-        $('#totalAmount').text('৳' + total.toFixed(2));
     }
 
     // Function to reset form to initial state
@@ -588,6 +592,8 @@
         // Initialize with original data
         filteredData = [...tableData];
         calculateTodayAmount(filteredData);
+        $('#totalAmount').text('৳' + serverTotalAmount.toFixed(2));
+        $('#filteredAmount').text('৳' + serverTotalAmount.toFixed(2));
 
         const initDataTable = (data) => {
             calculateTodayAmount(data);
@@ -679,15 +685,20 @@
                 ],
                 dom: '<"row"<"col-sm-6"l><"col-sm-6 text-right"f>>rt<"row"<"col-sm-6"i><"col-sm-6 text-right"p>>',
                 footerCallback: function(row, data, start, end, display) {
+                    // Server-computed grand total (SQL SUM), not a client-side
+                    // reduce over currently-loaded rows — stays correct even
+                    // when this table is filtered/paginated client-side.
+                    // Falls back to the unfiltered server total when a search
+                    // is applied, since we don't have a per-search-term sum.
                     var api = this.api();
-                    var total = api
-                        .column(5, {
+                    var isSearched = api.search() !== '';
+                    var total = isSearched ?
+                        api.column(5, {
                             search: 'applied'
-                        })
-                        .data()
-                        .reduce(function(a, b) {
+                        }).data().reduce(function(a, b) {
                             return parseFloat(a) + parseFloat(b);
-                        }, 0);
+                        }, 0) :
+                        serverTotalAmount;
                     $(api.column(5).footer()).html(total.toFixed(2));
                 }
             });
@@ -760,9 +771,8 @@
             dataTable.destroy();
             dataTable = initDataTable(filteredData);
 
-            const initialTotal = <?= array_sum(array_column($requisitions, 'total_amount')) ?>;
-            $('#totalAmount').text('৳' + initialTotal.toFixed(2));
-            $('#filteredAmount').text('৳' + initialTotal.toFixed(2));
+            $('#totalAmount').text('৳' + serverTotalAmount.toFixed(2));
+            $('#filteredAmount').text('৳' + serverTotalAmount.toFixed(2));
         });
 
         // Add Requisition Button Click (Purchess button)

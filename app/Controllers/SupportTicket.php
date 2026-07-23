@@ -115,19 +115,36 @@ class SupportTicket extends BaseController
 
     /**
      * Support Tickets — JSON inbox list (JSX split-pane).
+     *
+     * The split-pane view loads this whole list client-side (search/status-tab
+     * filtering and the KPI strip are computed in JS), so we bound it with a
+     * generous LIMIT here rather than paginating — there's no page-number/load-more
+     * UI in tickets/all.php to hook a real page param into.
      */
     public function inbox()
     {
-        $rows = $this->ticketListBuilder()->get()->getResult();
+        $rows = $this->ticketListBuilder()->limit(300)->get()->getResult();
         $showUser = getSession('user_role') != 'user';
         $canUpdate = userHasPermission('support_ticket', 'update');
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $userIds = array_values(array_unique(array_filter(array_map(fn($row) => $row->user_id, $rows))));
+        $usersById = [];
+        if ($showUser && !empty($userIds)) {
+            $usersById = $this->user_model->select('id, name')->whereIn('id', $userIds)->findAll();
+            $usersById = array_column($usersById, 'name', 'id');
+        }
+
         $items = [];
 
         foreach ($rows as $row) {
             $items[] = [
                 'id' => (int) $row->id,
                 'subject' => (string) ($row->subject ?? ''),
-                'user' => $showUser ? (getUserById($row->user_id)->name ?? '--') : '',
+                'user' => $showUser ? ($usersById[$row->user_id] ?? '--') : '',
                 'category' => ucwords((string) ($row->category ?? '')),
                 'priority' => strtolower((string) ($row->priority ?? 'low')),
                 'status' => (string) ($row->status ?? 'closed'),

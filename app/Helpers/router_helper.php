@@ -2209,6 +2209,15 @@ if (!function_exists('disablePPPoEUser')) {
 if (!function_exists('removePPPoEUser')) {
 	function removePPPoEUser($client, $ppp_id)
 	{
+		// Defense-in-depth: every other PPPoE helper here (getPPPoEUser,
+		// getPPPoEUserUserId) already no-ops on a null/invalid client since
+		// routerClient() returns null on any connection failure. This one didn't,
+		// so a caller that didn't itself catch a null client (e.g. an unreachable
+		// router mid-delete) hit an uncaught fatal calling ->query() on null.
+		if (!($client instanceof RouterOS\Client)) {
+			log_message('error', 'removePPPoEUser: RouterOS client is not initialized for PPPoE ID: ' . $ppp_id);
+			return false;
+		}
 
 		$query = (new RouterOS\Query('/ppp/secret/remove'))->equal('numbers', $ppp_id);
 

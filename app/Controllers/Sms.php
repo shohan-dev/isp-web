@@ -124,28 +124,67 @@ class Sms extends BaseController
         $userId = session()->get('user_id');
         $userRole = session()->get('user_role');
 
-
-
-        if ($userRole === 'super_admin') {
-            $data = [
-                'title' => 'New SMS',
-                'area' => $area_model->where('user_id', $userId)->findAll(),
-                'template' => $template->where(['template_type' => 'default'])->orwhere('user_id', $userId)->findAll(),
-                'packages' => $package_model->where('user_id', $userId)->findAll(),
-                'customers' => $this->user_model->where(['role' => 'admin', 'status' => 'active'])->findAll(),
-            ];
-        } else {
-            $data = [
-                'title' => 'New SMS',
-                'area' => $area_model->where('user_id', $userId)->findAll(),
-                'template' => $template->where(['template_type' => 'default'])->orwhere('user_id', $userId)->findAll(),
-                'packages' => $package_model->where('user_id', $userId)->findAll(),
-                'customers' => $this->user_model->where(['role' => 'user', 'status' => 'active'])->where('admin_id', $userId)->findAll(),
-            ];
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
         }
+
+        // Recipient picker is Select2 remote-search backed (searchRecipients()) instead of
+        // inlining every active customer into the HTML — see HIGH severity perf finding.
+        $data = [
+            'title' => 'New SMS',
+            'area' => $area_model->where('user_id', $userId)->findAll(),
+            'template' => $template->where(['template_type' => 'default'])->orwhere('user_id', $userId)->findAll(),
+            'packages' => $package_model->where('user_id', $userId)->findAll(),
+        ];
         // log_message('debug', 'System Resources my Data: ' . print_r($data, true));
 
         return view('sms/new', $data);
+    }
+
+
+    /**
+     * Sms
+     * @action: Remote search for the recipient picker (Select2 ajax source).
+     * Bounded LIMIT instead of dumping every active customer into the page.
+     */
+    public function searchRecipients()
+    {
+        $userId = session()->get('user_id');
+        $userRole = session()->get('user_role');
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $term = trim((string) ($this->request->getGet('q') ?? $this->request->getGet('term') ?? ''));
+        $areaId = $this->request->getGet('area');
+
+        if ($userRole === 'super_admin') {
+            $builder = $this->user_model->where(['role' => 'admin', 'status' => 'active']);
+        } else {
+            $builder = $this->user_model->where(['role' => 'user', 'status' => 'active'])->where('admin_id', $userId);
+            if (!empty($areaId)) {
+                $builder->where('area_id', $areaId);
+            }
+        }
+
+        if ($term !== '') {
+            $builder->groupStart()
+                ->like('name', $term)
+                ->orLike('mobile', $term)
+                ->groupEnd();
+        }
+
+        $users = $builder->orderBy('name', 'asc')->findAll(30);
+
+        $results = array_map(function ($u) {
+            return [
+                'id'   => $u->id,
+                'text' => $u->name . (!empty($u->mobile) ? ' (' . $u->mobile . ')' : ''),
+            ];
+        }, $users);
+
+        return $this->response->setJSON(['results' => $results]);
     }
 
 

@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('css'); ?>
 <link rel="stylesheet" href="<?= base_url('assets/css/saas/bandwidth-pages.css?v=7'); ?>">
@@ -84,7 +85,7 @@
                         <tfoot>
                             <tr>
                                 <th colspan="3" style="text-align:right;">Total:</th>
-                                <th id="totalAmountFooter"></th>
+                                <th id="totalAmountFooter"><?= esc(number_format((float) $grandTotal, 2)) ?></th>
                                 <th colspan="6"></th>
                             </tr>
                         </tfoot>
@@ -188,16 +189,10 @@
                 lengthMenu: 'Show _MENU_ entries'
             },
             order: [[4, 'desc']],
-            dom: '<"row"<"col-sm-6"l><"col-sm-6 text-right"f>>rt<"row"<"col-sm-6"i><"col-sm-6 text-right"p>>',
-            footerCallback: function (row, data, start, end, display) {
-                var api = this.api();
-                var total = api.column(3).data().reduce(function (a, b) {
-                    var x = typeof a === 'string' ? parseFloat(a.replace(/,/g, '')) || 0 : a;
-                    var y = typeof b === 'string' ? parseFloat(b.replace(/,/g, '')) || 0 : b;
-                    return x + y;
-                }, 0);
-                $(api.column(3).footer()).html(total.toLocaleString());
-            }
+            dom: '<"row"<"col-sm-6"l><"col-sm-6 text-right"f>>rt<"row"<"col-sm-6"i><"col-sm-6 text-right"p>>'
+            // Total amount footer is server-rendered from SQL SUM(total) (see purchase_list.php
+            // controller / $grandTotal) so it stays correct regardless of search/paging/filtering
+            // and is not recomputed here from currently-visible/loaded rows.
         });
 
         function setPurchaseModalMode(mode) {

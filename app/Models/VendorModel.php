@@ -70,8 +70,23 @@ class VendorModel extends Model
     }
 public function getCompanyNameById($id)
 {
+    // Phase-perf: request-scoped memo. vendor_suggestion is stored as free-form
+    // TEXT (not a clean FK column) on requisitions/purchases, so a JOIN doesn't
+    // fit that query shape — this is called once per grouped row in
+    // Requisition/InventoryPurchess index(), an N+1 without memoization.
+    static $__cache = [];
+    static $__reqStamp = null;
+    $stamp = $_SERVER['REQUEST_TIME_FLOAT'] ?? null;
+    if ($__reqStamp !== $stamp) {
+        $__cache = [];
+        $__reqStamp = $stamp;
+    }
+    if (array_key_exists($id, $__cache)) {
+        return $__cache[$id];
+    }
+
     $vendor = $this->select('company_name')->find($id);
-    return $vendor['company_name'] ?? null;
+    return $__cache[$id] = ($vendor['company_name'] ?? null);
 }
     // Method to get a specific bandwidth package by ID
     public function getBandwidthPackageById($id)

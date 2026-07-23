@@ -17,6 +17,7 @@ $isExpiringSoon = is_numeric($daysLeftNum) && $daysLeftNum <= 7 && $daysLeftNum 
 $userId = (int) ($details->id ?? $details['id'] ?? 0);
 ?>
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsApexCharts'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('css'); ?>
 <?= saas_css('dashboard.css') ?>

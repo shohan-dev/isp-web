@@ -1163,13 +1163,12 @@ class Customer extends BaseController
 
 
 
-        if (userHasPermission('customer', 'delete')) {
-
-            $datatables->addColumn('select', function ($row) {
-
-                return '<input type="checkbox" class="form-check-input input-check-selected" value="' . $row->id . '">';
-            });
-        }
+        // Select column is always present: Transfer / SMS / Recharge / Change-router
+        // all need row checkboxes. Gating this on delete-only made those bulk
+        // actions permanently fail with "Please select at least one customer."
+        $datatables->addColumn('select', function ($row) {
+            return '<input type="checkbox" class="form-check-input input-check-selected" value="' . $row->id . '">';
+        });
 
         $datatables->addColumn('id', function ($row) {
             return $row->id;  // actual database ID
@@ -1524,9 +1523,13 @@ class Customer extends BaseController
             $data = $db->table('users')
                 ->select('users.*, users.id AS id, user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
                 ->select('areas.area_name AS area_name, routers.name AS router_name, users.status AS acc_status')
+                ->select('COALESCE(p_admin.package_name, p_reseller.package_name) as joined_package_name')
+                ->select('COALESCE(p_admin.price, p_reseller.selling_price, p_reseller.price) as joined_package_price')
                 ->join('user_router_data', 'user_router_data.user_id = users.id', 'left')
                 ->join('areas', 'areas.id = users.area_id', 'left')
                 ->join('routers', 'routers.id = users.router_id', 'left')
+                ->join('packages as p_admin', 'p_admin.id = users.package_id', 'left')
+                ->join('reseller_packages as p_reseller', 'p_reseller.id = users.package_id', 'left')
                 ->where([
                     'users.role' => 'user',
                     'users.admin_id' => $emp_admin_id,
@@ -1537,9 +1540,13 @@ class Customer extends BaseController
             $data = $db->table('users')
                 ->select('users.*, users.id AS id, user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
                 ->select('areas.area_name AS area_name, routers.name AS router_name, users.status AS acc_status')
+                ->select('COALESCE(p_admin.package_name, p_reseller.package_name) as joined_package_name')
+                ->select('COALESCE(p_admin.price, p_reseller.selling_price, p_reseller.price) as joined_package_price')
                 ->join('user_router_data', 'user_router_data.user_id = users.id', 'left')
                 ->join('areas', 'areas.id = users.area_id', 'left')
                 ->join('routers', 'routers.id = users.router_id', 'left')
+                ->join('packages as p_admin', 'p_admin.id = users.package_id', 'left')
+                ->join('reseller_packages as p_reseller', 'p_reseller.id = users.package_id', 'left')
                 ->where([
                     'users.role' => 'user',
                     'users.admin_id' => $userId,
@@ -1622,41 +1629,13 @@ class Customer extends BaseController
         }
 
         $datatables->addColumn('package', function ($row) {
+            // Phase-perf: was getUserPackage($row->id) per row (a fresh users +
+            // packages query every call) — now reads the COALESCE(p_admin,
+            // p_reseller) columns joined into the base query above, same as
+            // Customer::fetch(). Zero per-row queries.
+            $name = $row->joined_package_name ?? '--';
+            $price = $row->joined_package_price ?? '--';
 
-            $role = $row->created_by;
-
-            if ($role === 'resellerAdmin') {
-                $package = getUserPackage($row->id); // returns array
-                $name = $package['package_name'] ?? '--';
-
-                $selling_price = is_array($package)
-                    ? ($package['selling_price'] ?? null)
-                    : ($package->selling_price ?? null);
-
-                $base_price = is_array($package)
-                    ? ($package['price'] ?? null)
-                    : ($package->price ?? null);
-
-                // Determine final price based on role and value validity
-                if ($role === 'resellerAdmin' && !empty($selling_price) && is_numeric($selling_price)) {
-                    $price = $selling_price;
-                } else {
-                    $price = $base_price ?? '--';
-                }
-
-                // Standard design for resellerAdmin
-                // Standard design for regular users
-                return '<div style="line-height:1.2;">
-                    <strong style="font-size:16px;">' . htmlspecialchars($name) . '</strong><br>
-                    <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars($price) . '</span>
-                </div>';
-            }
-
-            $package = getUserPackage($row->id); // returns object
-            $name = $package->package_name ?? '--';
-            $price = $package->price ?? '--';
-
-            // Standard design for regular users
             return '<div style="line-height:1.2;">
                 <strong style="font-size:16px;">' . htmlspecialchars($name) . '</strong><br>
                 <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars($price) . '</span>
@@ -2113,9 +2092,13 @@ class Customer extends BaseController
             $data = $db->table('users')
                 ->select('users.*, users.id AS id, user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
                 ->select('areas.area_name AS area_name, routers.name AS router_name, users.status AS acc_status')
+                ->select('COALESCE(p_admin.package_name, p_reseller.package_name) as joined_package_name')
+                ->select('COALESCE(p_admin.price, p_reseller.selling_price, p_reseller.price) as joined_package_price')
                 ->join('user_router_data', 'user_router_data.user_id = users.id', 'left')
                 ->join('areas', 'areas.id = users.area_id', 'left')
                 ->join('routers', 'routers.id = users.router_id', 'left')
+                ->join('packages as p_admin', 'p_admin.id = users.package_id', 'left')
+                ->join('reseller_packages as p_reseller', 'p_reseller.id = users.package_id', 'left')
                 ->where([
                     'users.role' => 'user',
                     'users.admin_id' => $emp_admin_id,
@@ -2127,9 +2110,13 @@ class Customer extends BaseController
             $data = $db->table('users')
                 ->select('users.*, users.id AS id, user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
                 ->select('areas.area_name AS area_name, routers.name AS router_name, users.status AS acc_status')
+                ->select('COALESCE(p_admin.package_name, p_reseller.package_name) as joined_package_name')
+                ->select('COALESCE(p_admin.price, p_reseller.selling_price, p_reseller.price) as joined_package_price')
                 ->join('user_router_data', 'user_router_data.user_id = users.id', 'left')
                 ->join('areas', 'areas.id = users.area_id', 'left')
                 ->join('routers', 'routers.id = users.router_id', 'left')
+                ->join('packages as p_admin', 'p_admin.id = users.package_id', 'left')
+                ->join('reseller_packages as p_reseller', 'p_reseller.id = users.package_id', 'left')
                 ->where([
                     'users.role' => 'user',
                     'users.admin_id' => $userId,
@@ -2214,41 +2201,12 @@ class Customer extends BaseController
         }
 
         $datatables->addColumn('package', function ($row) {
+            // Phase-perf: was getUserPackage($row->id) per row — now reads the
+            // COALESCE(p_admin, p_reseller) columns joined into the base query
+            // above, same as Customer::fetch(). Zero per-row queries.
+            $name = $row->joined_package_name ?? '--';
+            $price = $row->joined_package_price ?? '--';
 
-            $role = $row->created_by;
-
-            if ($role === 'resellerAdmin') {
-                $package = getUserPackage($row->id); // returns array
-                $name = $package['package_name'] ?? '--';
-
-                $selling_price = is_array($package)
-                    ? ($package['selling_price'] ?? null)
-                    : ($package->selling_price ?? null);
-
-                $base_price = is_array($package)
-                    ? ($package['price'] ?? null)
-                    : ($package->price ?? null);
-
-                // Determine final price based on role and value validity
-                if ($role === 'resellerAdmin' && !empty($selling_price) && is_numeric($selling_price)) {
-                    $price = $selling_price;
-                } else {
-                    $price = $base_price ?? '--';
-                }
-
-                // Standard design for resellerAdmin
-                // Standard design for regular users
-                return '<div style="line-height:1.2;">
-                    <strong style="font-size:16px;">' . htmlspecialchars($name) . '</strong><br>
-                    <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars($price) . '</span>
-                </div>';
-            }
-
-            $package = getUserPackage($row->id); // returns object
-            $name = $package->package_name ?? '--';
-            $price = $package->price ?? '--';
-
-            // Standard design for regular users
             return '<div style="line-height:1.2;">
                 <strong style="font-size:16px;">' . htmlspecialchars($name) . '</strong><br>
                 <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars($price) . '</span>
@@ -3626,8 +3584,20 @@ class Customer extends BaseController
                     // Skip this iteration
                 } else {
                     $router_client = routerClient($user->router_id);
-                    if (is_array($router_client)) {
-                        return requestResponse('error', $router_client['error'], 500);
+                    if (!($router_client instanceof \RouterOS\Client)) {
+                        /* routerClient() returns null on any connection failure (router
+                           offline, timeout, circuit breaker open) — it never returns an
+                           array, so this check never actually caught a failure. The null
+                           client then fell through to removePPPoEUser() below, which has
+                           no null-guard and fatally errors ("Call to a member function
+                           query() on null"), aborting the WHOLE delete request (including
+                           customers later in the batch) with an uncaught PHP error instead
+                           of the JSON response the frontend expects. A router being
+                           temporarily unreachable shouldn't block deleting the customer
+                           record, so skip the on-router PPPoE cleanup for this one and
+                           continue the batch. */
+                        log_message('error', "Router unreachable for router_id {$user->router_id}; skipping on-router PPPoE cleanup for user {$user->id}");
+                        continue;
                     }
 
                     $userId = session()->get('user_id');
@@ -4009,185 +3979,222 @@ class Customer extends BaseController
             return show_404();
         }
 
-        if (!empty($details)) {
+        if (empty($details)) {
+            show_404();
+        }
 
-            $area_model = model('App\Models\Area');
+        // Page-load-performance audit (Axis1 #3): this used to open routerClient()
+        // + 3 RouterOS reads (profile list + PPPoE user) synchronously on render,
+        // AND if the router was offline the whole edit form was replaced by an
+        // error page — an admin couldn't even fix a customer's name/area while
+        // their router was down. DB-first paint now; live profile/PPPoE data
+        // loads via get_edit_mikrotik_info() after paint (same split as
+        // Customer::details()/get_mikrotik_info()). Defaults below are the
+        // stored values, exactly what the live fetch would show on a healthy
+        // router anyway.
+        $area_model = model('App\Models\Area');
+        $ConnectionDetails = model('App\Models\ConnectionData');
+        $ConnDetails = $ConnectionDetails->where('user_id', $id)->findAll();
+
+        $userId = session()->get('user_id');
+        $userole = session()->get('user_role');
+        $detail = $this->user_model->where(['id' => $userId])->first();
+        $emp_admin_id = $detail->admin_id;
+        $created_by = $detail->created_by;
+        if ($userole === 'employee') {
+            $userId = $emp_admin_id;
+        }
+
+        $packages = $this->resolveCustomerFormPackages($userId, $userole, $created_by);
+
+        $routerDataRow = model('App\Models\UserRouterDataModel')->where(['user_id' => $id])->first();
+        $pppoeSecret = $routerDataRow->pppoe_secret ?? ($details->pppoe_id ?? '--');
+        $storedPassword = $routerDataRow->router_password ?? '';
+        $storedProfile = $routerDataRow->pppoe_profile ?? '';
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $data = [
+            'title' => 'Update Customer',
+            'profiles' => $storedProfile !== '' ? [$storedProfile] : [],
+            'areas' => $area_model->where('status', 'active')->where('user_id', $userId)->findAll(),
+            'packages' => $packages,
+            'details' => $details,
+            'ConnDetails' => $ConnDetails ?? null,
+            'router' => getRouterById($details->router_id)->name ?? '--',
+            'pppoe_name' => $pppoeSecret,
+            'pppoe_password' => $storedPassword,
+            'pppoe_service' => 'pppoe',
+            'pppoe_profile' => $storedProfile,
+            'mikrotik_pending' => true,
+        ];
+
+        return view('customers/edit', $data);
+    }
+
+    /**
+     * DB-only package list for the customer edit/create forms — shared by
+     * edit() (immediate render) and get_edit_mikrotik_info() (profile
+     * matching), no router dependency.
+     */
+    private function resolveCustomerFormPackages($userId, $userole, $created_by): array
+    {
+        $packages = [];
+
+        if ($userole === 'admin' || $created_by === 'admin') {
             $package_model = model('App\Models\Package');
+            $packages = $package_model->where('user_id', $userId)->where('status', 'active')->findAll();
+        }
 
-            $router_client = routerClient($details->router_id);
-            $ConnectionDetails = model('App\Models\ConnectionData');
+        if ($userole != 'admin' && $created_by != 'admin') {
+            $packageModel = model('App\Models\allResellerPackage');
+            $rawPackages = $packageModel->where('user_id', $userId)->findAll();
 
-            // $result = $ConnectionDetails->insert($connection_data);
-
-            $ConnDetails = $ConnectionDetails // Use the model instance directly
-                ->where('user_id', $id)
-                ->findAll();
-
-            if ($router_client instanceof \RouterOS\Client) {
-
-                $pppoe = getPPPoEUserUserId($router_client, $id);
-                $pppoe_id = $pppoe[0]['.id'] ?? $details->pppoe_id ?? null;
-
-                log_message('info', "PPPoE ID for User ID {$id}: {$pppoe_id}");
-
-
-                log_message('info', 'Fetched ConnDetails data 1: ' . json_encode($details));
-
-                $user_ppp = getPPPoEUser($router_client, $pppoe_id);
-                log_message('info', 'Fetched ConnDetails data 2: ' . json_encode($user_ppp));
-
-                $userId = session()->get('user_id');
-
-
-                $userole = session()->get('user_role');
-
-                $detail = $this->user_model->where(['id' => $userId])->first();
-                $emp_admin_id = $detail->admin_id;
-                $created_by = $detail->created_by;
-
-                if ($userole === 'employee') {
-                    $userId = $emp_admin_id;
-                }
-
-                if ($userole === 'admin' || $created_by === 'admin') {
-                    // $userId = $emp_admin_id;
-                    // log_message('info', 'Fetched router_client data 3: ' . json_encode($router_client));
-                    $packages = $package_model->where('user_id', $userId)->where('status', 'active')->findAll();
-                }
-
-
-                if ($userole != 'admin' && $created_by != 'admin') {
-                    $packageModel = model('App\Models\allResellerPackage');
-                    $rawPackages = $packageModel->where('user_id', $userId)->findAll();
-
-                    // Decode the package_details JSON field
-                    $packages = [];
-                    foreach ($rawPackages as $package) {
-                        $detailsArr = is_string($package['package_details']) 
-                            ? json_decode($package['package_details'], true) 
-                            : $package['package_details'];
-                        if (is_array($detailsArr)) {
-                            foreach ($detailsArr as $detail) {
-                                $packages[] = $detail;
-                            }
-                        }
+            foreach ($rawPackages as $package) {
+                $detailsArr = is_string($package['package_details'])
+                    ? json_decode($package['package_details'], true)
+                    : $package['package_details'];
+                if (is_array($detailsArr)) {
+                    foreach ($detailsArr as $detail) {
+                        $packages[] = $detail;
                     }
-
-                    // Extract just the package numbers for comparison
-                    $packageNumbers = array_map(function ($p) {
-                        return is_object($p) ? $p->package_name : $p['package_name'];
-                    }, $packages);
                 }
-
-                log_message('info', 'Fetched packages edit data: ' . json_encode($packages));
-                // Fetch PPPoE profiles
-                $profiles = getPPPoEProfiles($router_client);
-
-                if ($userole != 'admin' && $created_by != 'admin') {
-                    // Step 1: Filter profiles by matching number
-                    $profiles = array_values(array_filter($profiles, function ($profile) use ($packageNumbers) {
-                        if (preg_match('/\d+/', $profile, $profileMatches)) {
-                            $profileNum = $profileMatches[0];
-                            foreach ($packageNumbers as $pkg) {
-                                if (preg_match('/\d+/', $pkg, $pkgMatches)) {
-                                    if ($profileNum === $pkgMatches[0]) {
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
-                        return false;
-                    }));
-
-                    // Step 2: Decide best variant for each number using letter-aware matching
-                    $bestVariant = [];
-                    foreach ($packageNumbers as $pkg) {
-                        $pkgName = strtolower(trim($pkg));
-                        if (!preg_match('/\d+/', $pkgName, $pkgNumMatch))
-                            continue;
-                        $pkgNum = $pkgNumMatch[0];
-                        $pkgWords = preg_split('/[^a-z0-9]+/', $pkgName, -1, PREG_SPLIT_NO_EMPTY);
-
-                        // Get profiles that share this number
-                        $matchingProfiles = array_filter($profiles, function ($p) use ($pkgNum) {
-                            return preg_match('/\d+/', $p, $pMatch) && $pMatch[0] === $pkgNum;
-                        });
-
-                        $bestMatch = null;
-                        $highestScore = -1;
-
-                        foreach ($matchingProfiles as $profile) {
-                            $profileWords = preg_split('/[^a-z0-9]+/', strtolower($profile), -1, PREG_SPLIT_NO_EMPTY);
-
-                            // Score: count partial word matches between package and profile
-                            $score = 0;
-                            foreach ($profileWords as $pw) {
-                                foreach ($pkgWords as $kw) {
-                                    if (strpos($pw, $kw) !== false || strpos($kw, $pw) !== false) {
-                                        $score++;
-                                    }
-                                }
-                            }
-
-                            if ($score > $highestScore || ($score === $highestScore && $bestMatch === null)) {
-                                $highestScore = $score;
-                                $bestMatch = $profile;
-                            }
-                        }
-
-                        if ($bestMatch) {
-                            $bestVariant[$pkgNum] = $bestMatch;
-                        }
-                    }
-
-                    // Step 3: Keep only best variants
-                    $profiles = array_values(array_filter($profiles, function ($p) use ($bestVariant) {
-                        if (preg_match('/\d+/', $p, $pMatch)) {
-                            $num = $pMatch[0];
-                            return isset($bestVariant[$num]) && $bestVariant[$num] === $p;
-                        }
-                        return false;
-                    }));
-
-                    // Now $profiles contains the filtered profiles exactly like JS
-                }
-
-                // Log filtered profiles
-
-                // Pass filtered profiles to view
-                $unmaskedPassword = $user_ppp[0]['password'] ?? '--';
-                $routerPassData = function_exists('getRouterPassById') ? getRouterPassById($details->id) : null;
-                if (is_array($routerPassData) && !empty($routerPassData['router_password']) && !preg_match('/^\*+$/', $routerPassData['router_password'])) {
-                    $unmaskedPassword = $routerPassData['router_password'];
-                }
-
-                $data = [
-                    'title' => 'Update Customer',
-                    'profiles' => $profiles, // use filtered list
-                    'areas' => $area_model->where('status', 'active')->where('user_id', $userId)->findAll(),
-                    'packages' => $packages,
-                    'details' => $details,
-                    'ConnDetails' => $ConnDetails ?? null,
-                    'router' => getRouterById($details->router_id)->name ?? '--',
-                    'pppoe_name' => $user_ppp[0]['name'] ?? '--',
-                    'pppoe_password' => $unmaskedPassword,
-                    'pppoe_service' => $user_ppp[0]['service'] ?? '--',
-                    'pppoe_profile' => $user_ppp[0]['profile'] ?? '--',
-                ];
-                log_message('info', 'Fetched ConnDetails data: ' . json_encode($data));
-
-
-                return view('customers/edit', $data);
             }
+        }
 
-            return view('routers/error', [
-                'title' => 'Mikrotik Error',
-                'error' => $router_client['error'] ?? 'Users router info not found',
-                'router_id' => $details->router_id,
+        return $packages;
+    }
+
+    /**
+     * Live MikroTik snapshot for the customer edit form (post-paint AJAX) —
+     * same connect-once-and-derive shape as get_mikrotik_info(), but also
+     * returns the profile list filtered/scored against the caller's own
+     * packages (moved here verbatim from the old synchronous edit()).
+     */
+    public function get_edit_mikrotik_info($id)
+    {
+        $details = $this->user_model->where(['id' => $id, 'role' => 'user'])->first();
+        if (empty($details) || !$this->actorOwnsCustomer($details)) {
+            return $this->response->setStatusCode(404)->setJSON(['ok' => false, 'error' => 'Not found']);
+        }
+
+        $userId = session()->get('user_id');
+        $userole = session()->get('user_role');
+        $detail = $this->user_model->where(['id' => $userId])->first();
+        $emp_admin_id = $detail->admin_id;
+        $created_by = $detail->created_by;
+        if ($userole === 'employee') {
+            $userId = $emp_admin_id;
+        }
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        ignore_user_abort(false);
+
+        $packages = $this->resolveCustomerFormPackages($userId, $userole, $created_by);
+        $router_client = routerClient($details->router_id);
+
+        if (!($router_client instanceof \RouterOS\Client)) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'offline' => true,
+                'error' => is_array($router_client) ? ($router_client['error'] ?? 'Router connection failed') : 'Router connection failed',
             ]);
         }
 
-        show_404();
+        $pppoe = getPPPoEUserUserId($router_client, $id);
+        $pppoe_id = $pppoe[0]['.id'] ?? $details->pppoe_id ?? null;
+        $user_ppp = getPPPoEUser($router_client, $pppoe_id);
+
+        $profiles = getPPPoEProfiles($router_client);
+
+        if ($userole != 'admin' && $created_by != 'admin') {
+            $packageNumbers = array_map(function ($p) {
+                return is_object($p) ? $p->package_name : $p['package_name'];
+            }, $packages);
+
+            // Step 1: Filter profiles by matching number
+            $profiles = array_values(array_filter($profiles, function ($profile) use ($packageNumbers) {
+                if (preg_match('/\d+/', $profile, $profileMatches)) {
+                    $profileNum = $profileMatches[0];
+                    foreach ($packageNumbers as $pkg) {
+                        if (preg_match('/\d+/', $pkg, $pkgMatches)) {
+                            if ($profileNum === $pkgMatches[0]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }));
+
+            // Step 2: Decide best variant for each number using letter-aware matching
+            $bestVariant = [];
+            foreach ($packageNumbers as $pkg) {
+                $pkgName = strtolower(trim($pkg));
+                if (!preg_match('/\d+/', $pkgName, $pkgNumMatch))
+                    continue;
+                $pkgNum = $pkgNumMatch[0];
+                $pkgWords = preg_split('/[^a-z0-9]+/', $pkgName, -1, PREG_SPLIT_NO_EMPTY);
+
+                $matchingProfiles = array_filter($profiles, function ($p) use ($pkgNum) {
+                    return preg_match('/\d+/', $p, $pMatch) && $pMatch[0] === $pkgNum;
+                });
+
+                $bestMatch = null;
+                $highestScore = -1;
+
+                foreach ($matchingProfiles as $profile) {
+                    $profileWords = preg_split('/[^a-z0-9]+/', strtolower($profile), -1, PREG_SPLIT_NO_EMPTY);
+
+                    $score = 0;
+                    foreach ($profileWords as $pw) {
+                        foreach ($pkgWords as $kw) {
+                            if (strpos($pw, $kw) !== false || strpos($kw, $pw) !== false) {
+                                $score++;
+                            }
+                        }
+                    }
+
+                    if ($score > $highestScore || ($score === $highestScore && $bestMatch === null)) {
+                        $highestScore = $score;
+                        $bestMatch = $profile;
+                    }
+                }
+
+                if ($bestMatch) {
+                    $bestVariant[$pkgNum] = $bestMatch;
+                }
+            }
+
+            // Step 3: Keep only best variants
+            $profiles = array_values(array_filter($profiles, function ($p) use ($bestVariant) {
+                if (preg_match('/\d+/', $p, $pMatch)) {
+                    $num = $pMatch[0];
+                    return isset($bestVariant[$num]) && $bestVariant[$num] === $p;
+                }
+                return false;
+            }));
+        }
+
+        $unmaskedPassword = $user_ppp[0]['password'] ?? '--';
+        $routerPassData = function_exists('getRouterPassById') ? getRouterPassById($details->id) : null;
+        if (is_array($routerPassData) && !empty($routerPassData['router_password']) && !preg_match('/^\*+$/', $routerPassData['router_password'])) {
+            $unmaskedPassword = $routerPassData['router_password'];
+        }
+
+        return $this->response->setJSON([
+            'ok' => true,
+            'offline' => false,
+            'profiles' => $profiles,
+            'pppoe_name' => $user_ppp[0]['name'] ?? '--',
+            'pppoe_password' => $unmaskedPassword,
+            'pppoe_service' => $user_ppp[0]['service'] ?? '--',
+            'pppoe_profile' => $user_ppp[0]['profile'] ?? '--',
+        ]);
     }
 
 
@@ -4532,133 +4539,18 @@ class Customer extends BaseController
             log_message('info', 'Fetched details: ' . json_encode($details->admin_id));
 
             if ($details->created_by === 'resellerAdmin') {
-
-                $router_client = routerClient($details->router_id);
-
-                if ($router_client instanceof \RouterOS\Client) {
-                    $userId = session()->get('user_id');
-
-                    $pppoe = getPPPoEUserUserId($router_client, $id);
-                    $pppoe_id = $pppoe[0]['.id'] ?? $details->pppoe_id ?? null;
-
-                    log_message('info', "PPPoE ID for User ID {$id}: {$pppoe_id}");
-
-
-                    $user_ppp = getPPPoEUser($router_client, $pppoe_id);
-
-                    $packageModel = model('App\Models\allResellerPackage');
-                    $rawPackages = $packageModel->where('user_id', $userId)->findAll();
-
-                    // Decode the package_details JSON field
-                    $packages = [];
-                    foreach ($rawPackages as $package) {
-                        $detailsArr = is_string($package['package_details']) 
-                            ? json_decode($package['package_details'], true) 
-                            : $package['package_details'];
-                        if (is_array($detailsArr)) {
-                            foreach ($detailsArr as $detail) {
-                                $packages[] = $detail;
-                            }
-                        }
-                    }
-
-                    // Extract just the package numbers for comparison
-                    $packageNumbers = array_map(function ($p) {
-                        return is_object($p) ? $p->package_name : $p['package_name'];
-                    }, $packages);
-
-                    // Fetch PPPoE profiles
-                    $profiles = getPPPoEProfiles($router_client);
-
-                    log_message('info', 'Fetched profiles before filtering: ' . json_encode($profiles));
-                    log_message('info', 'Fetched packageNumbers: ' . json_encode($packageNumbers));
-
-                    $userole = session()->get('user_role');
-                    $created_by = $details->created_by;
-
-                    if ($userole != 'admin' && $created_by != 'admin') {
-                        // Step 1: Filter profiles by matching number
-                        $profiles = array_values(array_filter($profiles, function ($profile) use ($packageNumbers) {
-                            if (preg_match('/\d+/', $profile, $profileMatches)) {
-                                $profileNum = $profileMatches[0];
-                                foreach ($packageNumbers as $pkg) {
-                                    if (preg_match('/\d+/', $pkg, $pkgMatches)) {
-                                        if ($profileNum === $pkgMatches[0]) {
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-                            return false;
-                        }));
-
-                        // Step 2: Decide best variant for each number using letter-aware matching
-                        $bestVariant = [];
-                        foreach ($packageNumbers as $pkg) {
-                            $pkgName = strtolower(trim($pkg));
-                            if (!preg_match('/\d+/', $pkgName, $pkgNumMatch))
-                                continue;
-                            $pkgNum = $pkgNumMatch[0];
-                            $pkgWords = preg_split('/[^a-z0-9]+/', $pkgName, -1, PREG_SPLIT_NO_EMPTY);
-
-                            // Get profiles that share this number
-                            $matchingProfiles = array_filter($profiles, function ($p) use ($pkgNum) {
-                                return preg_match('/\d+/', $p, $pMatch) && $pMatch[0] === $pkgNum;
-                            });
-
-                            $bestMatch = null;
-                            $highestScore = -1;
-
-                            foreach ($matchingProfiles as $profile) {
-                                $profileWords = preg_split('/[^a-z0-9]+/', strtolower($profile), -1, PREG_SPLIT_NO_EMPTY);
-
-                                // Score: count partial word matches between package and profile
-                                $score = 0;
-                                foreach ($profileWords as $pw) {
-                                    foreach ($pkgWords as $kw) {
-                                        if (strpos($pw, $kw) !== false || strpos($kw, $pw) !== false) {
-                                            $score++;
-                                        }
-                                    }
-                                }
-
-                                if ($score > $highestScore || ($score === $highestScore && $bestMatch === null)) {
-                                    $highestScore = $score;
-                                    $bestMatch = $profile;
-                                }
-                            }
-
-                            if ($bestMatch) {
-                                $bestVariant[$pkgNum] = $bestMatch;
-                            }
-                        }
-
-                        // Step 3: Keep only best variants
-                        $profiles = array_values(array_filter($profiles, function ($p) use ($bestVariant) {
-                            if (preg_match('/\d+/', $p, $pMatch)) {
-                                $num = $pMatch[0];
-                                return isset($bestVariant[$num]) && $bestVariant[$num] === $p;
-                            }
-                            return false;
-                        }));
-
-                        // Now $profiles contains the filtered profiles exactly like JS
-                    }
-                } else {
-                    return view('routers/error', [
-                        'title' => 'Mikrotik Error',
-                        'error' => $router_client['error'] ?? 'Users router info not found',
-                        'router_id' => $details->router_id,
-                    ]);
-                }
+                // Page-load-performance audit (Axis1 #4): this used to open
+                // routerClient() + 2 RouterOS reads synchronously on render
+                // (and replace the whole page with an error view if the router
+                // was offline). DB-first paint now; live profile list loads via
+                // get_subscription_mikrotik_info() after paint — same split as
+                // Customer::edit()/get_edit_mikrotik_info().
+                $packages = $this->resolveResellerPackagesForCustomer(session()->get('user_id'));
 
                 log_message('info', 'Fetched packages data: ' . json_encode($packages));
 
                 $package_model = model('App\Models\ResellerPackages');
                 $last_packages = $package_model->where(['status' => 'Active'])->where(['user_id' => $admin->admin_id])->findAll();
-                // log_message('info', 'Fetched last packages for admin: ' . json_encode($last_packages));
-                // log_message('info', 'Fetched $details->admin_id data: ' . json_encode($admin));
-                // log_message('info', 'Fetched $profiles data: ' . json_encode($profiles));
                 // Build package to profile map
                 $packageProfileMap = [];
                 if (!empty($packages)) {
@@ -4671,11 +4563,14 @@ class Customer extends BaseController
                     }
                 }
 
+                $routerDataRow = model('App\Models\UserRouterDataModel')->where(['user_id' => $id])->first();
+                $storedProfile = $routerDataRow->pppoe_profile ?? '';
+
                 $data = [
                     'title' => 'Customer\'s Subscription',
                     'details' => $details,
                     'admin_details' => $admin,
-                    'profiles' => $profiles,
+                    'profiles' => $storedProfile !== '' ? [$storedProfile] : [],
                     'payment_details' => $payment_details,
                     'multiple' => !empty($ids) ? 'true' : 'false',
                     'userNames' => $userNames ?? [],
@@ -4683,10 +4578,10 @@ class Customer extends BaseController
                     'packageIds' => $packageIds ?? [],
                     'packages' => $packages ?? $package_model->where(['status' => 'Active'])->where(['user_id' => $admin->admin_id])->findAll(),
                     'payment_months' => $payment_months ?? [],
-                    'pppoe_profile' => $user_ppp[0]['profile'] ?? '--',
+                    'pppoe_profile' => $storedProfile,
                     'package_profile_map' => $packageProfileMap,
+                    'mikrotik_pending' => true,
                 ];
-                // log_message('info', 'Fetched data1: ' . json_encode($data));
             } else {
 
 
@@ -4710,6 +4605,145 @@ class Customer extends BaseController
         }
 
         show_404();
+    }
+
+    /**
+     * DB-only reseller package list for the subscription form — shared by
+     * subscription() (immediate render) and get_subscription_mikrotik_info()
+     * (profile matching), no router dependency.
+     */
+    private function resolveResellerPackagesForCustomer($userId): array
+    {
+        $packageModel = model('App\Models\allResellerPackage');
+        $rawPackages = $packageModel->where('user_id', $userId)->findAll();
+
+        $packages = [];
+        foreach ($rawPackages as $package) {
+            $detailsArr = is_string($package['package_details'])
+                ? json_decode($package['package_details'], true)
+                : $package['package_details'];
+            if (is_array($detailsArr)) {
+                foreach ($detailsArr as $detail) {
+                    $packages[] = $detail;
+                }
+            }
+        }
+
+        return $packages;
+    }
+
+    /**
+     * Live MikroTik profile list for the resellerAdmin-created customer's
+     * subscription form (post-paint AJAX) — moved here verbatim from the old
+     * synchronous subscription() branch.
+     */
+    public function get_subscription_mikrotik_info($id)
+    {
+        $details = $this->user_model->where(['id' => $id])->first();
+        if (empty($details) || $details->created_by !== 'resellerAdmin') {
+            return $this->response->setStatusCode(404)->setJSON(['ok' => false, 'error' => 'Not found']);
+        }
+
+        $userId = session()->get('user_id');
+        $userole = session()->get('user_role');
+        $created_by = $details->created_by;
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        ignore_user_abort(false);
+
+        $router_client = routerClient($details->router_id);
+        if (!($router_client instanceof \RouterOS\Client)) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'offline' => true,
+                'error' => is_array($router_client) ? ($router_client['error'] ?? 'Router connection failed') : 'Router connection failed',
+            ]);
+        }
+
+        $pppoe = getPPPoEUserUserId($router_client, $id);
+        $pppoe_id = $pppoe[0]['.id'] ?? $details->pppoe_id ?? null;
+        $user_ppp = getPPPoEUser($router_client, $pppoe_id);
+
+        $packages = $this->resolveResellerPackagesForCustomer($userId);
+        $packageNumbers = array_map(function ($p) {
+            return is_object($p) ? $p->package_name : $p['package_name'];
+        }, $packages);
+
+        $profiles = getPPPoEProfiles($router_client);
+
+        if ($userole != 'admin' && $created_by != 'admin') {
+            // Step 1: Filter profiles by matching number
+            $profiles = array_values(array_filter($profiles, function ($profile) use ($packageNumbers) {
+                if (preg_match('/\d+/', $profile, $profileMatches)) {
+                    $profileNum = $profileMatches[0];
+                    foreach ($packageNumbers as $pkg) {
+                        if (preg_match('/\d+/', $pkg, $pkgMatches)) {
+                            if ($profileNum === $pkgMatches[0]) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }));
+
+            // Step 2: Decide best variant for each number using letter-aware matching
+            $bestVariant = [];
+            foreach ($packageNumbers as $pkg) {
+                $pkgName = strtolower(trim($pkg));
+                if (!preg_match('/\d+/', $pkgName, $pkgNumMatch))
+                    continue;
+                $pkgNum = $pkgNumMatch[0];
+                $pkgWords = preg_split('/[^a-z0-9]+/', $pkgName, -1, PREG_SPLIT_NO_EMPTY);
+
+                $matchingProfiles = array_filter($profiles, function ($p) use ($pkgNum) {
+                    return preg_match('/\d+/', $p, $pMatch) && $pMatch[0] === $pkgNum;
+                });
+
+                $bestMatch = null;
+                $highestScore = -1;
+
+                foreach ($matchingProfiles as $profile) {
+                    $profileWords = preg_split('/[^a-z0-9]+/', strtolower($profile), -1, PREG_SPLIT_NO_EMPTY);
+
+                    $score = 0;
+                    foreach ($profileWords as $pw) {
+                        foreach ($pkgWords as $kw) {
+                            if (strpos($pw, $kw) !== false || strpos($kw, $pw) !== false) {
+                                $score++;
+                            }
+                        }
+                    }
+
+                    if ($score > $highestScore || ($score === $highestScore && $bestMatch === null)) {
+                        $highestScore = $score;
+                        $bestMatch = $profile;
+                    }
+                }
+
+                if ($bestMatch) {
+                    $bestVariant[$pkgNum] = $bestMatch;
+                }
+            }
+
+            // Step 3: Keep only best variants
+            $profiles = array_values(array_filter($profiles, function ($p) use ($bestVariant) {
+                if (preg_match('/\d+/', $p, $pMatch)) {
+                    $num = $pMatch[0];
+                    return isset($bestVariant[$num]) && $bestVariant[$num] === $p;
+                }
+                return false;
+            }));
+        }
+
+        return $this->response->setJSON([
+            'ok' => true,
+            'offline' => false,
+            'profiles' => $profiles,
+            'pppoe_profile' => $user_ppp[0]['profile'] ?? '--',
+        ]);
     }
 
 

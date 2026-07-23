@@ -522,6 +522,47 @@
       toggleConnectionFields();
     });
 
+    <?php if (!empty($mikrotik_pending)): ?>
+    // Page-load-performance audit (Axis1 #3): the live PPPoE name/password/
+    // service/profile list used to be fetched from MikroTik synchronously
+    // before this page could render at all — and the whole form was replaced
+    // by an error page if the router was offline. The form above already
+    // renders with the last-known (DB) values; this fills in the live values
+    // once the router answers, without blocking first paint or edits to the
+    // customer's other fields.
+    $.ajax({
+      url: '<?= route_to('route.customer.getEditMikrotikInfo', $details->id); ?>',
+      type: 'GET',
+      dataType: 'json'
+    }).done(function(resp) {
+      if (!resp || !resp.ok) return;
+
+      $('input[name="pppoe_name"]').val(resp.pppoe_name || '--');
+      $('input[name="pppoe_password"]').val(resp.pppoe_password || '');
+      $('select[name="pppoe_service"]').val(resp.pppoe_service || 'pppoe');
+
+      var $profileSelect = $('select[name="pppoe_profile"]');
+      if ($profileSelect.length) {
+        var current = $profileSelect.val();
+        var profiles = resp.profiles || [];
+        $profileSelect.empty();
+        if (!profiles.length) {
+          $profileSelect.append($('<option>', {value: '', text: 'No profile found!'}));
+        } else {
+          $profileSelect.append($('<option>', {value: '', text: '--Select--'}));
+          profiles.forEach(function(p) {
+            $profileSelect.append($('<option>', {value: p, text: p}));
+          });
+          if (current && profiles.indexOf(current) !== -1) {
+            $profileSelect.val(current);
+          } else if (resp.pppoe_profile && profiles.indexOf(resp.pppoe_profile) !== -1) {
+            $profileSelect.val(resp.pppoe_profile);
+          }
+        }
+      }
+    });
+    <?php endif; ?>
+
 
     // // Filter PPPoE profiles based on selected package - EXACT NUMERIC MATCH
     // function filterProfilesByPackage(selectedPackageName) {

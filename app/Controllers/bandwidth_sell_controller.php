@@ -243,16 +243,43 @@ class bandwidth_sell_controller extends BaseController
 
         $model = new BandwidthSellInvoices();
         $userId = session()->get('user_id');
-        $vendorModel = new BandwidthSellClient();
 
-        // Step 1: Fetch all requisitions for this user
-        $allRequisitions = $model->where(['admin_id' => $userId])->findAll();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        // Step 1: Fetch all requisitions for this user, with vendor name joined
+        // in (was a per-row ->first() query below, one extra query per row).
+        $allRequisitions = $model->builder()
+            ->select('bandwidth_sell_invoices.*, bandwidth_sell_client.customer_name as joined_vendor_name')
+            ->join('bandwidth_sell_client', 'bandwidth_sell_client.id = bandwidth_sell_invoices.vendor_suggestion', 'left')
+            ->where('bandwidth_sell_invoices.admin_id', $userId)
+            ->get()->getResultArray();
+
+        // True grand total (SQL, not a PHP/JS loop). total_amount is the
+        // requisition's total duplicated onto every item row belonging to
+        // that requisition (see grouping below, which keeps only the first
+        // item's total_amount per requisition), so a plain SUM(total_amount)
+        // over all rows would overcount by item_count per requisition. Sum
+        // one row per distinct requisition_id instead, scoped by the same
+        // admin_id filter as the list itself, so the total stays correct and
+        // cheap no matter how many rows are loaded/paginated client-side.
+        $totalAmountRow = $model->builder()
+            ->selectSum('total_amount', 'grand_total')
+            ->whereIn('id', function ($builder) use ($userId) {
+                return $builder->select('MIN(id)')
+                    ->from('bandwidth_sell_invoices')
+                    ->where('admin_id', $userId)
+                    ->groupBy('requisition_id');
+            })
+            ->get()->getRowArray();
+        $totalAmount = (float) ($totalAmountRow['grand_total'] ?? 0);
 
         // Step 2: Group by requisition_id
         $grouped = [];
         foreach ($allRequisitions as $row) {
             $requisitionId = $row['requisition_id'];
-            $vendorName = $vendorModel->where(['id' => $row['vendor_suggestion']])->first()['customer_name'] ?? null;
+            $vendorName = $row['joined_vendor_name'] ?? null;
 
             if (!isset($grouped[$requisitionId])) {
                 // Initialize with the first item's data
@@ -335,6 +362,7 @@ class bandwidth_sell_controller extends BaseController
             'units' => $unit,
             'items' => $allItems,
             'requisitions' => $requisitions, // ✅ Grouped & processed
+            'totalAmount' => $totalAmount, // ✅ True SUM from SQL, not a client-side loop
             'vendors' => $providers
         ]);
     }
@@ -710,16 +738,28 @@ class bandwidth_sell_controller extends BaseController
 
         $model = new BandwidthSellInvoices();
         $userId = session()->get('user_id');
-        $vendorModel = new BandwidthSellClient();
 
-        // Step 1: Fetch all requisitions for this user
-        $allRequisitions = $model->where(['admin_id' => $userId])->findAll();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
 
-        // Step 2: Group by requisition_id
+        // Step 1: Fetch all requisitions for this user, with vendor name joined
+        // in (was a per-row ->first() query below, one extra query per row).
+        $allRequisitions = $model->builder()
+            ->select('bandwidth_sell_invoices.*, bandwidth_sell_client.customer_name as joined_vendor_name')
+            ->join('bandwidth_sell_client', 'bandwidth_sell_client.id = bandwidth_sell_invoices.vendor_suggestion', 'left')
+            ->where('bandwidth_sell_invoices.admin_id', $userId)
+            ->get()->getResultArray();
+
+        // Step 2: Group by requisition_id, and accumulate each requisition's
+        // item total from the already-fetched rows (was a per-requisition
+        // findAll() query below, one extra query per requisition).
         $grouped = [];
+        $calculatedTotals = [];
         foreach ($allRequisitions as $row) {
             $requisitionId = $row['requisition_id'];
-            $vendorName = $vendorModel->where(['id' => $row['vendor_suggestion']])->first()['customer_name'] ?? null;
+            $vendorName = $row['joined_vendor_name'] ?? null;
+            $calculatedTotals[$requisitionId] = ($calculatedTotals[$requisitionId] ?? 0) + (float) ($row['total'] ?? 0);
 
             if (!isset($grouped[$requisitionId])) {
                 // Initialize with the first item's data
@@ -756,14 +796,10 @@ class bandwidth_sell_controller extends BaseController
         // Step 3: Re-index grouped values
         $requisitions = array_values($grouped);
 
-        // Step 4: Calculate totals from individual items for verification
+        // Step 4: Log calculated totals for verification (same behavior as before,
+        // just sourced from the preloaded rows instead of a per-requisition query)
         foreach ($requisitions as &$req) {
-            // Get all items for this requisition to calculate correct total from individual items
-            $items = $model->where('requisition_id', $req['requisition_id'])->findAll();
-            $calculatedTotal = 0;
-            foreach ($items as $item) {
-                $calculatedTotal += (float)($item['total'] ?? 0);
-            }
+            $calculatedTotal = $calculatedTotals[$req['requisition_id']] ?? 0;
 
             // Log for debugging
             log_message('info', 'Requisition ' . $req['requisition_id'] .
@@ -773,6 +809,7 @@ class bandwidth_sell_controller extends BaseController
             // Use the calculated total if it's different (optional)
             // $req['total_amount'] = $calculatedTotal;
         }
+        unset($req);
 
         // Step 5: Load other models for form data
         $VendorModel = new BandwidthSellClient();

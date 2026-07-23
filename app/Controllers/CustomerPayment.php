@@ -179,25 +179,26 @@ class CustomerPayment extends BaseController
     }
     /**
      * Customer Payment
-     * @action: Fetch Customer Payments
+     * @action: Build the same role-scoped + optional status/paid_via/date
+     * filtered query builder used by both fetch() (DataTables grid) and
+     * fetchTotals() (aggregate sums), so the totals always match what the
+     * grid itself would show. DB-only, no DataTables wrapper.
      */
-    public function fetch()
+    private function buildFetchFilterQuery($userId, $userole)
     {
-        $userId = session()->get('user_id');
-        $userole = session()->get('user_role');
-
         $paid_via = $this->request->getPost('paid_via');
         $status = $this->request->getPost('status');
         $fromDate = $this->request->getPost('fromDate');
         $toDate = $this->request->getPost('toDate');
-        // log_message('debug', 'Fetching payments with filters - Paid Via: ' . $paid_via . ', Status: ' . $status . ', From Date: ' . $fromDate . ', To Date: ' . $toDate);
         $today = date('Y-m-d H:i:s');
         $today = date('Y-m-d H:i:s', strtotime('-1 days', strtotime($today)));
-        // log_message('info', 'Successfully fromDate : ' . print_r($fromDate, true));
-        // log_message('info', 'Successfully toDate : ' . print_r($toDate, true));
 
+        // No select() here on purpose — the two callers need different
+        // projections (full row columns for the grid vs. a SUM aggregate for
+        // totals) and CodeIgniter's select() always appends to the existing
+        // list rather than replacing it, so each caller applies its own
+        // select() on top of this filtered/joined builder.
         $builder = $this->payment_model->builder()
-            ->select('payments.*, customer.name as customer_name, admin.name as paid_to_name, admin.role as paid_to_role')
             ->join('users as customer', 'customer.id = payments.user_id', 'left')
             ->join('users as admin', 'admin.id = payments.paid_to', 'left');
 
@@ -229,7 +230,7 @@ class CustomerPayment extends BaseController
                 ->orWhere('payments.paid_to', $userId) // Include if paid to this reseller
                 ->groupEnd();
         }
-        $builder->orderBy('COALESCE(payments.paid_at, payments.created_at)', 'DESC', false);
+
         $data = $builder;
         if (!empty($status)) {
             $data->where('payments.status', $status);
@@ -239,27 +240,36 @@ class CustomerPayment extends BaseController
             $data->where('paid_via', $paid_via);
         }
 
-        $today = date('Y-m-d H:i:s');
-        $today = date('Y-m-d H:i:s', strtotime('-1 days', strtotime($today)));
-
         if (!empty($fromDate) && !empty($toDate)) {
-            // log_message('info', 'Successfully fromDate : ' . print_r($fromDate, true));
-
             $data->where('payments.created_at >=', $fromDate)
                 ->where('payments.created_at <=', $toDate);
         } elseif (!empty($fromDate) && empty($toDate)) {
-            // log_message('info', 'Successfully fromDate !empty($fromDate) && empty($toDate): ' . print_r($fromDate, true));
-
             $data->where('payments.created_at >=', $fromDate);
         } elseif (empty($fromDate) && empty($toDate)) {
             $data->where('payments.created_at >=', $today);
         }
 
-        // $totalQuery = clone $data;
-        // $totalAmount = $totalQuery->selectSum('amount')->get()->getRow()->amount ?? 0;
-        // log_message('info', 'Successfully totalAmount : ' . print_r($totalAmount, true));
-        // session()->set('totalAmount', $totalAmount);
+        return $data;
+    }
 
+    /**
+     * Customer Payment
+     * @action: Fetch Customer Payments
+     */
+    public function fetch()
+    {
+        $userId = session()->get('user_id');
+        $userole = session()->get('user_role');
+
+        // Release the file-session lock early (read-only grid; session is only
+        // read here, never written). (Phase 2 / T3)
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $data = $this->buildFetchFilterQuery($userId, $userole);
+        $data->select('payments.*, customer.name as customer_name, admin.name as paid_to_name, admin.role as paid_to_role')
+            ->orderBy('COALESCE(payments.paid_at, payments.created_at)', 'DESC', false);
 
         $datatables = new DataTablesCodeIgniter4($data);
 
@@ -337,6 +347,41 @@ class CustomerPayment extends BaseController
 
 
         $datatables->generate();
+    }
+
+    /**
+     * Customer Payment
+     * @action: Aggregate totals (total/paid/due) for the SAME role-scoped +
+     * optional status/paid_via/date filters as fetch(), computed in SQL so
+     * the stat cards stay correct regardless of DataTables pagination.
+     */
+    public function fetchTotals()
+    {
+        $userId = session()->get('user_id');
+        $userole = session()->get('user_role');
+
+        // Read-only; release the file-session lock early like fetch() does.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $data = $this->buildFetchFilterQuery($userId, $userole);
+
+        $row = $data
+            ->select(
+                'COALESCE(SUM(payments.amount), 0) as total, '
+                . "COALESCE(SUM(CASE WHEN payments.status = 'successful' THEN payments.amount ELSE 0 END), 0) as paid, "
+                . "COALESCE(SUM(CASE WHEN payments.status != 'successful' THEN payments.amount ELSE 0 END), 0) as due",
+                false
+            )
+            ->get()
+            ->getRow();
+
+        return requestResponse('success', [
+            'total' => (float) ($row->total ?? 0),
+            'paid' => (float) ($row->paid ?? 0),
+            'due' => (float) ($row->due ?? 0),
+        ], 200);
     }
 
     public function user_fetch()

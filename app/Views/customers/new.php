@@ -837,14 +837,26 @@
       },
 
       error: function({
-        responseText
+        responseText,
+        status
       }) {
-
-        const result = JSON.parse(responseText);
 
         $(form).find('button[type="submit"]').html('Add Customer');
 
         $(form).find('button[type="submit"]').removeAttr('disabled');
+
+        // A permission-denied page, an expired-CSRF page, or any uncaught
+        // server error (e.g. a MikroTik/router failure mid-create) comes back
+        // as HTML, not JSON. JSON.parse() on HTML used to throw here uncaught,
+        // leaving the submit button stuck on "Please wait" forever with no
+        // error shown — the form would look like it silently did nothing.
+        let result;
+        try {
+          result = JSON.parse(responseText);
+        } catch (e) {
+          tata.error("Couldn't add customer", "Something went wrong (status " + status + "). Please refresh the page and try again.");
+          return;
+        }
 
         if (result.status === 'validation-error') {
 

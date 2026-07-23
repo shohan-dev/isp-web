@@ -482,10 +482,27 @@ function getfund()
 
 function checkPaymentStatus($id, $lastPaymentMonth = null)
 {
-    $payment_model = model('App\Models\Payment');
+    // Phase-perf: request-scoped memo. This is called ~2x/row on the
+    // Inactive/Expired customer grids (last-paid month + expiring month), so
+    // an unmemoized version is a real N+1 on those serverSide-paginated
+    // pages. Same static-cache-keyed-by-REQUEST_TIME_FLOAT convention as
+    // getUserPackage() above.
+    static $__cache = [];
+    static $__reqStamp = null;
+    $stamp = $_SERVER['REQUEST_TIME_FLOAT'] ?? null;
+    if ($__reqStamp !== $stamp) {
+        $__cache = [];
+        $__reqStamp = $stamp;
+    }
 
     // Get current month name
     $currentMonth = $lastPaymentMonth ?? date('F'); // e.g., "September"
+    $cacheKey = $id . '|' . $currentMonth;
+    if (array_key_exists($cacheKey, $__cache)) {
+        return $__cache[$cacheKey];
+    }
+
+    $payment_model = model('App\Models\Payment');
 
     // Fetch payment for this user and current month
     $details = $payment_model->where([
@@ -496,7 +513,7 @@ function checkPaymentStatus($id, $lastPaymentMonth = null)
     // Return the status if available
     $fund = $details->status ?? ($details['status'] ?? null);
     log_message('info', 'Payment status: ' . 'id :' . $id . '...' . print_r($fund, true));
-    return $fund ?? null;
+    return $__cache[$cacheKey] = ($fund ?? null);
 }
 
 

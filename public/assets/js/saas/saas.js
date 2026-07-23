@@ -89,6 +89,19 @@
     return chart;
   }
 
+  /* Called by ipb-nav.js before swapping #ipb-main to a new page — every
+     ApexCharts instance the outgoing page registered (dashboards, the
+     customer usage chart) holds a window resize listener that otherwise
+     outlives the DOM it was drawn into. */
+  function destroyCharts() {
+    themedCharts.forEach(function (chart) {
+      try {
+        if (chart && typeof chart.destroy === "function") chart.destroy();
+      } catch (e) {}
+    });
+    themedCharts.length = 0;
+  }
+
   function restyleCharts() {
     var p = chartPalette();
     themedCharts.forEach(function (chart) {
@@ -129,6 +142,7 @@
     token: cssToken,
     chartPalette: chartPalette,
     registerChart: registerChart,
+    destroyCharts: destroyCharts,
   };
 
   function setCollapsed(collapsed) {

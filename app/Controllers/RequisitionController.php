@@ -18,12 +18,22 @@ class RequisitionController extends BaseController
             show_404();
         $model = new RequisitionModel();
         $userId = session()->get('user_id');
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
         $vendorModel = new VendorModel();
         // $companyName = $vendorModel->getCompanyNameById(5);
 
 
         // Step 1: Fetch all requisitions for this user
         $allRequisitions = $model->where(['admin_id' => $userId])->findAll();
+
+        // True grand total computed in SQL (not by summing loaded/paginated DOM rows),
+        // so the footer total stays correct regardless of client-side pagination.
+        $grandTotal = (float) ($model
+            ->selectSum('total')
+            ->where(['admin_id' => $userId])
+            ->first()['total'] ?? 0);
 
         // Step 2: Group by requisition_id
         $grouped = [];
@@ -110,7 +120,8 @@ class RequisitionController extends BaseController
             'units' => $unit,
             'items' => $allItems,
             'requisitions' => $requisitions, // ✅ Grouped & processed
-            'vendors' => $providers
+            'vendors' => $providers,
+            'grandTotal' => $grandTotal, // ✅ True SQL-computed total (correct regardless of client-side pagination)
         ]);
     }
 

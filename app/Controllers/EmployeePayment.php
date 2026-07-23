@@ -54,6 +54,10 @@ class EmployeePayment extends BaseController
         // log_message('info', 'Successfully called userId : ' . print_r($userId, true));
         $details = $this->user_model->where(['id' => $userId])->first();
 
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         if ($userRole === 'employee') {
             $admin_id = $details->admin_id;
             // $Pre_created_by = $details->created_by;
@@ -68,17 +72,25 @@ class EmployeePayment extends BaseController
 
 
             $data = $this->payment_model->builder()
-                ->select('*')
+                ->select('payments.*')
+                ->select('joined_emp.name as joined_employee_name')
+                ->select('joined_area.area_name as joined_area_name, joined_area.area_code as joined_area_code')
+                ->join('users as joined_emp', 'joined_emp.id = payments.user_id', 'left')
+                ->join('areas as joined_area', 'joined_area.id = joined_emp.area_id', 'left')
                 ->where('user_type', 'employee')
                 ->where('user_id ', $userId)
                 ->where('admin_id', $admin_id)
-                ->orderBy('id', 'desc');
+                ->orderBy('payments.id', 'desc');
         } else {
             $data = $this->payment_model->builder()
-                ->select('*')
+                ->select('payments.*')
+                ->select('joined_emp.name as joined_employee_name')
+                ->select('joined_area.area_name as joined_area_name, joined_area.area_code as joined_area_code')
+                ->join('users as joined_emp', 'joined_emp.id = payments.user_id', 'left')
+                ->join('areas as joined_area', 'joined_area.id = joined_emp.area_id', 'left')
                 ->where(['user_type' => 'employee'])
                 ->where('admin_id', $userId)
-                ->orderBy('id', 'desc');
+                ->orderBy('payments.id', 'desc');
         }
 
         if (!empty($status)) {
@@ -99,12 +111,12 @@ class EmployeePayment extends BaseController
 
         $datatables->addColumn('employee', function ($row) {
 
-            return getUserById($row->user_id)->name ?? '--';
+            return $row->joined_employee_name ?? '--';
         });
 
         $datatables->addColumn('area', function ($row) {
 
-            return getUserArea($row->user_id) ? getUserArea($row->user_id)->area_name . ' (' . getUserArea($row->user_id)->area_code . ')' : '--';
+            return !empty($row->joined_area_name) ? $row->joined_area_name . ' (' . $row->joined_area_code . ')' : '--';
         });
 
 

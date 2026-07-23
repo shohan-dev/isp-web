@@ -185,7 +185,7 @@
     }
 
     $(document)
-      .off("click.ipbCustMore")
+      .off("click.ipbCustMore click.ipbCustMoreDoc keydown.ipbCustMore")
       .on("click.ipbCustMore", ".ipb-cust-more-btn", function (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -197,8 +197,11 @@
         $wrap.toggleClass("is-open", willOpen);
         $(this).attr("aria-expanded", willOpen ? "true" : "false");
       })
-      .on("click.ipbCustMore", ".ipb-cust-more-menu", function (e) {
-        if ($(e.target).closest("a, button").length) closeAll();
+      .on("click.ipbCustMore", ".ipb-cust-more-item", function () {
+        // Only close the overflow menu. Do not stopPropagation here —
+        // Transfer/Delete bind on document and must still receive this click.
+        // Their own handlers defer swal() so SweetAlert does not auto-dismiss.
+        setTimeout(closeAll, 0);
       })
       .on("click.ipbCustMoreDoc", function (e) {
         if (!$(e.target).closest(".ipb-cust-more").length) closeAll();

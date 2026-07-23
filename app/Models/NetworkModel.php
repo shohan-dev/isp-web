@@ -95,6 +95,13 @@ class NetworkModel extends Model
     // Create table if it doesn't exist
     public function ensureTableExists()
     {
+        // Phase-E1: once per FPM worker process (was probing information_schema on every call).
+        static $checked = false;
+        if ($checked) {
+            return;
+        }
+        $checked = true;
+
         $db = \Config\Database::connect();
         $forge = \Config\Database::forge();
 

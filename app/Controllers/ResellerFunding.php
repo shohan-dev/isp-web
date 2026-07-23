@@ -123,6 +123,10 @@ class ResellerFunding extends BaseController
         $userId = session()->get('user_id');
         $userole = session()->get('user_role');
 
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         // Get filter inputs from the request
         $reseller = $this->request->getPost('reseller');
         $status = $this->request->getPost('status');  // Uncomment if needed
@@ -134,40 +138,44 @@ class ResellerFunding extends BaseController
         log_message('info', 'Successfully fromDate : ' . print_r($fromDate, true));
         log_message('info', 'Successfully toDate : ' . print_r($toDate, true));
         // Build the initial query based on user role
+        // NOTE: users has its own admin_id/status/created_at columns, so every filter below
+        // must stay qualified with reseller_transaction. now that the join is in place.
         if ($userole == 'resellerAdmin') {
             $data = $model->builder()
-                ->select('*')
-                ->where('admin_id', $userId)
-                ->orderBy('id', 'desc');
+                ->select('reseller_transaction.*, joined_customer.name as joined_customer_name')
+                ->join('users as joined_customer', 'joined_customer.id = reseller_transaction.customer', 'left')
+                ->where('reseller_transaction.admin_id', $userId)
+                ->orderBy('reseller_transaction.id', 'desc');
         } else {
             $data = $model->builder()
-                ->select('*')
-                ->orderBy('id', 'desc');
+                ->select('reseller_transaction.*, joined_customer.name as joined_customer_name')
+                ->join('users as joined_customer', 'joined_customer.id = reseller_transaction.customer', 'left')
+                ->orderBy('reseller_transaction.id', 'desc');
         }
 
         // Apply filters based on the input values
         if (!empty($reseller)) {
-            $data->where('admin_id', $reseller);
+            $data->where('reseller_transaction.admin_id', $reseller);
         }
 
         if (!empty($status)) {
-            $data->where('status', $status);
+            $data->where('reseller_transaction.status', $status);
         }
 
         if (!empty($fromDate) && !empty($toDate)) {
-            $data->where('created_at >=', $fromDate)
-                ->where('created_at <=', $toDate);
+            $data->where('reseller_transaction.created_at >=', $fromDate)
+                ->where('reseller_transaction.created_at <=', $toDate);
         } elseif (!empty($fromDate) && empty($toDate)) {
             log_message('info', 'Successfully funding fromDate !empty($fromDate) && empty($toDate): ' . print_r($fromDate, true));
-            $data->where('created_at >=', $fromDate);
+            $data->where('reseller_transaction.created_at >=', $fromDate);
         } elseif (empty($fromDate) && empty($toDate)) {
             log_message('info', 'Successfully fromDate : 5');
-            $data->where('created_at >=', $today);
+            $data->where('reseller_transaction.created_at >=', $today);
         }
 
         // If all filters are empty (and the user is not resellerAdmin), force no results.
         if ($userole != 'resellerAdmin' && empty($reseller) && empty($status) && empty($fromDate) && empty($toDate)) {
-            $data->where('admin_id', '-1'); // Assuming no record has admin_id = -1
+            $data->where('reseller_transaction.admin_id', '-1'); // Assuming no record has admin_id = -1
         }
 
         // Generate DataTables with the filtered data
@@ -176,7 +184,7 @@ class ResellerFunding extends BaseController
         $datatables->addSequenceNumber('serial');
 
         $datatables->addColumn('customer', function ($row) {
-            return getUserById($row->customer)->name ?? '--';
+            return $row->joined_customer_name ?? '--';
         });
         $datatables->addColumn('amount', function ($row) {
             return $row->amount ?? '--';
@@ -219,6 +227,10 @@ class ResellerFunding extends BaseController
         $userId = session()->get('user_id');
         $userole = session()->get('user_role');
 
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         // Get filter inputs from the request
         $reseller = $this->request->getPost('reseller');
         $status = $this->request->getPost('status');
@@ -230,39 +242,43 @@ class ResellerFunding extends BaseController
         log_message('info', 'Successfully toDate : ' . print_r($toDate, true));
 
         $model = new ResellerFundingModel();
+        // NOTE: users has its own admin_id/status/created_at/customer-shaped columns, so every
+        // filter below must stay qualified with reseller_funding. now that the join is in place.
         if ($userole != 'resellerAdmin') {
             // Build the initial query
             $data = $model->builder()
-                ->select('*')
+                ->select('reseller_funding.*, joined_customer.name as joined_customer_name')
+                ->join('users as joined_customer', 'joined_customer.id = reseller_funding.customer', 'left')
                 // ->where('user_type', 'user')
-                ->where('admin_id', $userId)
-                ->orderBy('id', 'desc');
+                ->where('reseller_funding.admin_id', $userId)
+                ->orderBy('reseller_funding.id', 'desc');
 
             // Apply filters based on the input values
             // Apply filters based on the input values
             if (!empty($reseller)) {
-                $data->where('admin_id', $reseller);
+                $data->where('reseller_funding.admin_id', $reseller);
             }
         } else {
             $data = $model->builder()
-                ->select('*')
+                ->select('reseller_funding.*, joined_customer.name as joined_customer_name')
+                ->join('users as joined_customer', 'joined_customer.id = reseller_funding.customer', 'left')
                 // ->where('user_type', 'user')
-                ->where('customer', $userId)
-                ->orderBy('id', 'desc');
+                ->where('reseller_funding.customer', $userId)
+                ->orderBy('reseller_funding.id', 'desc');
         }
 
         if (!empty($status)) {
-            $data->where('status', $status);
+            $data->where('reseller_funding.status', $status);
         }
 
         if (!empty($fromDate) && !empty($toDate)) {
-            $data->where('created_at >=', $fromDate)
-                ->where('created_at <=', $toDate);
+            $data->where('reseller_funding.created_at >=', $fromDate)
+                ->where('reseller_funding.created_at <=', $toDate);
         } elseif (!empty($fromDate) && empty($toDate)) {
             log_message('info', 'Successfully funding fromDate !empty($fromDate) && empty($toDate): ' . print_r($fromDate, true));
-            $data->where('created_at >=', $fromDate);
+            $data->where('reseller_funding.created_at >=', $fromDate);
         } elseif (empty($fromDate) && empty($toDate)) {
-            $data->where('created_at >=', $today);
+            $data->where('reseller_funding.created_at >=', $today);
         }
 
         // If all filters are empty (and the user is not resellerAdmin), force no results.
@@ -283,8 +299,7 @@ class ResellerFunding extends BaseController
         }
 
         $datatables->addColumn('customer', function ($row) {
-            $userId = session()->get('user_id');
-            return getUserById($row->customer)->name ?? '--';
+            return $row->joined_customer_name ?? '--';
         });
         $datatables->addColumn('invoice', function ($row) {
             return $row->invoice_number ?? '--';

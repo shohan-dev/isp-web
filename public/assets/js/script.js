@@ -572,9 +572,12 @@ if (typeof jQuery === "undefined") {
   $(document).ready(function () {
 
     //init bootstrap tooltips
-    $('[data-toggle="tooltip"]').tooltip();
+    var $tooltips = $('[data-toggle="tooltip"]');
+    if ($tooltips.length) $tooltips.tooltip();
 
-    //init select2
-    $('select[class="form-control"]').select2({width: '100%',});
+    // init select2 — only pages that actually have a select.form-control pay
+    // the init cost (docs/production-optimization/PAGE-LOAD-PERFORMANCE-AUDIT-PART-2.md A4)
+    var $selects = $('select[class="form-control"]');
+    if ($selects.length) $selects.select2({width: '100%',});
   });
 })(jQuery);

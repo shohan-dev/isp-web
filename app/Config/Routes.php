@@ -147,9 +147,11 @@ $routes->group('admins', function ($routes) {
 
     $routes->get('contactfetch', 'Admin::contactfetch', [
         'as' => 'route.contact.fetch',
+        'filter' => 'role:super_admin',
     ]);
     $routes->post('contactfetchall', 'Admin::contactfetchall', [
         'as' => 'route.contact.fetchall',
+        'filter' => 'role:super_admin',
     ]);
     $routes->delete('contactdelete', 'Admin::contactdelete', [
         'as' => 'route.contactdelete',
@@ -1022,7 +1024,9 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
                them to another reseller/package or another router. */
             $routes->post('transfer', 'Customer::transfer', [
                 'as' => 'route.customer.transfer',
-                'filter' => 'permissioncheck:customer,delete',
+                // Same array_merge() key-collision drops the group's authcheck
+                // here as on new/create/delete above — see the comment there.
+                'filter' => ['authcheck', 'permissioncheck:customer,delete'],
             ]);
 
             $routes->post('change-router', 'Customer::changeRouter', [
@@ -1065,12 +1069,22 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
             $routes->get('new', 'Customer::new', [
                 'as' => 'route.customer.new',
-                'filter' => 'permissioncheck:customer,create',
+                /* A route's own 'filter' key silently overwrites (not merges with)
+                   the enclosing group's 'filter' => 'authcheck' set at the top of
+                   this file — array_merge() last-value-wins on the shared string
+                   key (RouteCollection::create(), vendor/.../RouteCollection.php:1319).
+                   So AuthCheck::before() — the filter that re-validates the session's
+                   user_id/role against the DB, checks tenant/host match, and clears a
+                   stale session('status')='inactive' flag once the account is active
+                   again — was never actually running on this route, only
+                   permissioncheck was. $multipleFilters is on (app/Config/Feature.php),
+                   so declare both explicitly instead of relying on group inheritance. */
+                'filter' => ['authcheck', 'permissioncheck:customer,create'],
             ]);
 
             $routes->post('create', 'Customer::create', [
                 'as' => 'route.customer.create',
-                'filter' => 'permissioncheck:customer,create',
+                'filter' => ['authcheck', 'permissioncheck:customer,create'],
             ]);
 
             $routes->post('connection-status-update', 'Customer::updateConnStatus', [
@@ -1080,7 +1094,7 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
             $routes->delete('delete', 'Customer::delete', [
                 'as' => 'route.customer.delete',
-                'filter' => 'permissioncheck:customer,delete',
+                'filter' => ['authcheck', 'permissioncheck:customer,delete'],
             ]);
 
             $routes->post('get-profiles', 'Customer::getProfiles', [
@@ -1096,6 +1110,10 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
                     $routes->get('(:num)', 'Customer::subscription/$1', [
                         'as' => 'route.customer.subscription',
+                        'filter' => 'permissioncheck:customer,update_subscription',
+                    ]);
+                    $routes->get('get-mikrotik-info/(:num)', 'Customer::get_subscription_mikrotik_info/$1', [
+                        'as' => 'route.customer.getSubscriptionMikrotikInfo',
                         'filter' => 'permissioncheck:customer,update_subscription',
                     ]);
                     $routes->get('reseller/(:num)', 'Customer::Resellersubscription/$1', [
@@ -1124,9 +1142,14 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
             $routes->get('get-mikrotik-info', 'Customer::get_mikrotik_info', [
                 'as' => 'route.customer.getMikrotikInfo'
             ]);
+            $routes->get('get-edit-mikrotik-info/(:num)', 'Customer::get_edit_mikrotik_info/$1', [
+                'as' => 'route.customer.getEditMikrotikInfo',
+                'filter' => 'permissioncheck:customer,update',
+            ]);
             $routes->get('modal-lookups', 'Customer::modal_lookups', [
                 'as' => 'route.customer.modalLookups',
-                'filter' => 'permissioncheck:customer,read',
+                // Same array_merge() authcheck-drop as new/create/delete/transfer.
+                'filter' => ['authcheck', 'permissioncheck:customer,read'],
             ]);
 
 
@@ -1168,6 +1191,10 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
             $routes->post('fetch', 'CustomerPayment::fetch', [
                 'as' => 'route.customer.payment.fetch',
+                'filter' => 'permissioncheck:customer_payment,read',
+            ]);
+            $routes->post('fetch-totals', 'CustomerPayment::fetchTotals', [
+                'as' => 'route.customer.payment.fetch_totals',
                 'filter' => 'permissioncheck:customer_payment,read',
             ]);
             $routes->get('user/(:num)', 'CustomerPayment::user_index/$1', [
@@ -1505,6 +1532,10 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
                 'as' => 'route.sms.getuser',
                 'filter' => 'permissioncheck:sms_message,create',
             ]);
+            $routes->get('search-recipients', 'Sms::searchRecipients', [
+                'as' => 'route.sms.searchrecipients',
+                'filter' => 'permissioncheck:sms_message,create',
+            ]);
             $routes->post('get-customer-details', 'Sms::getCustomerDetails', [
                 'as' => 'route.sms.getcustomerdetails',
                 'filter' => 'permissioncheck:sms_message,create',
@@ -1531,6 +1562,11 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
             $routes->get('new', 'VoiceSms::new', [
                 'as' => 'route.voice-sms.new',
+                // 'filter' => 'permissioncheck:sms_message,create',
+            ]);
+
+            $routes->get('search-recipients', 'VoiceSms::searchRecipients', [
+                'as' => 'route.voicesms.searchrecipients',
                 // 'filter' => 'permissioncheck:sms_message,create',
             ]);
 
@@ -1621,6 +1657,11 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
                 'filter' => 'permissioncheck:routers,read',
             ]);
 
+            $routes->get('get-details-info/(:num)', 'Routers::get_router_details_info/$1', [
+                'as' => 'route.routers.getDetailsInfo',
+                'filter' => 'permissioncheck:routers,read',
+            ]);
+
             $routes->get('load-traffic/(:num)', 'Routers::loadTraffic/$1', [
                 'as' => 'route.routers.load_traffic',
                 // 'filter' => 'permissioncheck:routers,read',
@@ -1654,6 +1695,11 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 
             $routes->get('sync/(:num)', 'Routers::sync/$1', [
                 'as' => 'route.routers.sync',
+                'filter' => 'permissioncheck:routers,sync',
+            ]);
+
+            $routes->get('get-sync-secrets/(:num)', 'Routers::get_router_sync_secrets/$1', [
+                'as' => 'route.routers.getSyncSecrets',
                 'filter' => 'permissioncheck:routers,sync',
             ]);
 

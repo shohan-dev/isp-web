@@ -81,19 +81,31 @@ class Employee extends BaseController
             });
         }
 
-        $datatables->addColumn('area', function ($row) {
+        // Preload all areas for this admin once instead of getEmpArea()'s
+        // per-row User::find() + Area::whereIn()->findAll() inside the closure.
+        $area_model = model('App\Models\Area');
+        $areasById = [];
+        foreach ($area_model->where('user_id', $userId)->findAll() as $area) {
+            $areasById[$area->id] = $area;
+        }
 
-            $areas = getEmpArea($row->id);
+        $datatables->addColumn('area', function ($row) use ($areasById) {
 
-            if (empty($areas)) {
+            if (empty($row->area_id)) {
                 return '--';
             }
 
-            $area_names = array_map(function ($area) {
-                return $area->area_name . ' (' . $area->area_code . ')';
-            }, $areas);
+            $area_ids = is_array($row->area_id) ? $row->area_id : explode(',', $row->area_id);
 
-            return implode(', ', $area_names);
+            $area_names = [];
+            foreach ($area_ids as $area_id) {
+                if (isset($areasById[$area_id])) {
+                    $area = $areasById[$area_id];
+                    $area_names[] = $area->area_name . ' (' . $area->area_code . ')';
+                }
+            }
+
+            return !empty($area_names) ? implode(', ', $area_names) : '--';
         });
 
 
@@ -122,6 +134,10 @@ class Employee extends BaseController
             $datatables->addColumn('action', function ($row) {
                 return '<div class="ipb-row-actions"><a href="' . route_to('route.employee.edit', $row->id) . '" class="ipb-row-btn tone-brand" title="Update"><i class="far fa-pen-to-square"></i> Update</a></div>';
             });
+        }
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
         }
 
         $datatables->except([

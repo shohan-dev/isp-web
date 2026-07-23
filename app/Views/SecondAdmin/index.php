@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 <?= $this->section('content'); ?>
 
 <!-- Content Wrapper. Contains page content -->
@@ -112,7 +113,8 @@
       scrollX: true,
       scrollY: "55vh",
       scrollCollapse: true,
-      paging: false,
+      serverSide: true,
+      processing: true,
       ajax: {
         url: '<?= route_to("route.Admin.fetch"); ?>',
         type: 'post',

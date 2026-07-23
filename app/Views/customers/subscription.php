@@ -715,6 +715,12 @@ if (isset($payment_details) && is_array($payment_details))
   const details = <?= json_encode($details) ?>;
   const userRole = '<?= session()->get("user_role") ?>';
   const packageProfileMap = <?= json_encode($package_profile_map ?? []) ?>;
+  // Page-load-performance audit (Axis1 #4): live profile list loads via AJAX
+  // after paint (see the get_subscription_mikrotik_info() call below), so
+  // this starts as the last-known (DB) value and gets replaced once the
+  // router answers — filterProfilesByPackage()/the package-change handler
+  // both read from this instead of re-embedding PHP each time.
+  let livePppoeProfiles = <?= json_encode($profiles ?? []) ?>;
 
   /* ══════════════════════════════════════════
      SECTION SWITCHER
@@ -732,7 +738,7 @@ if (isset($payment_details) && is_array($payment_details))
   ══════════════════════════════════════════ */
   function filterProfilesByPackage(selectedPackageName) {
     var profileDropdown = $('select[name="pppoe_profile"]');
-    var allProfiles = <?= json_encode($profiles ?? []) ?>;
+    var allProfiles = livePppoeProfiles;
     if (!selectedPackageName || allProfiles.length === 0) return;
     var packageMatch = selectedPackageName.match(/(\d+)/);
     if (!packageMatch) return;
@@ -810,12 +816,42 @@ if (isset($payment_details) && is_array($payment_details))
         $('select[name="pppoe_profile"]').val(targetProfile).trigger('change');
       }
     } else {
-      var allProfiles = <?= json_encode($profiles ?? []) ?>;
       var pd = $('select[name="pppoe_profile"]');
       pd.html('<option value="">--Select--</option>');
-      allProfiles.forEach(function (p) { pd.append('<option value="' + p + '">' + p + '</option>'); });
+      livePppoeProfiles.forEach(function (p) { pd.append('<option value="' + p + '">' + p + '</option>'); });
     }
   });
+
+  <?php if (!empty($mikrotik_pending)): ?>
+  // Live profile list, fetched after paint instead of blocking render (or
+  // replacing the whole page with an error view) on a slow/offline router.
+  $.ajax({
+    url: '<?= route_to('route.customer.getSubscriptionMikrotikInfo', $details->id); ?>',
+    type: 'GET',
+    dataType: 'json'
+  }).done(function (resp) {
+    if (!resp || !resp.ok) return;
+    livePppoeProfiles = resp.profiles || [];
+
+    var packageId = $('select[name="package_id"]').val();
+    if (packageId && userRole !== 'admin') {
+      filterProfilesByPackage(getPackageName(packageId));
+      if (packageProfileMap && packageProfileMap[packageId]) {
+        $('select[name="pppoe_profile"]').val(packageProfileMap[packageId]).trigger('change');
+      }
+    } else {
+      var pd = $('select[name="pppoe_profile"]');
+      var current = pd.val();
+      pd.html('<option value="">--Select--</option>');
+      livePppoeProfiles.forEach(function (p) { pd.append('<option value="' + p + '">' + p + '</option>'); });
+      if (resp.pppoe_profile && livePppoeProfiles.indexOf(resp.pppoe_profile) !== -1) {
+        pd.val(resp.pppoe_profile);
+      } else if (current && livePppoeProfiles.indexOf(current) !== -1) {
+        pd.val(current);
+      }
+    }
+  });
+  <?php endif; ?>
 
   /* ══════════════════════════════════════════
      FORM SUBMIT

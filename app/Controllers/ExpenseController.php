@@ -768,14 +768,9 @@ class ExpenseController extends BaseController
                 return redirect()->to('login')->with('error', 'Please login first');
             }
 
-            // Get all users/POPs for dropdown
-            $pops = $this->user_model->where('admin_id', $user_id)->findAll();
-
             // Prepare data for view
             $data = [
                 'title' => 'OTC Report',
-                'pops' => $pops,
-                'user_id' => $user_id
             ];
 
             return view('accounts/otc_report', $data);

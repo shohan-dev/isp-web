@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('content'); ?>
 <?php $status = $status ?? ''; ?>
@@ -89,7 +90,8 @@
 <script>
   $(document).ready(function () {
     var table = $('.datatable').DataTable({
-      processing: false,
+      processing: true,
+      serverSide: true,
       ajax: {
         url: '<?= route_to("route.employee.payment.fetch"); ?>',
         type: 'post',

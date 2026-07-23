@@ -4,6 +4,7 @@ $clientsRunning = (int) ($users_active ?? 0);
 $clientsDisabled = (int) ($users_inactive ?? 0) + (int) ($expired_inactive ?? 0);
 ?>
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsApexCharts'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('css'); ?>
 <?= saas_css('dashboard.css') ?>

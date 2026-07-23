@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 <?php
 $areasForFilter = $areasForFilter ?? [];
 $packagesForFilter = $packagesForFilter ?? [];
@@ -358,7 +359,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 <?php // Removed redundant CSS block and duplicate endSection call ?>
 
 <?= $this->section('script'); ?>
-<script src="<?= base_url('assets/js/saas/customers-list.js?v=2'); ?>"></script>
+<script src="<?= base_url('assets/js/saas/customers-list.js?v=3'); ?>"></script>
 
 
 <script>

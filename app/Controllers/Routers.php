@@ -346,35 +346,115 @@ class Routers extends BaseController
         $details = $this->router_model->find($id);
         log_message('debug', 'router_action details: ' . json_encode($details, true));
 
-        if (!empty($details)) {
-
-            $router_client = routerClient($details->id);
-
-            if (!is_array($router_client)) {
-
-                $area_model = model('App\Models\Area');
-                $package_model = model('App\Models\Package');
-                $userId = session()->get('user_id');
-
-                $data = [
-                    'title' => 'Mikrotik Router Sync',
-                    'details' => $details,
-                    'secrets' => getAllPPPoEUsers($router_client),
-                    'areas' => $area_model->where('status', 'active')->where('user_id', $userId)->findAll(),
-                    'packages' => $package_model->where('status', 'active')->where('user_id', $userId)->findAll(),
-                ];
-
-                return view('routers/sync', $data);
-            }
-
-            return view('routers/error', [
-                'title' => 'Mikrotik Error',
-                'error' => $router_client['error'],
-                'router_id' => $id,
-            ]);
+        if (empty($details)) {
+            show_404();
         }
 
-        show_404();
+        // Page-load-performance audit (Axis1 #5): this used to open routerClient()
+        // + pull the router's FULL PPPoE secret list synchronously before the page
+        // could render, and replaced the whole page with an error view if the
+        // router happened to be slow/offline at that instant. This page's whole
+        // purpose is the live secret list, so there's no meaningful DB-cached
+        // fallback to show — instead the shell (title, router row, areas,
+        // packages — all plain DB reads) renders immediately with an empty
+        // secrets list, and the live secrets load via get_router_sync_secrets()
+        // after paint (same split as Customer::details()/get_mikrotik_info()).
+        $area_model = model('App\Models\Area');
+        $package_model = model('App\Models\Package');
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $data = [
+            'title' => 'Mikrotik Router Sync',
+            'details' => $details,
+            'secrets' => [],
+            'areas' => $area_model->where('status', 'active')->where('user_id', $userId)->findAll(),
+            'packages' => $package_model->where('status', 'active')->where('user_id', $userId)->findAll(),
+            'mikrotik_pending' => true,
+        ];
+
+        return view('routers/sync', $data);
+    }
+
+    /**
+     * Routers
+     * @action: Live PPPoE secret list for the sync page, loaded via AJAX after
+     * the shell has painted. Mirrors the JSON shape convention used by
+     * Customer::get_mikrotik_info() (ok / offline / error on failure).
+     */
+    public function get_router_sync_secrets($id)
+    {
+        if (!userHasPermission('routers', 'sync'))
+            show_404();
+
+        $userId = session()->get('user_id');
+
+        $userModel = model('App\Models\User');
+        $udetails = $userModel->where(['id' => $userId])->first();
+        $role = $udetails->role ?? null;
+
+        if ($role === 'admin') {
+            if ($udetails->status === 'inactive' || $udetails->subscription_status === 'inactive' || $udetails->conn_status != 'conn') {
+                return $this->response->setStatusCode(403)->setJSON([
+                    'ok' => false,
+                    'offline' => false,
+                    'error' => 'You are not allowed to sync users. Please check your subscription status and connection status',
+                ]);
+            }
+        }
+
+        $details = $this->router_model->find($id);
+        if (empty($details)) {
+            return $this->response->setStatusCode(404)->setJSON(['ok' => false, 'offline' => false, 'error' => 'Router not found']);
+        }
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        try {
+            $router_client = routerClient($details->id);
+
+            if (!($router_client instanceof \RouterOS\Client)) {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'offline' => true,
+                    'error' => 'Unable to connect to router',
+                    'secrets' => [],
+                ]);
+            }
+
+            $secrets = getAllPPPoEUsers($router_client);
+
+            // Mirror the view's existing "already synced" rule (getUserByPPPoEId):
+            // tell the client which secret IDs are already imported so it can
+            // skip rendering rows for them, exactly like the old server-rendered
+            // table did.
+            $syncedIds = [];
+            foreach ($secrets as $secret) {
+                $pppoeId = $secret['.id'] ?? null;
+                if ($pppoeId !== null && !empty(getUserByPPPoEId($pppoeId, $details->id))) {
+                    $syncedIds[] = $pppoeId;
+                }
+            }
+
+            return $this->response->setJSON([
+                'ok' => true,
+                'offline' => false,
+                'secrets' => $secrets,
+                'synced_ids' => $syncedIds,
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'get_router_sync_secrets router ' . $id . ': ' . $e->getMessage());
+            return $this->response->setJSON([
+                'ok' => false,
+                'offline' => true,
+                'error' => 'Router communication error',
+                'secrets' => [],
+            ]);
+        }
     }
 
     /**
@@ -550,33 +630,85 @@ class Routers extends BaseController
 
         $details = $this->router_model->find($id);
 
-        if (!empty($details)) {
-
-            $router_client = routerClient($details->id);
-
-
-            if (!is_array($router_client)) {
-
-                // log_message('debug', 'System response interfaces Data: ' . print_r(getInterface($router_client), true));
-
-                $data = [
-                    'title' => $details->name . ' Router Details',
-                    'details' => $details,
-                    'interfaces' => getInterface($router_client),
-                    'logs' => getLogs($router_client),
-                ];
-
-                return view('routers/details', $data);
-            }
-
-            return view('routers/error', [
-                'title' => 'Mikrotik Error',
-                'error' => $router_client['error'],
-                'router_id' => $id,
-            ]);
+        if (empty($details)) {
+            show_404();
         }
 
-        show_404();
+        // Page-load-performance audit (Axis1 #6): this used to open routerClient()
+        // + getInterface()/getLogs() synchronously before the page could render,
+        // and replaced the whole page with an error view if the router happened
+        // to be slow/offline at that instant. This page's whole purpose is live
+        // router interfaces/logs, so there's no meaningful DB-cached fallback —
+        // instead the shell (title, router row) renders immediately with empty
+        // interfaces/logs, and the live data loads via get_router_details_info()
+        // after paint (same split as Customer::details()/get_mikrotik_info()).
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $data = [
+            'title' => $details->name . ' Router Details',
+            'details' => $details,
+            'interfaces' => [],
+            'logs' => [],
+            'mikrotik_pending' => true,
+        ];
+
+        return view('routers/details', $data);
+    }
+
+    /**
+     * Routers
+     * @action: Live interfaces/logs for the details page, loaded via AJAX
+     * after the shell has painted. Mirrors the JSON shape convention used by
+     * Customer::get_mikrotik_info() (ok / offline / error on failure).
+     */
+    public function get_router_details_info($id)
+    {
+        if (!userHasPermission('routers', 'read'))
+            show_404();
+
+        $details = $this->router_model->find($id);
+        if (empty($details)) {
+            return $this->response->setStatusCode(404)->setJSON(['ok' => false, 'offline' => false, 'error' => 'Router not found']);
+        }
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        try {
+            $router_client = routerClient($details->id);
+
+            if (!($router_client instanceof \RouterOS\Client)) {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'offline' => true,
+                    'error' => 'Unable to connect to router',
+                    'interfaces' => [],
+                    'logs' => [],
+                ]);
+            }
+
+            $interfaces = getInterface($router_client);
+            $logs = getLogs($router_client);
+
+            return $this->response->setJSON([
+                'ok' => true,
+                'offline' => false,
+                'interfaces' => is_array($interfaces) ? $interfaces : [],
+                'logs' => is_array($logs) ? $logs : [],
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'get_router_details_info router ' . $id . ': ' . $e->getMessage());
+            return $this->response->setJSON([
+                'ok' => false,
+                'offline' => true,
+                'error' => 'Router communication error',
+                'interfaces' => [],
+                'logs' => [],
+            ]);
+        }
     }
 
 

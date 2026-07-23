@@ -253,6 +253,8 @@ function legacyCopy(text) {
 
 }
 
+var __resolvedPaymentId = null;
+
 function payNow(){
 
 // 01 §4.14 / 08 §8 — was a dead placeholder domain ("https://your-payment-link.com")
@@ -260,9 +262,26 @@ function payNow(){
 // UI costume. The controller (CaptivePortal / zapi CaptivePortalController)
 // already resolves this customer's pending Payment row and passes payment_id
 // to this view; route to the real, public, no-login payment page.
-window.location.href = "<?= route_to('route.payment.pay', (int) ($payment_id ?? 0)); ?>";
+var id = __resolvedPaymentId !== null ? __resolvedPaymentId : <?= (int) ($payment_id ?? 0); ?>;
+window.location.href = "<?= base_url('make-payment'); ?>/" + id;
 
 }
+
+<?php if (!empty($resolve_needed)): ?>
+// Page-load-performance audit (Axis1 #2): the server no longer sweeps every
+// MikroTik synchronously to resolve this customer when the walled-garden
+// redirect omitted `rid` — that could block this public, unauthenticated
+// page for minutes. First paint is instant with the dummy payment id; this
+// background call resolves the real one before the customer taps Pay Now.
+fetch("<?= base_url('captiveportal/resolve'); ?>", { credentials: 'omit' })
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    if (data && data.ok && data.payment_id) {
+      __resolvedPaymentId = parseInt(data.payment_id, 10);
+    }
+  })
+  .catch(function () {});
+<?php endif; ?>
 
 </script>
 

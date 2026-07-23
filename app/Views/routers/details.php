@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsApexCharts'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('content'); ?>
 
@@ -66,7 +67,7 @@ $routerName = (string) ($details->name ?? 'Router');
                       $data[$interface['name']] = ucwords($interface['name']);
                     }
                   } else {
-                    $data[''] = 'No interface found!';
+                    $data[''] = !empty($mikrotik_pending) ? 'Loading interfaces…' : 'No interface found!';
                   }
 
                   echo form_dropdown('package_id', $data, "", 'class="form-control" id="interface"');
@@ -180,6 +181,8 @@ $routerName = (string) ($details->name ?? 'Router');
               <?= esc($log["message"] ?? '') ?>
             </p>
           <?php endforeach; ?>
+        <?php elseif (!empty($mikrotik_pending)): ?>
+          <p class="ipb-router-log-empty" id="ipbLogsPending">Loading logs…</p>
         <?php else: ?>
           <p class="ipb-router-log-empty">No logs available</p>
         <?php endif; ?>
@@ -541,6 +544,65 @@ $routerName = (string) ($details->name ?? 'Router');
     });
 
     loadTrafic();
+
+    <?php if (!empty($mikrotik_pending)): ?>
+    // Page-load-performance audit (Axis1 #6): interfaces/logs used to be fetched
+    // from MikroTik synchronously before this page could render at all. The
+    // shell above already renders immediately with an empty interface list and
+    // a "Loading…" logs placeholder; this fills in the live values once the
+    // router answers, without blocking first paint.
+    $.ajax({
+      url: '<?= route_to('route.routers.getDetailsInfo', $details->id); ?>',
+      type: 'GET',
+      dataType: 'json'
+    }).done(function (resp) {
+      if (!resp || !resp.ok) {
+        if ($('#ipbLogsPending').length) {
+          $('#ipbLogsPending').text('Router unreachable — logs unavailable.');
+        }
+        return;
+      }
+
+      // Interface dropdown
+      var $interface = $('#interface');
+      if ($interface.length) {
+        var current = $interface.val();
+        var interfaces = resp.interfaces || [];
+        $interface.empty();
+        if (!interfaces.length) {
+          $interface.append($('<option>', { value: '', text: 'No interface found!' }));
+        } else {
+          interfaces.forEach(function (iface) {
+            var name = iface.name || '';
+            $interface.append($('<option>', { value: name, text: name.charAt(0).toUpperCase() + name.slice(1) }));
+          });
+          if (current && $interface.find('option[value="' + current + '"]').length) {
+            $interface.val(current);
+          }
+        }
+      }
+
+      // Logs
+      var $logs = $('#logs');
+      var logs = resp.logs || [];
+      if ($logs.length && logs.length) {
+        $logs.empty();
+        logs.forEach(function (log) {
+          var $line = $('<p>', { class: 'ipb-router-log-line' });
+          $line.append($('<i>', { class: 'fa fa-chevron-right fa-xs', 'aria-hidden': 'true' }));
+          $line.append(document.createTextNode(' ' + (log.message || '')));
+          $logs.append($line);
+        });
+        $logs.scrollTop($logs[0].scrollHeight);
+      } else if ($('#ipbLogsPending').length) {
+        $('#ipbLogsPending').text('No logs available');
+      }
+    }).fail(function () {
+      if ($('#ipbLogsPending').length) {
+        $('#ipbLogsPending').text('Router unreachable — logs unavailable.');
+      }
+    });
+    <?php endif; ?>
 
     //scroll to bottom
     if ($('#logs').length) {

@@ -46,6 +46,7 @@ $ticketTotal = max(1, $ticketOpen + $ticketOngoing + $ticketSolved + $ticketClos
 $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) * 100);
 ?>
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsApexCharts'); ?>1<?php $this->endSection(); ?>
 
 <?= $this->section('css'); ?>
 <?= saas_css('dashboard.css') ?>
@@ -1690,6 +1691,10 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         liveInterval = null;
       }
     }
+
+    // Navigating away via the sidebar swaps #ipb-main instead of reloading the
+    // document — without this the 3s router poll would keep running forever.
+    (window.IpbPageTeardown = window.IpbPageTeardown || []).push(stopLiveTraffic);
 
     function updateBandwidthChart(routerId) {
       routerId = String(routerId || 'all');

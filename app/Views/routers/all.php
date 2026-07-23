@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 <?php
 // 06 §9 — domain empty state for the routers list DataTable's emptyTable language override.
 $routerAddAction = userHasPermission('routers', 'create')

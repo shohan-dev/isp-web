@@ -16,19 +16,33 @@ class InventoryPurchessController extends BaseController
             show_404();
         $model = new InventoryPurchess();
         $userId = session()->get('user_id');
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
         $vendorModel = new VendorModel();
-        // $companyName = $vendorModel->getCompanyNameById(5);
-
 
         // Step 1: Fetch all requisitions for this user
         $allRequisitions = $model->where(['admin_id' => $userId])->findAll();
+
+        // True grand total computed in SQL (not by summing DOM/loaded rows) so the
+        // footer total stays correct regardless of how many rows are displayed.
+        $grandTotal = (float) ($model->selectSum('total')
+            ->where(['admin_id' => $userId])
+            ->get()
+            ->getRow('total') ?? 0);
+
+        // Preload vendor names in one query instead of one getCompanyNameById() call per row
+        $vendorIds = array_unique(array_filter(array_column($allRequisitions, 'vendor_suggestion')));
+        $vendorNamesById = $vendorIds
+            ? array_column($vendorModel->select('id, company_name')->whereIn('id', $vendorIds)->findAll(), 'company_name', 'id')
+            : [];
 
         // Step 2: Group by requisition_id
         $grouped = [];
         foreach ($allRequisitions as $row) {
             // log_message('info', 'Processing requisition row: ' . json_encode($row));
             $id = $row['requisition_id'];
-            $vendorName = $vendorModel->getCompanyNameById($row['vendor_suggestion']);
+            $vendorName = $vendorNamesById[$row['vendor_suggestion']] ?? null;
 
             if (!isset($grouped[$id])) {
                 $grouped[$id] = [
@@ -108,7 +122,8 @@ class InventoryPurchessController extends BaseController
             'units' => $unit,
             'items' => $allItems,
             'requisitions' => $requisitions, // ✅ Grouped & processed
-            'vendors' => $providers
+            'vendors' => $providers,
+            'grandTotal' => $grandTotal, // true SUM(total) via SQL, not a client-side sum of loaded rows
         ]);
     }
 

@@ -71,19 +71,26 @@ class InventoryController extends Controller
         $unitsModel = new UnitModel();
         $adminId = session('user_id'); // Get current admin ID from session
 
-        $results = $model
-            ->where('admin_id', $adminId) // Filter by current admin
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
 
+        // Aggregate in SQL instead of pulling every purchase row into PHP.
+        // TRIM+GROUP BY on (item_name, category, subcategory) mirrors the old PHP
+        // composite key; MIN(unit_id) keeps "first unit seen per group" semantics
+        // since the group is otherwise unordered from the DB's perspective.
+        $rows = $model
+            ->select('TRIM(item_name) as item_name, TRIM(category) as category, TRIM(subcategory) as subcategory, MIN(unit_id) as unit_id, SUM(qty) as total_qty')
+            ->where('admin_id', $adminId)
+            ->groupBy('TRIM(item_name), TRIM(category), TRIM(subcategory)')
             ->findAll();
-        $units= $unitsModel->where('admin_id', $adminId)->findAll();
+        $units = $unitsModel->where('admin_id', $adminId)->findAll();
         log_message('info', 'Units fetched: ' . json_encode($units));
-        // log_message('info', 'Purchess stock results: ' . json_encode($results));
-        $itemSummary = [];
 
-        foreach ($results as $row) {
-            $itemName = trim($row['item_name']);
-            $category = trim($row['category']);
-            $subcategory = trim($row['subcategory']);
+        $itemSummary = [];
+        foreach ($rows as $row) {
+            $category = $row['category'];
+            $subcategory = $row['subcategory'];
 
             // Skip if explicitly "null"
             if ($category === 'null' || $subcategory === 'null') {
@@ -94,25 +101,14 @@ class InventoryController extends Controller
             $category = $category === '' ? '0' : $category;
             $subcategory = $subcategory === '' ? '0' : $subcategory;
 
-            // Create a composite key
-            $key = "{$itemName}|{$category}|{$subcategory}";
-
-            // Accumulate totals
-            if (!isset($itemSummary[$key])) {
-                $itemSummary[$key] = [
-                    'item_name' => $itemName,
-                    'category' => $category,
-                    'subcategory' => $subcategory,
-                    'unit' => $row['unit_id'] ?? null, // Use unit_id if available
-                    'total_qty' => (int)$row['qty']
-                ];
-            } else {
-                $itemSummary[$key]['total_qty'] += (int)$row['qty'];
-            }
+            $itemSummary[] = [
+                'item_name' => $row['item_name'],
+                'category' => $category,
+                'subcategory' => $subcategory,
+                'unit' => $row['unit_id'] ?? null,
+                'total_qty' => (int)$row['total_qty']
+            ];
         }
-
-        // Reindex array (optional)
-        $itemSummary = array_values($itemSummary);
 
         // Example: log or return
         log_message('info', 'Item summary: ' . json_encode($itemSummary));

@@ -1,4 +1,5 @@
 <?= $this->extend('layout/main-layout'); ?>
+<?php $this->section('needsDataTable'); ?>1<?php $this->endSection(); ?>
 <?= $this->section('content'); ?>
 <div class="content-wrapper">
     <section class="content ipb-saas-list">
@@ -278,6 +279,10 @@
 <script>
     const items = <?= json_encode($items, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
     console.log('Items from PHP:', items);
+    // True grand total computed server-side in SQL (SUM over all matching rows for this
+    // admin), independent of how many rows are currently loaded/paginated client-side.
+    // Named distinctly from the unrelated #grandTotal form-total input/local var below.
+    const requisitionListGrandTotal = <?= json_encode((float) ($grandTotal ?? 0)) ?>;
 
     $(document).ready(function() {
         // Initialize DataTable
@@ -296,18 +301,10 @@
             footerCallback: function(row, data, start, end, display) {
                 var api = this.api();
 
-                // Calculate the total over all pages
-                var total = api
-                    .column(3) // 3 is the index of "Total Amount" column
-                    .data()
-                    .reduce(function(a, b) {
-                        var x = typeof a === 'string' ? parseFloat(a.replace(/,/g, '')) || 0 : a;
-                        var y = typeof b === 'string' ? parseFloat(b.replace(/,/g, '')) || 0 : b;
-                        return x + y;
-                    }, 0);
-                console.log('Total:', total);
-                // Update footer
-                $(api.column(3).footer()).html(total.toLocaleString());
+                // Grand total is computed server-side in SQL (SUM over ALL matching rows,
+                // not just the currently loaded/paginated ones) so it stays correct
+                // regardless of client-side pagination/search/filtering.
+                $(api.column(3).footer()).html(requisitionListGrandTotal.toLocaleString());
             }
         });
 

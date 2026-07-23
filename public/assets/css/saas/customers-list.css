@@ -128,10 +128,20 @@
   color: var(--text-primary, #0f172a) !important;
 }
 
-/* Overflow menu */
-.ipb-customers-page .ipb-cust-more {
-  position: relative;
+.ipb-customers-page .ipb-c-select {
+  width: 42px;
+  text-align: center !important;
+  vertical-align: middle !important;
 }
+.ipb-customers-page .ipb-c-select .form-check-input,
+.ipb-customers-page #select_all {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  pointer-events: auto;
+}
+
 .ipb-customers-page .ipb-cust-more-menu {
   position: absolute;
   top: calc(100% + 6px);

@@ -32,15 +32,10 @@
 
                             <div class="form-group">
                                 <label>Target Customers <sup class="text-danger">*</sup></label>
-                                <select name="send_to[]" id="send_to" class="form-control select2" multiple="multiple" style="width:100%">
-                                    <?php if (!empty($customers)): ?>
-                                        <option value="all">All Active Customers</option>
-                                        <?php foreach ($customers as $c): ?>
-                                            <option value="<?= $c->id ?>"><?= esc($c->name) ?> (<?= $c->mobile ?? '--' ?>)</option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
+                                <select name="send_to[]" id="send_to" class="form-control" multiple="multiple" style="width:100%">
+                                    <option value="all">All Active Customers</option>
                                 </select>
-                                <small class="text-muted">You can select multiple customers or 'All'.</small>
+                                <small class="text-muted">Start typing a name or mobile number to search customers. You can select multiple customers or 'All'.</small>
                             </div>
                         </div>
 
@@ -96,25 +91,45 @@
             allowClear: true
         });
 
-        // Pre-select customers from URL params
+        // Recipient picker is remote/ajax-backed (bounded LIMIT server-side) instead of
+        // inlining every active customer's <option> into the page HTML.
+        $('#send_to').select2({
+            placeholder: 'Click to select',
+            allowClear: true,
+            width: '100%',
+            closeOnSelect: false,
+            minimumInputLength: 0,
+            ajax: {
+                url: '<?= route_to("route.voicesms.searchrecipients"); ?>',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return { q: params.term || '', area: $('select[name="area"]').val() };
+                },
+                processResults: function(data) {
+                    return { results: data.results || [] };
+                },
+                cache: true
+            }
+        });
+
+        // Pre-select customer IDs passed via URL — plain labels (no lookup endpoint
+        // wired for voice SMS), matching what this view already did before the fix.
         const urlParams = new URLSearchParams(window.location.search);
         const ids = urlParams.get('ids');
         if (ids) {
-            $('#send_to').val(ids.split(',')).trigger('change');
+            ids.split(',').forEach(function(id) {
+                if (id === 'all' || $('#send_to').find('option[value="' + id + '"]').length) return;
+                $('#send_to').append(new Option('User #' + id, id, true, true));
+            });
+            $('#send_to').trigger('change');
         }
 
-        // Live Area Filter
+        // Area filter is passed as part of every ajax search request (see select2 data()
+        // above) — changing it just clears the current picks so stale-area selections
+        // aren't sent, then lets the next search re-query scoped to the new area.
         $('select[name="area"]').change(function() {
-            const area = $(this).val();
-            $.ajax({
-                url: '<?= route_to("route.sms.getuser"); ?>',
-                type: 'POST',
-                data: { area },
-                headers: { '<?= csrf_header() ?>': '<?= csrf_hash() ?>' },
-                success: function(result) {
-                    $('#send_to').html(result.response).trigger('change');
-                }
-            });
+            $('#send_to').val(null).trigger('change');
         });
 
         $('#voice-form').submit(function(e) {

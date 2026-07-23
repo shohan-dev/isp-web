@@ -228,9 +228,15 @@ class Access extends BaseController
     {
         $userId = session()->get('user_id');
 
+        // Read-only grid; session is only read above, never written.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $data = $this->custom_access_model->builder()
-            ->select('*')
-            ->where('admin_id', $userId);
+            ->select('custom_access.*, users.name as joined_user_name, users.role as joined_user_role')
+            ->join('users', 'users.id = custom_access.user_id', 'left')
+            ->where('custom_access.admin_id', $userId);
 
         $datatables = new DataTablesCodeIgniter4($data);
 
@@ -243,14 +249,12 @@ class Access extends BaseController
 
         $datatables->addColumn('user', function ($row) {
 
-            return getUserById($row->user_id)->name ?? '--';
+            return $row->joined_user_name ?? '--';
         });
 
         $datatables->addColumn('role', function ($row) {
 
-            $user = getUserById($row->user_id);
-
-            return $user->role === 'user' ? 'Customer' : $user->role;
+            return $row->joined_user_role === 'user' ? 'Customer' : $row->joined_user_role;
         });
 
         $datatables->format('status', function ($value) {
@@ -265,7 +269,7 @@ class Access extends BaseController
             return '<div class="ipb-row-actions"><button type="button" class="ipb-row-btn tone-brand access-btn" data-access_id="' . $row->id . '" title="Update"><i class="far fa-pen-to-square"></i> Update</button></div>';
         });
 
-        $datatables->except(['id', 'user_id', 'permissions']);
+        $datatables->except(['id', 'user_id', 'permissions', 'joined_user_name', 'joined_user_role']);
 
         $datatables->asObject();
 
