@@ -34,7 +34,7 @@ final class LandingTest extends CIUnitTestCase
         // strict requirement — but users/landing_testimonials/admin_packages
         // are queried via query-builder (DBGroup-prefix-aware).
         $p = $this->db->DBPrefix;
-        foreach (['users', 'landing_testimonials', 'admin_packages'] as $name) {
+        foreach (['users', 'landing_testimonials', 'admin_packages', 'plugins'] as $name) {
             $this->db->query('DROP TABLE IF EXISTS ' . $p . $name);
         }
         $this->db->query('CREATE TABLE ' . $p . 'users (id INTEGER PRIMARY KEY, admin_id INTEGER, role TEXT, name TEXT, status TEXT)');
@@ -45,6 +45,10 @@ final class LandingTest extends CIUnitTestCase
         $this->db->query('CREATE TABLE ' . $p . 'admin_packages (
             id INTEGER PRIMARY KEY AUTOINCREMENT, package_name TEXT, price REAL, duration INTEGER,
             user_limit INTEGER, is_active INTEGER, sort_order INTEGER, tier_key TEXT
+        )');
+        $this->db->query('CREATE TABLE ' . $p . 'plugins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, category TEXT, description TEXT,
+            price_type TEXT, billing_cycle TEXT, image TEXT, status INTEGER, created_at TEXT, updated_at TEXT
         )');
     }
 
@@ -149,5 +153,63 @@ final class LandingTest extends CIUnitTestCase
         $this->assertStringContainsString('lp-product__tab', $body);
         $this->assertStringContainsString('data-bullets', $body);
         $this->assertStringContainsString('id="lp-auto-reconcile"', $body);
+    }
+
+    public function testHomeHidesPluginsSectionWhenNoActivePlugins(): void
+    {
+        $this->requireSqlite();
+
+        $result = $this->get('/');
+        $body = (string) $result->getBody();
+
+        // The standalone "#lp-plugins" partial was merged into the integrations
+        // section's "Plugins & Addons" sub-block (landing/partials/connects.php,
+        // class="lp-connect-plugins") during the 13-beats redesign — #lp-plugins
+        // itself no longer exists on any render. #lp-integrations is the (always
+        // present) parent section; the plugins sub-block is what's conditional.
+        $this->assertStringNotContainsString('lp-connect-plugins', $body);
+    }
+
+    public function testHomeShowsActivePluginAsLandingCard(): void
+    {
+        $this->requireSqlite();
+
+        $p = $this->db->DBPrefix;
+        $this->db->query(
+            "INSERT INTO {$p}plugins (title, category, description, price_type, billing_cycle, image, status, created_at, updated_at) " .
+            "VALUES ('Bongo OTT', 'VAS', 'Subscribe to Bongo OTT from your dashboard.', 'Free', 'monthly', NULL, 1, '2026-07-16 00:00:00', '2026-07-16 00:00:00')"
+        );
+
+        $result = $this->get('/');
+        $body = (string) $result->getBody();
+
+        $this->assertStringContainsString('lp-connect-plugins', $body);
+        $this->assertStringContainsString('Bongo OTT', $body);
+        $this->assertStringContainsString('href="' . route_to('route.plugins.index') . '"', $body);
+    }
+
+    public function testHomeTruncatesMultibytePluginDescriptionSafely(): void
+    {
+        $this->requireSqlite();
+
+        // Multibyte (Bangla + Taka sign) description, well past the 110-char
+        // truncation threshold, to guard against byte-based substr() mangling
+        // UTF-8 (the bug this truncation logic was originally fixed for).
+        $desc = str_repeat('বাংলা টেক্সট পরীক্ষা এবং বিবরণ ৳ ', 10);
+        $this->assertGreaterThan(110, mb_strlen($desc, 'UTF-8'));
+
+        $p = $this->db->DBPrefix;
+        $this->db->query(
+            "INSERT INTO {$p}plugins (title, category, description, price_type, billing_cycle, image, status, created_at, updated_at) " .
+            'VALUES (' . $this->db->escape('Bangla Plugin') . ', ' . $this->db->escape('VAS') . ', ' .
+            $this->db->escape($desc) . ", 'Free', 'monthly', NULL, 1, '2026-07-16 00:00:00', '2026-07-16 00:00:00')"
+        );
+
+        $result = $this->get('/');
+        $body = (string) $result->getBody();
+
+        $this->assertStringContainsString('lp-connect-plugins', $body);
+        $this->assertStringContainsString('...', $body);
+        $this->assertTrue(mb_check_encoding($body, 'UTF-8'), 'Response body must remain valid UTF-8 after multibyte truncation.');
     }
 }

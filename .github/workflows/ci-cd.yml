@@ -1,0 +1,122 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ci-test-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # Match this to the PHP version running on the production VPS (php -v).
+          php-version: '8.2'
+          extensions: mbstring, intl, sqlite3, pdo_sqlite, gd, curl, zip, bcmath, xml
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: PHP lint
+        run: find app -name "*.php" -print0 | xargs -0 -n1 -P4 php -l
+
+      - name: Run tests
+        env:
+          # app/Config/Database.php switches to the in-memory SQLite "tests"
+          # group whenever ENVIRONMENT === 'testing' - no external DB needed.
+          CI_ENVIRONMENT: testing
+        run: vendor/bin/phpunit
+
+  deploy:
+    name: Deploy to production
+    needs: test
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Deploy over SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Pinned host key fingerprint (output of `ssh-keyscan -p <port> <host>`
+          # run from a machine that already trusts this server), NOT harvested
+          # live by the runner - a live keyscan has nothing to verify against
+          # and would trust whatever key a network attacker presents.
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/deploy_key -p "${SSH_PORT:-22}" -o StrictHostKeyChecking=yes \
+            "${SSH_USERNAME}@${SSH_HOST}" "DEPLOY_SHA='${DEPLOY_SHA}' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /var/www/isp-web
+
+          # .env is tracked in this repo but holds this server's real secrets.
+          # Back it up and restore it after reset so the deploy never
+          # overwrites production config with whatever is committed to git.
+          backup="/tmp/isp-web-env.$$.bak"
+          trap 'rm -f "$backup"' EXIT
+          cp .env "$backup"
+          chmod 600 "$backup"
+
+          git fetch origin
+          # Deploy the exact commit this workflow run tested, not whatever
+          # origin/main happens to point to by the time this step runs.
+          git reset --hard "$DEPLOY_SHA"
+
+          cp "$backup" .env
+
+          composer install --no-dev --optimize-autoloader --no-interaction
+
+          yes | php spark migrate
+
+          sudo systemctl reload php-fpm || echo "::warning::php-fpm reload failed or not configured; verify manually"
+          REMOTE
+
+      - name: Clean up SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/known_hosts
