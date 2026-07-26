@@ -8,7 +8,7 @@ use App\Models\TenantWallet;
 use App\Models\WalletTransaction;
 use App\Services\PaygBillingService;
 use App\Services\WalletService;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 /**
  * Tenant (sAdmin) platform wallet — Pay-As-You-Go balance, top-ups, add-ons
@@ -28,7 +28,11 @@ class Wallet extends BaseController
 
     protected function currentSAdmin()
     {
-        if (getSession('user_role') !== 'admin') {
+        $role = (string) getSession('user_role');
+        $isTenantAdmin = function_exists('isTenantAdminRole')
+            ? isTenantAdminRole($role)
+            : in_array($role, ['admin', 'sAdmin'], true);
+        if (! $isTenantAdmin) {
             return null;
         }
 
@@ -198,7 +202,7 @@ class Wallet extends BaseController
             ->where('user_id', $user->id)
             ->orderBy('id', 'desc');
 
-        $datatables = new DataTablesCodeIgniter4($builder);
+        $datatables = new DataTables($builder);
         $datatables->addSequenceNumber('serial');
 
         $datatables->format('created_at', static function ($value) {

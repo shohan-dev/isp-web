@@ -464,7 +464,9 @@ class Dashboard extends BaseController
                     return $routers;
                 })(),
             ];
-        } elseif ($role === 'admin') {
+        } elseif ($role === 'admin' || $role === 'sAdmin') {
+            // 'sAdmin' is the pre-rename tenant role (migration 2026-07-07).
+            // Sessions / DBs that still carry it must use the same ISP dashboard as 'admin'.
             $userId = session()->get('user_id');
             helper('subscription');
             $trialUser = $this->user_model->find($userId);
@@ -508,6 +510,15 @@ class Dashboard extends BaseController
             // AJAX still fires in background to refresh stale values.
             $cachedMetrics = cache('sadmin_card_metrics_user_' . $userId) ?? [];
 
+            // Seed chart payloads from the charts-data cache when present so the
+            // new UI can paint series immediately (old dashboards embedded this
+            // in HTML). AJAX still refreshes. Empty fallbacks keep first visits safe.
+            $emptyPaymentStats = ['months' => [], 'successful' => [], 'pending' => [], 'failed' => []];
+            $cachedCharts = cache('sadmin_dashboard_charts_data_v2_user_' . $userId);
+            if (!is_array($cachedCharts) || ($cachedCharts['status'] ?? '') !== 'success') {
+                $cachedCharts = [];
+            }
+
             $data = [
                 'routers'                        => $routers,
                 'trialUser'                      => $trialUser,
@@ -531,22 +542,22 @@ class Dashboard extends BaseController
                 'router_active'                  => $cachedMetrics['router_active'] ?? 0,
                 'router_inactive'                => $cachedMetrics['router_inactive'] ?? 0,
                 'all_resellers'                  => $cachedMetrics['all_resellers'] ?? 0,
-                'customer_payment_statistics'    => ['months' => [], 'successful' => [], 'pending' => [], 'failed' => []],
-                'employee_payment_statistics'    => ['months' => [], 'successful' => [], 'pending' => [], 'failed' => []],
-                'ticket_stats'                   => ['open' => 0, 'ongoing' => 0, 'solved' => 0, 'closed' => 0],
-                'package_distribution'           => [],
-                'payment_methods'                => [],
-                'geo_revenue'                    => [],
-                'weekly_collections'             => [],
-                'growth_churn'                   => [],
-                'revenue_overview'               => [],
+                'customer_payment_statistics'    => $cachedCharts['customer_payment_statistics'] ?? $emptyPaymentStats,
+                'employee_payment_statistics'    => $cachedCharts['employee_payment_statistics'] ?? $emptyPaymentStats,
+                'ticket_stats'                   => $cachedCharts['ticket_stats'] ?? ['open' => 0, 'ongoing' => 0, 'solved' => 0, 'closed' => 0],
+                'package_distribution'           => $cachedCharts['package_distribution'] ?? [],
+                'payment_methods'                => $cachedCharts['payment_methods'] ?? [],
+                'geo_revenue'                    => $cachedCharts['geo_revenue'] ?? [],
+                'weekly_collections'             => $cachedCharts['weekly_collections'] ?? [],
+                'growth_churn'                   => $cachedCharts['growth_churn'] ?? [],
+                'revenue_overview'               => $cachedCharts['revenue_overview'] ?? [],
                 'col_rate'                       => 0,
-                'efficiency_rate'                => 0,
-                'ticket_solving_rate'            => 0,
-                'retention_rate'                 => 0,
-                'weekly_growth'                  => 0,
+                'efficiency_rate'                => $cachedCharts['efficiency_rate'] ?? 0,
+                'ticket_solving_rate'            => $cachedCharts['ticket_solving_rate'] ?? 0,
+                'retention_rate'                 => $cachedCharts['retention_rate'] ?? 0,
+                'weekly_growth'                  => $cachedCharts['weekly_growth'] ?? 0,
                 'bandwidth_peak'                 => 0,
-                'total_data_gb'                  => 0,
+                'total_data_gb'                  => $cachedCharts['total_data_gb'] ?? 0,
             ];
 
 
@@ -582,7 +593,56 @@ class Dashboard extends BaseController
                 $total_users = 0;
             }
 
+            $attendance_model = model('App\Models\Attendance');
+            $advance_salary_model = model('App\Models\AdvanceSalary');
+
+            $currentMonth = date('Y-m');
+            $today = date('Y-m-d');
+
+            // Get current month attendance records
+            $attendance_records = $attendance_model
+                ->where('employee_id', $userId)
+                ->where("date >= '$currentMonth-01'")
+                ->where("date <= '$today'")
+                ->orderBy('date', 'asc')
+                ->findAll();
+
+            // Today's check-in/out status
+            $today_attendance = $attendance_model
+                ->where(['employee_id' => $userId, 'date' => $today])
+                ->first();
+
+            // Pending advance salary requests count
+            $advance_salary_pending = $advance_salary_model
+                ->where(['employee_id' => $userId, 'status' => 'pending'])
+                ->countAllResults();
+
+            // Approved advance salary total
+            $advance_salary_approved = (int) $advance_salary_model
+                ->selectSum('amount')
+                ->where(['employee_id' => $userId, 'status' => 'approved'])
+                ->first()->amount;
+
             $data = [
+                'salary_received' => (int) $this->payment_model
+                    ->selectSum('amount')
+                    ->where([
+                        'user_id' => getSession('user_id'),
+                        'user_type' => 'employee',
+                        'status' => 'successful'
+                    ])
+                    ->first()
+                    ->amount,
+                'salary_pending' => (int) $this->payment_model
+                    ->selectSum('amount')
+                    ->where([
+                        'user_id' => getSession('user_id'),
+                        'user_type' => 'employee',
+                        'status' => 'pending'
+                    ])
+                    ->first()
+                    ->amount,
+                // Keep the old keys for backward compatibility with the chart
                 'payment_received' => (int) $this->payment_model
                     ->selectSum('amount')
                     ->where([
@@ -602,8 +662,13 @@ class Dashboard extends BaseController
                     ->first()
                     ->amount,
                 'total_area_customers_active' => (int) $total_users,
-                'total_area_customers_inactive' => (int) $inactive_users,
+                'total_area_customers_inactive' => (int) ($inactive_users ?? 0),
                 'statistics' => $this->statistics('employee', getSession('user_id')),
+                'attendance_records' => $attendance_records,
+                'today_attendance' => $today_attendance,
+                'advance_salary_pending' => $advance_salary_pending,
+                'advance_salary_approved' => $advance_salary_approved,
+                'employee_details' => $details,
             ];
         } elseif ($role === 'user') {
             // DB-only first paint — no synchronous MikroTik call here (used to be
@@ -665,21 +730,27 @@ class Dashboard extends BaseController
 
 
         if (isset($data)) {
-            /* str_replace('Admin', '', $role) maps resellerAdmin -> reseller, and
-               leaves 'user'/'employee' alone. But it is case-sensitive, so
-               'super_admin' passes through unchanged and resolved to the view
-               'dashboard/super_admin', which does not exist — the platform
-               owner's dashboard threw "View file not found" on every login. The
-               super_admin branch above builds revenue_total_all / package_users /
-               total_users, which is exactly what dashboard/admin.php renders
-               (dashboard/sAdmin.php is the role=admin view). Map it explicitly. */
-            $viewName = 'dashboard/' . str_replace('Admin', '', $role);
-            if ($role === 'admin') {
-                $viewName = 'dashboard/sAdmin';
-            } elseif ($role === 'super_admin') {
-                $viewName = 'dashboard/admin';
+            /* Explicit role → view map. Do NOT derive the path with
+               str_replace('Admin', '', $role): that turns legacy 'sAdmin'
+               into 'dashboard/s' (missing view) and blows up every login. */
+            $viewMap = [
+                'super_admin'   => 'dashboard/admin',
+                'admin'         => 'dashboard/sAdmin',
+                'sAdmin'        => 'dashboard/sAdmin', // legacy tenant alias
+                'resellerAdmin' => 'dashboard/reseller',
+                'employee'      => 'dashboard/employee',
+                'user'          => 'dashboard/user',
+            ];
+
+            if (!isset($viewMap[$role])) {
+                log_message('error', 'Dashboard: unknown user_role "{role}" for user {id}', [
+                    'role' => (string) $role,
+                    'id'   => (string) $id,
+                ]);
+                show_404();
             }
-            return view($viewName, $data);
+
+            return view($viewMap[$role], $data);
         }
 
         show_404();
@@ -692,36 +763,65 @@ class Dashboard extends BaseController
      */
     protected function statistics($role = null, $user_id = null)
     {
+        // Prefer explicit $user_id — sadminChartsData() closes the session before
+        // calling this, and some session drivers then stop returning reads.
         $sessionId = getSession('user_id');
         $sessionRole = session()->get('user_role');
+        if (empty($sessionId) && !empty($user_id)) {
+            $sessionId = (int) $user_id;
+        }
+        if (empty($sessionRole) && !empty($user_id)) {
+            $sessionRole = 'admin';
+        }
+        $adminId = !empty($user_id) ? (int) $user_id : (int) $sessionId;
 
-        $cacheKey = 'dashboard_statistics_' . (empty($role) ? 'none' : $role) . '_' . (empty($user_id) ? 'none' : $user_id) . '_' . $sessionId . '_' . $sessionRole;
+        // v2: scope like card metrics / payment_methods (users.admin_id OR paidby),
+        // not payments.admin_id alone — many successful rows leave admin_id empty.
+        $cacheKey = 'dashboard_statistics_v2_' . (empty($role) ? 'none' : $role) . '_' . $adminId . '_' . $sessionId . '_' . $sessionRole;
         if ($cached = cache($cacheKey)) {
             return $cached;
         }
 
-        $conditions = [];
-        if (!empty($role)) {
-            $conditions['user_type'] = $role;
-        }
+        $builder = $this->payment_model
+            ->select('payments.month, payments.status, SUM(payments.amount) as total_amount')
+            ->join('users', 'users.id = payments.user_id', 'left');
 
-        if ($sessionRole === 'user') {
-            $conditions['user_id'] = $sessionId;
+        if ($sessionRole === 'user' && empty($user_id)) {
+            $builder->where('payments.user_id', $sessionId);
         } else {
-            $conditions['admin_id'] = !empty($user_id) ? $user_id : $sessionId;
+            $builder->groupStart()
+                ->where('users.admin_id', $adminId)
+                ->orWhere('payments.paidby', $adminId)
+                ->orWhere('payments.admin_id', $adminId)
+            ->groupEnd();
         }
 
-        // Get all transactions grouped by month and status
-        $results = $this->payment_model
-            ->select('month, status, SUM(amount) as total_amount')
-            ->where($conditions)
-            ->groupBy('month, status')
-            ->findAll();
+        if (!empty($role)) {
+            // Prefer payments.user_type; fall back to users.role when type is blank
+            // (legacy rows) so KPI totals and bar charts stay aligned.
+            $builder->groupStart()
+                ->where('payments.user_type', $role)
+                ->orGroupStart()
+                    ->groupStart()
+                        ->where('payments.user_type', null)
+                        ->orWhere('payments.user_type', '')
+                    ->groupEnd()
+                    ->where('users.role', $role)
+                ->groupEnd()
+            ->groupEnd();
+        }
+
+        $results = $builder->groupBy('payments.month, payments.status')->findAll();
 
         $lookup = [];
         foreach ($results as $row) {
-            $monthKey = strtolower($row->month);
-            $lookup[$monthKey][$row->status] = (int)$row->total_amount;
+            $row = is_array($row) ? (object) $row : $row;
+            $monthKey = strtolower(trim((string) ($row->month ?? '')));
+            if ($monthKey === '') {
+                continue;
+            }
+            $statusKey = (string) ($row->status ?? '');
+            $lookup[$monthKey][$statusKey] = (int) ($row->total_amount ?? 0);
         }
 
         $months = [];
@@ -729,27 +829,23 @@ class Dashboard extends BaseController
         $pending_payment = [];
         $failed_payment = [];
 
-        $currentMonthNum = (int)date('m');
+        $currentMonthNum = (int) date('m');
 
         for ($i = 1; $i <= $currentMonthNum; $i++) {
             $monthName = strtolower(date('F', mktime(0, 0, 0, $i, 1, 2022)));
             $monthAbbr = date('M', mktime(0, 0, 0, $i, 1, 2022));
 
-            $successful = $lookup[$monthName]['successful'] ?? 0;
-            $pending = $lookup[$monthName]['pending'] ?? 0;
-            $failed = $lookup[$monthName]['failed'] ?? 0;
-
             $months[] = $monthAbbr;
-            $success_payment[] = $successful;
-            $pending_payment[] = $pending;
-            $failed_payment[] = $failed;
+            $success_payment[] = $lookup[$monthName]['successful'] ?? 0;
+            $pending_payment[] = $lookup[$monthName]['pending'] ?? 0;
+            $failed_payment[] = $lookup[$monthName]['failed'] ?? 0;
         }
 
         $result = [
             'months' => $months,
             'successful' => $success_payment,
             'pending' => $pending_payment,
-            'failed' => $failed_payment
+            'failed' => $failed_payment,
         ];
 
         cache()->save($cacheKey, $result, 300);
@@ -766,30 +862,41 @@ class Dashboard extends BaseController
      */
     protected function __transactionStatistics($status, $month, $role = null, $user_id = null)
     {
-
-        $conditions = [
-            'month' => $month,
-            'status' => $status
-        ];
-
-        if (!empty($role)) {
-            $conditions['user_type'] = $role;
-        }
-
         $sessionId = getSession('user_id');
         $sessionRole = session()->get('user_role');
+        $adminId = !empty($user_id) ? (int) $user_id : (int) $sessionId;
+
+        $builder = $this->payment_model
+            ->selectSum('payments.amount', 'amount')
+            ->join('users', 'users.id = payments.user_id', 'left')
+            ->where('payments.month', $month)
+            ->where('payments.status', $status);
 
         if ($sessionRole === 'user') {
-            // Customer: filter to their own payments only
-            $conditions['user_id'] = $sessionId;
+            $builder->where('payments.user_id', $sessionId);
         } else {
-            // Admin/sAdmin/employee: use admin_id
-            // If a specific admin_id was passed (e.g., from sAdmin block), use it
-            $conditions['admin_id'] = !empty($user_id) ? $user_id : $sessionId;
+            $builder->groupStart()
+                ->where('users.admin_id', $adminId)
+                ->orWhere('payments.paidby', $adminId)
+                ->orWhere('payments.admin_id', $adminId)
+            ->groupEnd();
         }
 
-        $amount = $this->payment_model->selectSum('amount')->where($conditions)->first()->amount;
-        return (int) $amount;
+        if (!empty($role)) {
+            $builder->groupStart()
+                ->where('payments.user_type', $role)
+                ->orGroupStart()
+                    ->groupStart()
+                        ->where('payments.user_type', null)
+                        ->orWhere('payments.user_type', '')
+                    ->groupEnd()
+                    ->where('users.role', $role)
+                ->groupEnd()
+            ->groupEnd();
+        }
+
+        $row = $builder->first();
+        return (int) ($row->amount ?? 0);
     }
 
     public function bandwidthUsage($routerId = null)
@@ -822,7 +929,7 @@ class Dashboard extends BaseController
             ->selectMax('user_data_usage.date', 'date')
             ->join('users', 'users.id = user_data_usage.admin_id', 'inner');
 
-        if ($role === 'admin') {
+        if ($this->isTenantAdminRole($role)) {
             $maxDateBuilder->join('routers', 'routers.id = users.router_id', 'left')
                 ->groupStart()
                     ->where('routers.user_id', $userId)
@@ -854,7 +961,7 @@ class Dashboard extends BaseController
             ->where('user_data_usage.date >=', $windowStart)
             ->where('user_data_usage.date <=', $today);
 
-        if ($role === 'admin') {
+        if ($this->isTenantAdminRole($role)) {
             $builder->join('routers', 'routers.id = users.router_id', 'left')
                 ->groupStart()
                     ->where('routers.user_id', $userId)
@@ -901,9 +1008,21 @@ class Dashboard extends BaseController
         return $this->response->setJSON($payload);
     }
 
+    /**
+     * Tenant ISP owner roles (current + pre-rename legacy session/DB value).
+     */
+    private function isTenantAdminRole(?string $role = null): bool
+    {
+        if (function_exists('isTenantAdminRole')) {
+            return \isTenantAdminRole($role);
+        }
+        $role = $role ?? (string) session()->get('user_role');
+        return $role === 'admin' || $role === 'sAdmin';
+    }
+
     public function sadminData()
     {
-        if (session()->get('user_role') !== 'admin') {
+        if (!$this->isTenantAdminRole()) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized'])->setStatusCode(403);
         }
 
@@ -936,7 +1055,7 @@ class Dashboard extends BaseController
 
     public function sadminChartsData()
     {
-        if (session()->get('user_role') !== 'admin') {
+        if (!$this->isTenantAdminRole()) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Unauthorized'])->setStatusCode(403);
         }
 
@@ -950,7 +1069,8 @@ class Dashboard extends BaseController
             return $this->response->setStatusCode(499)->setBody('');
         }
 
-        $cacheKey = 'sadmin_dashboard_charts_data_user_' . $userId;
+        // v2 invalidates empty bar-chart payloads cached under the old admin_id-only stats.
+        $cacheKey = 'sadmin_dashboard_charts_data_v2_user_' . $userId;
 
         if ($cachedResponse = cache($cacheKey)) {
             return $this->response->setJSON($cachedResponse);
@@ -1059,18 +1179,18 @@ class Dashboard extends BaseController
         }
 
         // Optimized Weekly Collections (1 query)
-        $weekly_col_cache_key = 'sadmin_weekly_collections_user_' . $userId;
+        $weekly_col_cache_key = 'sadmin_weekly_collections_v2_user_' . $userId;
         if (($weekly_collections_data = cache($weekly_col_cache_key)) === null) {
             $since_weekly = date('Y-m-d', strtotime('-6 days'));
             $weeklyResults = $this->payment_model
-                ->select('DATE(payments.paid_at) as pay_date, SUM(payments.amount) as amount')
+                ->select('DATE(COALESCE(payments.paid_at, payments.created_at)) as pay_date, SUM(payments.amount) as amount')
                 ->join('users', 'users.id = payments.user_id')
                 ->groupStart()
                     ->where('users.admin_id', $userId)
                     ->orWhere('payments.paidby', $userId)
                 ->groupEnd()
                 ->where('payments.status', 'successful')
-                ->where('DATE(payments.paid_at) >=', $since_weekly)
+                ->where('DATE(COALESCE(payments.paid_at, payments.created_at)) >=', $since_weekly)
                 ->groupBy('pay_date')
                 ->findAll();
 
@@ -1096,12 +1216,12 @@ class Dashboard extends BaseController
                 ->selectSum('payments.amount')
                 ->join('users', 'users.id = payments.user_id')
                 ->where('payments.status', 'successful')
-                ->where('payments.paid_at >=', date('Y-m-d', strtotime('-14 days')))
-                ->where('payments.paid_at <', date('Y-m-d', strtotime('-7 days')));
-
-            if (session()->get('user_role') !== 'admin') {
-                $prev_query->where('users.admin_id', $userId);
-            }
+                ->where('COALESCE(payments.paid_at, payments.created_at) >=', date('Y-m-d', strtotime('-14 days')))
+                ->where('COALESCE(payments.paid_at, payments.created_at) <', date('Y-m-d', strtotime('-7 days')))
+                ->groupStart()
+                    ->where('users.admin_id', $userId)
+                    ->orWhere('payments.paidby', $userId)
+                ->groupEnd();
             $prev_week_total = (int) ($prev_query->first()->amount / 1000 ?? 0);
             $weekly_growth = ($prev_week_total > 0)
                 ? round((($this_week_total - $prev_week_total) / $prev_week_total) * 100, 1)

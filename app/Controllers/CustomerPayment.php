@@ -7,7 +7,7 @@ use Mpdf\Mpdf;
 use App\Controllers\BaseController;
 
 
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 use Mike42\Escpos\Printer;
 use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
@@ -58,7 +58,7 @@ class CustomerPayment extends BaseController
                 ->groupEnd()
                 ->where('created_at >=', $today)
                 ->orderBy('id', 'desc');
-        } elseif ($userole === 'admin') {
+        } elseif (function_exists('isTenantAdminRole') ? isTenantAdminRole($userole) : ($userole === 'admin' || $userole === 'sAdmin')) {
             $data = $this->payment_model->builder()
                 ->select('*')
                 ->where('user_type', 'user')
@@ -208,7 +208,7 @@ class CustomerPayment extends BaseController
                 ->orWhere('payments.paid_to', $userId) // Include if paid to this admin
                 ->orWhere('payments.status', 'failed')
                 ->groupEnd();
-        } elseif ($userole === 'admin') {
+        } elseif (function_exists('isTenantAdminRole') ? isTenantAdminRole($userole) : ($userole === 'admin' || $userole === 'sAdmin')) {
             $builder->where('payments.user_type', 'user')
                 ->groupStart()
                 ->where('payments.admin_id', $userId)
@@ -271,7 +271,7 @@ class CustomerPayment extends BaseController
         $data->select('payments.*, customer.name as customer_name, admin.name as paid_to_name, admin.role as paid_to_role')
             ->orderBy('COALESCE(payments.paid_at, payments.created_at)', 'DESC', false);
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -446,7 +446,7 @@ class CustomerPayment extends BaseController
         // session()->set('totalAmount', $totalAmount);
 
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -548,7 +548,7 @@ class CustomerPayment extends BaseController
                 return redirect()->to('login');
             }
             $Pre_created_by = $details->created_by;
-            if ($Pre_created_by === 'admin') {
+            if ($Pre_created_by === 'admin' || $Pre_created_by === 'sAdmin') {
                 $userId = $details->admin_id;
                 // $details = $this->user_model->where(['id' => $userId])->first();
             } else {
@@ -610,7 +610,7 @@ class CustomerPayment extends BaseController
             ],
         ]);
 
-        if (getPostInput('status') === 'successful' && (session()->get('user_role') === 'super_admin' || session()->get('user_role') === 'admin')) {
+        if (getPostInput('status') === 'successful' && (session()->get('user_role') === 'super_admin' || (function_exists('isTenantAdminRole') ? isTenantAdminRole() : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true)))) {
 
             $this->validate([
                 'paid_via' => [
@@ -679,7 +679,7 @@ class CustomerPayment extends BaseController
                 'status' => getPostInput('status'),
             ];
 
-            if (session()->get('user_role') === 'super_admin' || session()->get('user_role') === 'admin') {
+            if (session()->get('user_role') === 'super_admin' || (function_exists('isTenantAdminRole') ? isTenantAdminRole() : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true))) {
                 if (!empty(getPostInput('user_id_override'))) {
                     $overrideUserId = (int) getPostInput('user_id_override');
                     /* Both role tests below were inverted relative to their own
@@ -1043,7 +1043,7 @@ class CustomerPayment extends BaseController
             ],
         ]);
 
-        if (getPostInput('status') === 'successful' && (session()->get('user_role') === 'super_admin' || session()->get('user_role') === 'admin')) {
+        if (getPostInput('status') === 'successful' && (session()->get('user_role') === 'super_admin' || (function_exists('isTenantAdminRole') ? isTenantAdminRole() : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true)))) {
 
             $this->validate([
                 'paid_via' => [
@@ -1065,7 +1065,7 @@ class CustomerPayment extends BaseController
                 'status' => getPostInput('status'),
             ];
 
-            if (session()->get('user_role') === 'super_admin' || session()->get('user_role') === 'admin') {
+            if (session()->get('user_role') === 'super_admin' || (function_exists('isTenantAdminRole') ? isTenantAdminRole() : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true))) {
                 if ($this->request->getPost('user_id') !== null) {
                     $data['user_id'] = getPostInput('user_id');
                 }
@@ -1497,10 +1497,14 @@ class CustomerPayment extends BaseController
         } elseif ($userRole === 'employee') {
             $employee = $this->user_model->find($userId);
             $query->where('admin_id', $employee->admin_id);
-        } elseif ($userRole === 'admin') {
-            // sAdmin can generate for everyone or just their own? 
-            // Usually sAdmin sees everything, but let's limit to their own or all depending on typical usage.
-            // For now, let's allow all active users if sAdmin.
+        } elseif (function_exists('isTenantAdminRole') ? isTenantAdminRole($userRole) : ($userRole === 'admin' || $userRole === 'sAdmin')) {
+            // Tenant admin: only customers under this tenant (direct or via POP).
+            $query->groupStart()
+                ->where('admin_id', $userId)
+                ->orWhereIn('admin_id', function ($sub) use ($userId) {
+                    return $sub->select('id')->from('users')->where('admin_id', $userId)->where('role', 'resellerAdmin');
+                })
+                ->groupEnd();
         } else {
             return requestResponse('error', "Unauthorized access", 403);
         }

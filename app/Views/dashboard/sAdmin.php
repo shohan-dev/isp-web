@@ -66,7 +66,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
 
     <?= $this->include('components/trial-banner', ['trialUser' => $trialUser ?? null]); ?>
 
-    <div class="ipb-dash fade-in" data-ipb-dashboard="admin">
+    <div class="ipb-dash fade-in" data-ipb-dashboard="sadmin">
 
       <div class="ipb-dash-toolbar">
         <button type="button" class="ipb-btn-outline" data-ipb-metrics-group-toggle aria-pressed="false" title="Group all metric sections together">
@@ -330,7 +330,11 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           <div class="ipb-card ipb-router-card">
             <div class="ipb-card-head">
               <div>
-                <div class="ipb-card-title"><?= esc($router->name ?? 'Router'); ?></div>
+                <div class="ipb-card-title">
+                  <a href="<?= route_to('route.routers.allusers') . '?routerId=' . (int) $router->id; ?>">
+                    <?= esc($router->name ?? 'Router'); ?>
+                  </a>
+                </div>
                 <div class="ipb-card-sub" id="last_updated_<?= (int) $router->id; ?>"><?= esc($lastUpdated); ?></div>
               </div>
               <div class="ipb-status-pill <?= $statusClass; ?>" id="status_<?= (int) $router->id; ?>">
@@ -339,24 +343,24 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
               </div>
             </div>
             <div class="ipb-dash-mini">
-              <div class="ipb-kpi tone-brand compact">
+              <a href="<?= route_to('route.routers.allusers') . '?routerId=' . (int) $router->id; ?>" class="ipb-kpi tone-brand compact">
                 <div class="ipb-kpi-top"><span class="ipb-kpi-icon"><i class="fa-solid fa-users"></i></span></div>
                 <div class="ipb-kpi-value" id="total_user_count_<?= (int) $router->id; ?>" data-cached="<?= (int) ($router->cached_total ?? 0); ?>">0</div>
                 <div class="ipb-kpi-label">Total Users</div>
-                <a href="#" class="ipb-kpi-cta view-all-users" data-router-id="<?= (int) $router->id; ?>">View details <i class="fa fa-chevron-right"></i></a>
-              </div>
-              <div class="ipb-kpi tone-success compact">
+                <span class="ipb-kpi-cta">View details <i class="fa fa-chevron-right"></i></span>
+              </a>
+              <a href="<?= route_to('route.routers.activeusers') . '?routerId=' . (int) $router->id; ?>" class="ipb-kpi tone-success compact">
                 <div class="ipb-kpi-top"><span class="ipb-kpi-icon"><i class="fa-solid fa-wifi"></i></span></div>
                 <div class="ipb-kpi-value" id="active_user_count_<?= (int) $router->id; ?>" data-cached="<?= (int) ($router->cached_active ?? 0); ?>">0</div>
                 <div class="ipb-kpi-label">Users Online</div>
-                <a href="#" class="ipb-kpi-cta view-active-users" data-router-id="<?= (int) $router->id; ?>">View details <i class="fa fa-chevron-right"></i></a>
-              </div>
-              <div class="ipb-kpi tone-error compact">
+                <span class="ipb-kpi-cta">View details <i class="fa fa-chevron-right"></i></span>
+              </a>
+              <a href="<?= route_to('route.routers.inactiveusers') . '?routerId=' . (int) $router->id; ?>" class="ipb-kpi tone-error compact">
                 <div class="ipb-kpi-top"><span class="ipb-kpi-icon"><i class="fa-solid fa-circle-xmark"></i></span></div>
                 <div class="ipb-kpi-value" id="inactive_user_count_<?= (int) $router->id; ?>" data-cached="<?= (int) (($router->cached_total ?? 0) - ($router->cached_active ?? 0)); ?>">0</div>
                 <div class="ipb-kpi-label">Users Offline</div>
-                <a href="#" class="ipb-kpi-cta view-inactive-users" data-router-id="<?= (int) $router->id; ?>">View details <i class="fa fa-chevron-right"></i></a>
-              </div>
+                <span class="ipb-kpi-cta">View details <i class="fa fa-chevron-right"></i></span>
+              </a>
             </div>
           </div>
         <?php endforeach; ?>
@@ -746,6 +750,34 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function paidViaLabel(raw) {
+    var s = String(raw == null || raw === '' ? 'Other' : raw);
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  /** Mount an Apex chart only when the host node exists — one missing widget
+   *  must not abort the rest of the dashboard chart boot (or the AJAX refresh). */
+  function mountApexChart(selector, options) {
+    var el = document.querySelector(selector);
+    if (!el || typeof ApexCharts === 'undefined') return null;
+    try {
+      if (el._ipbApex && typeof el._ipbApex.destroy === 'function') {
+        try { el._ipbApex.destroy(); } catch (e) {}
+        el._ipbApex = null;
+      }
+      var chart = new ApexCharts(el, options);
+      el._ipbApex = chart;
+      if (window.IpbTheme && typeof window.IpbTheme.registerChart === 'function') {
+        window.IpbTheme.registerChart(chart);
+      }
+      chart.render();
+      return chart;
+    } catch (err) {
+      console.error('ApexCharts mount failed for ' + selector, err);
+      return null;
+    }
   }
 
   // Skeleton -> content crossfade (components.css §05.8 contract): the real
@@ -1188,6 +1220,12 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           return;
         }
 
+        // AJAX can win the race before Apex mounts finish — retry once briefly.
+        if (!customerPaymentReportChart && !isRetry) {
+          setTimeout(function () { loadSuperAdminCharts(true); }, 300);
+          return;
+        }
+
         // Update Ticket Stats
         if (response.ticket_stats) {
           $('#ticket_open').text(response.ticket_stats.open || 0);
@@ -1247,7 +1285,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           const payRows = response.payment_methods
             .map((pay, index) => ({
               color: payColors[index % payColors.length],
-              label: pay.paid_via.charAt(0).toUpperCase() + pay.paid_via.slice(1),
+              label: paidViaLabel(pay.paid_via),
               total: parseFloat(pay.total || 0),
             }))
             .sort((a, b) => b.total - a.total);
@@ -1268,61 +1306,89 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         // Geo Revenue
         renderGeoRevenue(response.geo_revenue || []);
 
-        // Update Charts
+        // Update Charts — coerce to numbers (JSON/cache can leave strings; Apex
+        // then draws empty axes that look like "no data" even when totals exist).
+        // Apply series + categories in one updateOptions — separate updateSeries
+        // then updateOptions(xaxis) races with theme restyle and can wipe bars.
         if (customerPaymentReportChart && response.customer_payment_statistics) {
-          customerPaymentReportChart.updateSeries([
-            { name: 'Successful', data: response.customer_payment_statistics.successful },
-            { name: 'Pending', data: response.customer_payment_statistics.pending },
-            { name: 'Failed', data: response.customer_payment_statistics.failed }
-          ]);
-          customerPaymentReportChart.updateOptions({ xaxis: { categories: response.customer_payment_statistics.months } });
+          const cps = response.customer_payment_statistics;
+          customerPaymentReportChart.updateOptions({
+            series: [
+              { name: 'Successful', data: (cps.successful || []).map(Number) },
+              { name: 'Pending', data: (cps.pending || []).map(Number) },
+              { name: 'Failed', data: (cps.failed || []).map(Number) }
+            ],
+            xaxis: { categories: cps.months || [] }
+          }, true, true);
         }
         if (employeePaymentReportChart && response.employee_payment_statistics) {
-          employeePaymentReportChart.updateSeries([
-            { name: 'Successful', data: response.employee_payment_statistics.successful },
-            { name: 'Pending', data: response.employee_payment_statistics.pending },
-            { name: 'Failed', data: response.employee_payment_statistics.failed }
-          ]);
-          employeePaymentReportChart.updateOptions({ xaxis: { categories: response.employee_payment_statistics.months } });
+          const eps = response.employee_payment_statistics;
+          employeePaymentReportChart.updateOptions({
+            series: [
+              { name: 'Successful', data: (eps.successful || []).map(Number) },
+              { name: 'Pending', data: (eps.pending || []).map(Number) },
+              { name: 'Failed', data: (eps.failed || []).map(Number) }
+            ],
+            xaxis: { categories: eps.months || [] }
+          }, true, true);
         }
         if (weeklyCollectionChart && response.weekly_collections) {
-          weeklyCollectionChart.updateSeries([{ name: 'Collection', data: response.weekly_collections.map(i => i.amount) }]);
-          weeklyCollectionChart.updateOptions({ xaxis: { categories: response.weekly_collections.map(i => i.day) } });
+          weeklyCollectionChart.updateOptions({
+            series: [{ name: 'Collection', data: response.weekly_collections.map(i => Number(i.amount) || 0) }],
+            xaxis: { categories: response.weekly_collections.map(i => i.day) }
+          }, true, true);
         }
         if (packageDistributionChart && response.package_distribution) {
-          const pkgCounts = response.package_distribution.map(item => parseInt(item.count || 0));
+          const pkgCounts = response.package_distribution.map(item => parseInt(item.count || 0, 10));
           const pkgLabels = response.package_distribution.map(item => item.package_name || 'Unknown');
-          packageDistributionChart.updateOptions({ series: pkgCounts.length > 0 ? pkgCounts : [0], labels: pkgLabels.length > 0 ? pkgLabels : ['None'] });
-          if (pkgCounts.length === 0) {
-            packageDistributionChart.updateOptions({ noData: { text: 'No data yet' } });
-          }
+          const hasPkg = pkgCounts.some(function (n) { return n > 0; });
+          packageDistributionChart.updateOptions({
+            series: hasPkg ? pkgCounts : [0],
+            labels: hasPkg ? pkgLabels : ['None'],
+            noData: { text: hasPkg ? undefined : 'No data yet' }
+          });
         }
         if (paymentMethodChart && response.payment_methods) {
-          const payTotals = response.payment_methods.map(item => parseFloat(item.total || 0));
-          const payLabels = response.payment_methods.map(item => item.paid_via.charAt(0).toUpperCase() + item.paid_via.slice(1));
-          paymentMethodChart.updateOptions({ series: payTotals.length > 0 ? payTotals : [0], labels: payLabels.length > 0 ? payLabels : ['None'] });
-          if (payTotals.length === 0) {
-            paymentMethodChart.updateOptions({ noData: { text: 'No data yet' } });
-          }
+          // Donut collapses when every slice is 0 — only plot methods that carry money.
+          const payActive = response.payment_methods.filter(function (item) {
+            return parseFloat(item.total || 0) > 0;
+          });
+          const payTotals = payActive.map(item => parseFloat(item.total || 0));
+          const payLabels = payActive.map(item => paidViaLabel(item.paid_via));
+          paymentMethodChart.updateOptions({
+            series: payTotals.length > 0 ? payTotals : [0],
+            labels: payLabels.length > 0 ? payLabels : ['None'],
+            noData: { text: payTotals.length > 0 ? undefined : 'No data yet' }
+          });
         }
         if (revenueOverviewChart && response.revenue_overview) {
-          revenueOverviewChart.updateSeries([
-            { name: 'Revenue', data: response.revenue_overview.map(i => i.revenue) },
-            { name: 'Collection', data: response.revenue_overview.map(i => i.collection) },
-            { name: 'Expense', data: response.revenue_overview.map(i => i.expense) }
-          ]);
-          revenueOverviewChart.updateOptions({ xaxis: { categories: response.revenue_overview.map(i => i.month) } });
+          revenueOverviewChart.updateOptions({
+            series: [
+              { name: 'Revenue', data: response.revenue_overview.map(i => Number(i.revenue) || 0) },
+              { name: 'Collection', data: response.revenue_overview.map(i => Number(i.collection) || 0) },
+              { name: 'Expense', data: response.revenue_overview.map(i => Number(i.expense) || 0) }
+            ],
+            xaxis: { categories: response.revenue_overview.map(i => i.month) }
+          }, true, true);
         }
         if (growthChurnChart && response.growth_churn) {
-          growthChurnChart.updateSeries([
-            { name: 'New Customers', data: response.growth_churn.map(i => i.new) },
-            { name: 'Churn', data: response.growth_churn.map(i => i.churn * -1) }
-          ]);
-          growthChurnChart.updateOptions({ xaxis: { categories: response.growth_churn.map(i => i.month) } });
+          growthChurnChart.updateOptions({
+            series: [
+              { name: 'New Customers', data: response.growth_churn.map(i => Number(i.new) || 0) },
+              { name: 'Churn', data: response.growth_churn.map(i => (Number(i.churn) || 0) * -1) }
+            ],
+            xaxis: { categories: response.growth_churn.map(i => i.month) }
+          }, true, true);
         }
         if (collectionRateRadialChart) {
-          collectionRateRadialChart.updateSeries([response.ticket_solving_rate || 0]);
+          collectionRateRadialChart.updateSeries([Number(response.ticket_solving_rate) || 0]);
         }
+
+        // After series land, force a resize so SPA/widget-grid layout settles
+        // don't leave charts stuck at a zero-width first paint.
+        setTimeout(function () {
+          try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+        }, 60);
       },
       error: function(xhr, status, error) {
         console.error('Error fetching Super Admin charts data:', error);
@@ -1351,27 +1417,55 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
     });
   }
 
-  $(document).ready(function () {
-    loadSuperAdminCharts();
-  });
+  // Seed from server cache (same payloads the AJAX endpoint returns) so charts
+  // paint immediately on repeat visits — mirrors the old embedded-series approach.
+  window.__IPB_SADMIN_CHART_SEED = <?= json_encode([
+    'customer_payment_statistics' => $customer_payment_statistics ?? ['months' => [], 'successful' => [], 'pending' => [], 'failed' => []],
+    'employee_payment_statistics' => $employee_payment_statistics ?? ['months' => [], 'successful' => [], 'pending' => [], 'failed' => []],
+    'weekly_collections' => $weekly_collections ?? [],
+    'package_distribution' => $package_distribution ?? [],
+    'payment_methods' => $payment_methods ?? [],
+    'revenue_overview' => $revenue_overview ?? [],
+    'growth_churn' => $growth_churn ?? [],
+    'geo_revenue' => $geo_revenue ?? [],
+    'ticket_solving_rate' => $ticket_solving_rate ?? 0,
+  ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>;
 
-
-  document.addEventListener("DOMContentLoaded", () => {
+  // Charts used to init on DOMContentLoaded and fetch data on jQuery ready in
+  // parallel. After partial-nav (ipb-nav), DOMContentLoaded never fires again, so
+  // every chart stayed empty forever while the AJAX payload was discarded.
+  // Boot charts with IpbReady (SPA-safe), then load data only after instances exist.
+  function ipbBootCharts() {
+    if (typeof ApexCharts === "undefined" || !window.IpbTheme) {
+      console.error("ApexCharts / IpbTheme unavailable — dashboard charts cannot render");
+      return;
+    }
+    try {
     const p = window.IpbTheme.chartPalette();
+    const seed = window.__IPB_SADMIN_CHART_SEED || {};
+    const cps = seed.customer_payment_statistics || {};
+    const eps = seed.employee_payment_statistics || {};
+    const weeklySeed = Array.isArray(seed.weekly_collections) ? seed.weekly_collections : [];
+    const pkgSeed = Array.isArray(seed.package_distribution) ? seed.package_distribution : [];
+    const paySeed = Array.isArray(seed.payment_methods)
+      ? seed.payment_methods.filter(function (item) { return parseFloat(item.total || 0) > 0; })
+      : [];
+    const revSeed = Array.isArray(seed.revenue_overview) ? seed.revenue_overview : [];
+    const growthSeed = Array.isArray(seed.growth_churn) ? seed.growth_churn : [];
 
     //customer payment resport chart
-    customerPaymentReportChart = new ApexCharts(document.querySelector("#customerPaymentReportChart"), {
+    customerPaymentReportChart = mountApexChart("#customerPaymentReportChart", {
       series: [{
         name: 'Successful',
-        data: [],
+        data: (cps.successful || []).map(Number),
       },
       {
         name: 'Pending',
-        data: []
+        data: (cps.pending || []).map(Number)
       },
       {
         name: 'Failed',
-        data: []
+        data: (cps.failed || []).map(Number)
       }
       ],
       chart: {
@@ -1402,7 +1496,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       },
       grid: { borderColor: p.grid },
       xaxis: {
-        categories: [],
+        categories: cps.months || [],
         axisBorder: { show: false },
         labels: { style: { colors: p.axis } }
       },
@@ -1424,22 +1518,20 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         ? window.IpbUI.chartResponsive('bar', { yaxis: { labels: { formatter: window.IpbUI.compactNumber } } })
         : []
     });
-    window.IpbTheme.registerChart(customerPaymentReportChart);
-    customerPaymentReportChart.render();
 
     //employee payment chart
-    employeePaymentReportChart = new ApexCharts(document.querySelector("#employeePaymentReportChart"), {
+    employeePaymentReportChart = mountApexChart("#employeePaymentReportChart", {
       series: [{
         name: 'Successful',
-        data: [],
+        data: (eps.successful || []).map(Number),
       },
       {
         name: 'Pending',
-        data: []
+        data: (eps.pending || []).map(Number)
       },
       {
         name: 'Failed',
-        data: []
+        data: (eps.failed || []).map(Number)
       }
       ],
       chart: {
@@ -1457,7 +1549,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
       grid: { borderColor: p.grid },
       xaxis: {
-        categories: [],
+        categories: eps.months || [],
         axisBorder: { show: false },
         labels: { style: { colors: p.axis } }
       },
@@ -1477,18 +1569,16 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         ? window.IpbUI.chartResponsive('bar', { yaxis: { labels: { formatter: window.IpbUI.compactNumber } } })
         : []
     });
-    window.IpbTheme.registerChart(employeePaymentReportChart);
-    employeePaymentReportChart.render();
 
     // Weekly Collection Chart
-    weeklyCollectionChart = new ApexCharts(document.querySelector("#weeklyCollectionChart"), {
-      series: [{ name: 'Collection', data: [] }],
+    weeklyCollectionChart = mountApexChart("#weeklyCollectionChart", {
+      series: [{ name: 'Collection', data: weeklySeed.map(function (i) { return Number(i.amount) || 0; }) }],
       chart: { type: 'bar', height: 250, toolbar: { show: false } },
       plotOptions: { bar: { borderRadius: 8, columnWidth: '45%' } },
       colors: ['#4f46e5'],
       grid: { borderColor: p.grid },
       xaxis: {
-        categories: [],
+        categories: weeklySeed.map(function (i) { return i.day; }),
         labels: { style: { colors: p.axis } }
       },
       yaxis: { labels: { style: { colors: p.axis }, formatter: (val) => parseFloat(val).toFixed(2) + 'k' } },
@@ -1500,19 +1590,17 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           })
         : []
     });
-    window.IpbTheme.registerChart(weeklyCollectionChart);
-    weeklyCollectionChart.render();
 
     // Package Distribution Chart
-    packageDistributionChart = new ApexCharts(document.querySelector("#packageDistributionChart"), {
-      series: [],
+    packageDistributionChart = mountApexChart("#packageDistributionChart", {
+      series: pkgSeed.length ? pkgSeed.map(function (item) { return parseInt(item.count || 0, 10); }) : [],
       chart: {
         type: 'donut',
         height: 300,
         toolbar: { show: false },
         background: 'transparent'
       },
-      labels: [],
+      labels: pkgSeed.length ? pkgSeed.map(function (item) { return item.package_name || 'Unknown'; }) : [],
       colors: ['#007bff', '#28a745', '#ffc107', '#6f42c1', '#dc3545', '#fd7e14', '#20c997'],
       legend: { show: false, labels: { colors: p.ink } },
       dataLabels: {
@@ -1527,19 +1615,19 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         ? window.IpbUI.chartResponsive('donut')
         : [{ breakpoint: 480, options: { chart: { height: 220 } } }]
     });
-    window.IpbTheme.registerChart(packageDistributionChart);
-    packageDistributionChart.render();
 
     // Payment Method Chart
-    paymentMethodChart = new ApexCharts(document.querySelector("#paymentMethodChart"), {
-      series: [],
+    paymentMethodChart = mountApexChart("#paymentMethodChart", {
+      series: paySeed.length ? paySeed.map(function (item) { return parseFloat(item.total || 0); }) : [],
       chart: {
         type: 'donut',
         height: 300,
         toolbar: { show: false },
         background: 'transparent'
       },
-      labels: [],
+      labels: paySeed.length ? paySeed.map(function (item) {
+        return paidViaLabel(item.paid_via);
+      }) : [],
       colors: ['#e83e8c', '#28a745', '#fd7e14', '#6f42c1', '#007bff', '#20c997'],
       legend: { show: false, labels: { colors: p.ink } },
       dataLabels: {
@@ -1554,15 +1642,13 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         ? window.IpbUI.chartResponsive('donut')
         : [{ breakpoint: 480, options: { chart: { height: 220 } } }]
     });
-    window.IpbTheme.registerChart(paymentMethodChart);
-    paymentMethodChart.render();
 
     // Revenue Overview Chart
-    revenueOverviewChart = new ApexCharts(document.querySelector("#revenueOverviewChart"), {
+    revenueOverviewChart = mountApexChart("#revenueOverviewChart", {
       series: [
-        { name: 'Revenue', data: [] },
-        { name: 'Collection', data: [] },
-        { name: 'Expense', data: [] }
+        { name: 'Revenue', data: revSeed.map(function (i) { return Number(i.revenue) || 0; }) },
+        { name: 'Collection', data: revSeed.map(function (i) { return Number(i.collection) || 0; }) },
+        { name: 'Expense', data: revSeed.map(function (i) { return Number(i.expense) || 0; }) }
       ],
       chart: { type: 'area', height: 300, toolbar: { show: false } },
       stroke: { curve: 'smooth', width: 3 },
@@ -1578,19 +1664,17 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           }
         }
       },
-      xaxis: { categories: [], labels: { style: { colors: p.axis } } },
+      xaxis: { categories: revSeed.map(function (i) { return i.month; }), labels: { style: { colors: p.axis } } },
       responsive: window.IpbUI
         ? window.IpbUI.chartResponsive('area', { yaxis: { labels: { formatter: window.IpbUI.compactNumber } } })
         : []
     });
-    window.IpbTheme.registerChart(revenueOverviewChart);
-    revenueOverviewChart.render();
 
     // Growth & Churn Chart
-    growthChurnChart = new ApexCharts(document.querySelector("#growthChurnChart"), {
+    growthChurnChart = mountApexChart("#growthChurnChart", {
       series: [
-        { name: 'New Customers', data: [] },
-        { name: 'Churn', data: [] }
+        { name: 'New Customers', data: growthSeed.map(function (i) { return Number(i.new) || 0; }) },
+        { name: 'Churn', data: growthSeed.map(function (i) { return (Number(i.churn) || 0) * -1; }) }
       ],
       chart: { type: 'bar', height: 300, stacked: true, toolbar: { show: false } },
       plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
@@ -1598,11 +1682,9 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       legend: { labels: { colors: p.ink } },
       grid: { borderColor: p.grid },
       yaxis: { labels: { style: { colors: p.axis } } },
-      xaxis: { categories: [], labels: { style: { colors: p.axis } } },
+      xaxis: { categories: growthSeed.map(function (i) { return i.month; }), labels: { style: { colors: p.axis } } },
       responsive: window.IpbUI ? window.IpbUI.chartResponsive('bar') : undefined
     });
-    window.IpbTheme.registerChart(growthChurnChart);
-    growthChurnChart.render();
 
     // Bandwidth Usage Chart (daily consumption by router)
     let bwRequestId = 0;
@@ -1613,7 +1695,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
 
     const bwPalette = window.IpbTheme.chartPalette();
 
-    window.bwChart = new ApexCharts(document.querySelector("#bandwidthUsageChart"), {
+    window.bwChart = mountApexChart("#bandwidthUsageChart", {
       series: [
         { name: 'Total Usage', data: [] }
       ],
@@ -1647,10 +1729,10 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           })
         : []
     });
-    window.IpbTheme.registerChart(window.bwChart);
-    bwChart.render();
+    const bwChart = window.bwChart;
 
     function setBandwidthChart(data, labels) {
+      if (!bwChart) return;
       const seriesData = Array.isArray(data) ? data.map(function (v) { return Number(v) || 0; }) : [];
       const cats = Array.isArray(labels) ? labels : [];
 
@@ -1823,7 +1905,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
     updateBandwidthChart('all');
 
     // Support Resolution (Single Radial)
-    collectionRateRadialChart = new ApexCharts(document.querySelector("#collectionRateRadialChart"), {
+    collectionRateRadialChart = mountApexChart("#collectionRateRadialChart", {
       // Seed from the server-rendered rate: the AJAX refresh below overwrites it, but
       // starting at 0 made the (now visible) chart animate up from zero on every load.
       series: [<?= (int) ($ticket_solving_rate ?? $ticketSolvedPct); ?>],
@@ -1850,9 +1932,52 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       stroke: { lineCap: 'round' },
       responsive: window.IpbUI ? window.IpbUI.chartResponsive('radial') : undefined
     });
-    window.IpbTheme.registerChart(collectionRateRadialChart);
-    collectionRateRadialChart.render();
 
+    // Paint legend/geo from seed immediately when cache was available, then
+    // refresh everything from the live charts endpoint.
+    if (seed.geo_revenue) {
+      try { renderGeoRevenue(seed.geo_revenue); } catch (e) {}
+    }
+    } catch (bootErr) {
+      console.error('Dashboard chart boot failed:', bootErr);
+    } finally {
+      // Always refresh from API even if one chart mount failed.
+      loadSuperAdminCharts();
+    }
+  }
+
+  (window.IpbReady || function (fn) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fn);
+    else fn();
+  })(function () {
+    // Full page load: customize.js boots first on DOMContentLoaded and marks
+    // the dash ready before this runs. SPA partial-nav: this script runs during
+    // execScripts *before* afterContentSwap/reinitDashboards — wait for
+    // ipb:contentswap so charts measure laid-out widget widths.
+    var chartsBooted = false;
+    function startCharts() {
+      if (chartsBooted) return;
+      chartsBooted = true;
+      ipbBootCharts();
+    }
+    var dash = document.querySelector('[data-ipb-dashboard="sadmin"]');
+    if (dash && dash.classList.contains('ipb-dash-ready')) {
+      startCharts();
+      return;
+    }
+    if (dash) {
+      var onSwap = function () {
+        document.removeEventListener('ipb:contentswap', onSwap);
+        startCharts();
+      };
+      document.addEventListener('ipb:contentswap', onSwap);
+      setTimeout(function () {
+        document.removeEventListener('ipb:contentswap', onSwap);
+        startCharts();
+      }, 400);
+      return;
+    }
+    startCharts();
   });
 </script>
 

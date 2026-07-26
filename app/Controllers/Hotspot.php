@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 class Hotspot extends BaseController
 {

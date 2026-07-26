@@ -805,7 +805,10 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
         error: function () { if (!trafficPollStopped) setTimeout(() => loadTrafic(), 5000); }
       });
     }
+
+    // Fire both async calls in parallel (simultaneously)
     loadTrafic();
+    refreshOltData();
 
     <?php if (userHasPermission('customer', 'update_conn')): ?>
       $(document).on('change', 'input[name="conn_status"]', function () {
@@ -827,8 +830,6 @@ $headerActions .= '<a class="btn btn-default" href="' . route_to('route.customer
         });
       });
     <?php endif; ?>
-
-    refreshOltData();
   });
 </script>
 

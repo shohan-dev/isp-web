@@ -26,27 +26,29 @@ if (isset($payment_details) && is_array($payment_details))
       ],
     ]); ?>
 
-<!-- ═══════════════════════════════════════════════════════
+    <?php if ($showTabs): ?>
+      <!-- ═══════════════════════════════════════════════════════
          SECTION SELECTOR TABS
     ════════════════════════════════════════════════════════════ -->
-    <div class="section-tab-wrapper">
-      <div class="section-tab-item active" id="tab-sec1" onclick="switchSection(1)">
-        <div class="stab-icon s1-icon"><i class="fa fa-check-circle"></i></div>
-        <div class="stab-body">
-          <div class="stab-title">Payment Status Update</div>
-          <div class="stab-desc">Mark as Paid / Pending &nbsp;·&nbsp; <span class="text-success"><strong>No fund
-                deduction</strong></span> &nbsp;·&nbsp; No expiry change</div>
+      <div class="section-tab-wrapper">
+        <div class="section-tab-item active" id="tab-sec1" onclick="switchSection(1)">
+          <div class="stab-icon s1-icon"><i class="fa fa-check-circle"></i></div>
+          <div class="stab-body">
+            <div class="stab-title">Payment Status Update</div>
+            <div class="stab-desc">Mark as Paid / Pending &nbsp;·&nbsp; <span class="text-success"><strong>No fund
+                  deduction</strong></span> &nbsp;·&nbsp; No expiry change</div>
+          </div>
+        </div>
+        <div class="section-tab-item" id="tab-sec2" onclick="switchSection(2)">
+          <div class="stab-icon s2-icon"><i class="fa fa-refresh"></i></div>
+          <div class="stab-body">
+            <div class="stab-title">Full Subscription Recharge</div>
+            <div class="stab-desc">Change package / Extend expiry &nbsp;·&nbsp; <span class="text-danger"><strong>Fund
+                  will be deducted</strong></span></div>
+          </div>
         </div>
       </div>
-      <div class="section-tab-item" id="tab-sec2" onclick="switchSection(2)">
-        <div class="stab-icon s2-icon"><i class="fa fa-refresh"></i></div>
-        <div class="stab-body">
-          <div class="stab-title">Full Subscription Recharge</div>
-          <div class="stab-desc">Change package / Extend expiry &nbsp;·&nbsp; <span class="text-danger"><strong>Fund
-                will be deducted</strong></span></div>
-        </div>
-      </div>
-    </div>
+    <?php endif; ?>
 
     <?= form_open('', 'id="form"'); ?>
 
@@ -70,6 +72,33 @@ if (isset($payment_details) && is_array($payment_details))
       </div>
 
       <div class="box-body">
+
+        <div class="row">
+          <div class="col-md-6 col-sm-6 col-xs-12">
+            <div class="form-group">
+              <label>Customer Name</label>
+              <?php if (isset($multiple) && $multiple === 'true'): ?>
+                <?= form_input(['class' => 'form-control', 'value' => implode(', ', $userNames), 'disabled' => 'disabled']); ?>
+              <?php else: ?>
+                <?= form_input(['class' => 'form-control', 'value' => $details->name, 'disabled' => 'disabled']); ?>
+              <?php endif; ?>
+            </div>
+          </div>
+          <?php if (isset($show_daily_bill) && $show_daily_bill): ?>
+            <div class="col-md-6 col-sm-6 col-xs-12">
+              <div class="form-group">
+                <label>Daily Bill Generate</label>
+                <?php
+                echo form_dropdown('s1_daily_bill', [
+                  '0' => 'Disable',
+                  '1' => 'Enable'
+                ], $details->daily_bill ?? '0', 'class="form-control" id="s1_daily_bill"');
+                ?>
+                <small id="s1_daily_bill-error" class="error text-danger"></small>
+              </div>
+            </div>
+          <?php endif; ?>
+        </div>
 
         <div class="row">
           <div class="col-md-6 col-sm-6 col-xs-12">
@@ -336,7 +365,21 @@ if (isset($payment_details) && is_array($payment_details))
               ?>
               <small id="month-error" class="error text-danger"></small>
             </div>
-          </div>
+          </div> <!-- Daily Bill Generate for prepaid resellers -->
+          <?php if (isset($show_daily_bill) && $show_daily_bill): ?>
+            <div class="col-md-6 col-sm-6 col-xs-12">
+              <div class="form-group">
+                <label>Daily Bill Generate</label>
+                <?php
+                echo form_dropdown('s2_daily_bill', [
+                  '0' => 'Disable',
+                  '1' => 'Enable'
+                ], $details->daily_bill ?? '0', 'class="form-control" id="s2_daily_bill"');
+                ?>
+                <small id="s2_daily_bill-error" class="error text-danger"></small>
+              </div>
+            </div>
+          <?php endif; ?>
         </div><!-- /.row -->
 
         <!-- Payment Method (custom dropdown) -->
@@ -505,6 +548,8 @@ if (isset($payment_details) && is_array($payment_details))
               <small id="status-error" class="error text-danger"></small>
             </div>
           </div>
+
+
 
         </div><!-- /.row -->
 
@@ -945,11 +990,11 @@ if (isset($payment_details) && is_array($payment_details))
       if (!expireInputVal) { tata.error('Select an expiry date', 'Please select expire date'); return; }
       expireDate = new Date(expireInputVal);
       if (prePackageId != packageId) {
-        diffDays = Math.ceil((expireDate - today) / (1000 * 60 * 60 * 24));
+        diffDays = (expireDate - today) / (1000 * 60 * 60 * 24);
       } else if (subscriptionStatus === 'active' && preWillExpire > today) {
-        diffDays = Math.ceil((expireDate - preWillExpire) / (1000 * 60 * 60 * 24));
+        diffDays = (expireDate - preWillExpire) / (1000 * 60 * 60 * 24);
       } else {
-        diffDays = Math.ceil((expireDate - today) / (1000 * 60 * 60 * 24));
+        diffDays = (expireDate - today) / (1000 * 60 * 60 * 24);
       }
     }
 

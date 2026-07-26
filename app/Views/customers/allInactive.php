@@ -768,7 +768,8 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
           if (response.responseJSON && response.responseJSON.response.limitReached === true) {
             // Configure SweetAlert buttons based on user role
-            const swalButtons = userRole === 'admin' ? ["No", {
+            const isTenantAdmin = (userRole === 'admin' || userRole === 'sAdmin');
+            const swalButtons = isTenantAdmin ? ["No", {
               text: "Yes",
               closeModal: false,
             }] : ["No"];
@@ -781,7 +782,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
               dangerMode: true,
               buttons: swalButtons,
             }).then((willUpdate) => {
-              if (willUpdate && userRole === 'admin') {
+              if (willUpdate && isTenantAdmin) {
                 // Redirect to the package update page if confirmed
                 window.location.href = '<?= route_to("Admin.packages"); ?>';
               }

@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 class Access extends BaseController
 {
@@ -70,7 +70,7 @@ class Access extends BaseController
 
         log_message('debug', 'asdwdasd' . print_r($data, true));
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -238,7 +238,7 @@ class Access extends BaseController
             ->join('users', 'users.id = custom_access.user_id', 'left')
             ->where('custom_access.admin_id', $userId);
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addColumn('select', function ($row) {
 

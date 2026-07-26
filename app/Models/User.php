@@ -90,6 +90,40 @@ class User extends Model
                 'after' => 'pending_package_id',
             ];
         }
+        if (!$db->fieldExists('daily_bill', $this->table)) {
+            $fieldsToAdd['daily_bill'] = [
+                'type' => 'TINYINT',
+                'constraint' => 1,
+                'null' => true,
+                'default' => 0,
+                'after' => 'fund_enabled'
+            ];
+        }
+        if (!$db->fieldExists('location_required', $this->table)) {
+            $fieldsToAdd['location_required'] = [
+                'type' => 'TINYINT',
+                'constraint' => 1,
+                'null' => true,
+                'default' => 0,
+                'after' => 'daily_bill'
+            ];
+        }
+        if (!$db->fieldExists('location_interval', $this->table)) {
+            $fieldsToAdd['location_interval'] = [
+                'type' => 'INT',
+                'constraint' => 11,
+                'null' => true,
+                'default' => 30,
+                'after' => 'location_required'
+            ];
+        }
+        if (!$db->fieldExists('last_location_update', $this->table)) {
+            $fieldsToAdd['last_location_update'] = [
+                'type' => 'DATETIME',
+                'null' => true,
+                'after' => 'location_interval'
+            ];
+        }
 
         if (!empty($fieldsToAdd)) {
             $forge->addColumn($this->table, $fieldsToAdd);
@@ -132,6 +166,10 @@ class User extends Model
         'billing_type',
         'reseller_validity_periods',
         'fund_enabled',
+        'daily_bill',
+        'location_required',
+        'location_interval',
+        'last_location_update',
     ];
 
     protected $beforeInsert = ['beforeInsert'];
@@ -139,9 +177,13 @@ class User extends Model
 
     protected function beforeInsert(array $data)
     {
-
-        $data['data']['created_at'] = date('Y-m-d H:i:s');
-        $data['data']['last_renewed'] = date('Y-m-d H:i:s');
+        $now = date('Y-m-d H:i:s');
+        $data['data']['created_at'] = $now;
+        $data['data']['updated_at'] = $now;
+        $data['data']['last_renewed'] = $now;
+        if (!isset($data['data']['fund'])) {
+            $data['data']['fund'] = 0.00;
+        }
 
         return $data;
     }

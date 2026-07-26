@@ -293,16 +293,29 @@
             <small id="pppoe_name-error" class="error text-danger"></small>
           </div>
 
-          <div class="form-group col-lg-6">
+          <div class="form-group col-lg-6 position-relative">
             <label>PPPoE Password</label>
 
             <?= form_input([
               'type' => 'password',
+              'id' => 'pppoe_password',
               'name' => 'pppoe_password',
               'class' => 'form-control',
               'value' => !empty($pppoe_password) ? $pppoe_password : '',
               'placeholder' => '--'
             ]); ?>
+
+            <i class="fa fa-eye-slash"
+               id="togglePPPoEPasswordIcon"
+               onclick="togglePPPoEPassword()"
+               style="
+                   position: absolute;
+                   right: 25px;
+                   top: 45px;
+                   cursor: pointer;
+                   color: #6c757d;
+                   z-index: 10;
+               "></i>
 
             <small id="pppoe_password-error" class="error text-danger"></small>
           </div>
@@ -766,6 +779,21 @@
 
     e.preventDefault();
   });
+
+  function togglePPPoEPassword() {
+    const password = document.getElementById("pppoe_password");
+    const icon = document.getElementById("togglePPPoEPasswordIcon");
+
+    if (password.type === "password") {
+      password.type = "text";
+      icon.classList.remove("fa-eye-slash");
+      icon.classList.add("fa-eye");
+    } else {
+      password.type = "password";
+      icon.classList.remove("fa-eye");
+      icon.classList.add("fa-eye-slash");
+    }
+  }
 </script>
 
 <?= $this->endSection('script'); ?>

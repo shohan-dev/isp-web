@@ -5,6 +5,7 @@ import re
 import sys
 from datetime import datetime
 from urllib3.exceptions import InsecureRequestWarning
+from concurrent.futures import ThreadPoolExecutor
 
 # Suppress SSL warnings
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
@@ -82,7 +83,7 @@ def get_http_session(ip, username, password, auth_type='basic'):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.5',
-            'Connection': 'keep-alive',
+            'Connection': 'close',
             'Upgrade-Insecure-Requests': '1',
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
@@ -97,7 +98,7 @@ def get_http_session(ip, username, password, auth_type='basic'):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.5',
-            'Connection': 'keep-alive',
+            'Connection': 'close',
             'Referer': f'http://{ip}/index.asp'
         })
     
@@ -117,7 +118,7 @@ def try_login(session, ip):
             if response.status_code == 200:
                 return True
         except Exception as e:
-            return error_response("mac", OLT_NAME)
+            continue
     
     return False
 
@@ -147,8 +148,155 @@ def get_rx_power_http(session, onu_id):
     except Exception as e:
         return "0.00"
 
+def get_onu_details_http(session, onu_id):
+    """Get all ONU details from ONU detail page with retries"""
+    details = {
+        "rx": "0.00",
+        "vendor": "",
+        "voltage": "",
+        "temp": "",
+        "bias": "",
+        "tx_power": "",
+        "distance": "0"
+    }
+    
+    html = None
+    for attempt in range(3):
+        try:
+            url = f"http://{IP}/onuintfbasicinfo.asp?intfName={onu_id}"
+            response = session.get(url, timeout=8)
+            if response.status_code == 200:
+                html = response.text
+                break
+        except Exception as e:
+            if attempt == 2:
+                sys.stderr.write(f"Error fetching ONU {onu_id} details (attempt {attempt+1}): {e}\n")
+    
+    if html:
+            
+            # 1. RX Power
+            rx_patterns = [
+                r'received power\(Dbm\):\s*(-?\d+\.?\d*)',
+                r'received power\(DBm\):\s*(-?\d+\.?\d*)',
+                r'received power:\s*(-?\d+\.?\d*)',
+                r'RxPower.*?(-?\d+\.?\d*)'
+            ]
+            for pattern in rx_patterns:
+                match = re.search(pattern, html, re.IGNORECASE)
+                if match:
+                    details["rx"] = match.group(1).strip()
+                    break
+            
+            # 2. Vendor ID
+            vendor_patterns = [
+                r'ONU Vender ID\s*:\s*([^\r\n<]+)',
+                r'Vendor ID\s*:\s*([^\r\n<]+)',
+                r'vendor\s*:\s*([^\r\n<]+)'
+            ]
+            for pattern in vendor_patterns:
+                match = re.search(pattern, html, re.IGNORECASE)
+                if match:
+                    details["vendor"] = match.group(1).strip()
+                    break
+                    
+            # 3. Supply Voltage
+            voltage_patterns = [
+                r'supply voltage\(V\):\s*(\d+\.?\d*)',
+                r'voltage\(V\):\s*(\d+\.?\d*)',
+                r'voltage:\s*(\d+\.?\d*)'
+            ]
+            for pattern in voltage_patterns:
+                match = re.search(pattern, html, re.IGNORECASE)
+                if match:
+                    details["voltage"] = match.group(1).strip()
+                    break
+                    
+            # 4. Operating Temperature
+            temp_patterns = [
+                r'operating temperature\(degree\):\s*(-?\d+\.?\d*)',
+                r'temperature\(degree\):\s*(-?\d+\.?\d*)',
+                r'temperature:\s*(-?\d+\.?\d*)'
+            ]
+            for pattern in temp_patterns:
+                match = re.search(pattern, html, re.IGNORECASE)
+                if match:
+                    details["temp"] = match.group(1).strip()
+                    break
+                    
+            # 5. Bias Current
+            bias_patterns = [
+                r'bias current\(mA\):\s*(\d+\.?\d*)',
+                r'bias\(mA\):\s*(\d+\.?\d*)',
+                r'bias:\s*(\d+\.?\d*)'
+            ]
+            for pattern in bias_patterns:
+                match = re.search(pattern, html, re.IGNORECASE)
+                if match:
+                    details["bias"] = match.group(1).strip()
+                    break
+                    
+            # 6. Transmitted Power
+            tx_patterns = [
+                r'transmitted power\(Dbm\):\s*(-?\d+\.?\d*)',
+                r'transmitted power\(DBm\):\s*(-?\d+\.?\d*)',
+                r'transmitted power:\s*(-?\d+\.?\d*)',
+                r'TxPower.*?(-?\d+\.?\d*)'
+            ]
+            for pattern in tx_patterns:
+                match = re.search(pattern, html, re.IGNORECASE)
+                if match:
+                    details["tx_power"] = match.group(1).strip()
+                    break
+                    
+            # 7. Distance
+            distance_patterns = [
+                r'distance\(m\):\s*(\d+\.?\d*)',
+                r'distance:\s*(\d+\.?\d*)',
+                r'onu distance:\s*(\d+\.?\d*)'
+            ]
+            for pattern in distance_patterns:
+                match = re.search(pattern, html, re.IGNORECASE)
+                if match:
+                    details["distance"] = match.group(1).strip()
+                    break
+    return details
+
+def fetch_all_optical_data(session, unique_ports):
+    """Fetch optical diagnostics table from eponoptstate.asp for all unique ports"""
+    optical_map = {}
+    for port in unique_ports:
+        # Normalize port names like EPON0/1
+        port_name = port.split(':')[0] if ':' in port else port
+        try:
+            data = {'intfName': port_name}
+            response = session.post(f"http://{IP}/eponoptstate.asp", data=data, timeout=8)
+            if response.status_code == 200:
+                html = response.text
+                
+                # Regex matching all table rows in the optical state page
+                row_pattern = r'<td>\s*(EPON\d+/\d+:\d+|GPON\d+/\d+:\d+)\s*<\/td>\s*<td>\s*([^<]*?)\s*<\/td>\s*<td>\s*([^<]*?)\s*<\/td>\s*<td>\s*([^<]*?)\s*<\/td>\s*<td>\s*([^<]*?)\s*<\/td>\s*<td>\s*([^<]*?)\s*<\/td>'
+                matches = re.findall(row_pattern, html, re.IGNORECASE)
+                for match in matches:
+                    onu_id, temp, voltage, bias, tx_power, rx = match
+                    rx_clean = rx.strip()
+                    if rx_clean == "--" or not rx_clean:
+                        rx_clean = "0.00"
+                        
+                    optical_map[onu_id.upper()] = {
+                        "temp": temp.strip(),
+                        "voltage": voltage.strip(),
+                        "bias": bias.strip(),
+                        "tx_power": tx_power.strip(),
+                        "rx": rx_clean,
+                        "distance": "0",
+                        "vendor": ""  # Vendor is not in the optical table
+                    }
+        except Exception as e:
+            sys.stderr.write(f"Error fetching optical data for port {port_name}: {e}\n")
+    return optical_map
+
 def parse_bdcom_status(html, session, olt_name):
-    """Parse BDCOM HTML status page and fetch RX power for each ONU"""
+    """Parse BDCOM HTML status page and fetch RX power and details for each ONU"""
     current_time = now()
     
     # Initialize result structure
@@ -163,6 +311,11 @@ def parse_bdcom_status(html, session, olt_name):
         "last_register": [],
         "last_deregister": [],
         "reason": [],
+        "voltage": [],
+        "temp": [],
+        "bias": [],
+        "tx_power": [],
+        "vendor": [],
         "summary": {
             "online": 0,
             "offline_power_off": 0,
@@ -248,25 +401,51 @@ def parse_bdcom_status(html, session, olt_name):
             all_indices = sorted(set(list(onu_ids.keys()) + list(statuses.keys())))
             
             if all_indices:
+                # 1. Determine unique ports
+                unique_ports = set()
+                for idx in all_indices:
+                    onu_id = onu_ids.get(idx, "")
+                    if onu_id and ":" in onu_id:
+                        unique_ports.add(onu_id.split(':')[0])
+                
+                # 2. Bulk fetch optical data for these ports
+                optical_map = fetch_all_optical_data(session, unique_ports)
+                
                 for idx in all_indices:
                     onu_id = onu_ids.get(idx, f"UNKNOWN_{idx}")
                     status = statuses.get(idx, "Offline")
                     mac = macs.get(idx, "00:00:00:00:00:00")
                     reason = reasons.get(idx, "Power Off")
                     
-                    # Fetch RX power from detail page using the same function
-                    rx_power = "0.00"
+                    # Read from bulk optical map if online, else use defaults
+                    details = {
+                        "rx": "0.00",
+                        "vendor": "",
+                        "voltage": "",
+                        "temp": "",
+                        "bias": "",
+                        "tx_power": "",
+                        "distance": "0"
+                    }
+                    
+                    if status == "Online" and onu_id in optical_map:
+                        details = optical_map[onu_id]
                     
                     result["olt"].append(olt_name)
                     result["onu_id"].append(onu_id)
                     result["status"].append(status)
                     result["mac"].append(mac)
                     result["des"].append("")
-                    result["rx"].append(rx_power)
-                    result["distance"].append("0")
+                    result["rx"].append(details["rx"])
+                    result["distance"].append(details["distance"])
                     result["last_register"].append(current_time)
                     result["last_deregister"].append(current_time)
                     result["reason"].append(reason)
+                    result["voltage"].append(details["voltage"])
+                    result["temp"].append(details["temp"])
+                    result["bias"].append(details["bias"])
+                    result["tx_power"].append(details["tx_power"])
+                    result["vendor"].append(details["vendor"])
                     
                     # Update counters
                     if status == "Online":

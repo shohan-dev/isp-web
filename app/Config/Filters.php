@@ -85,6 +85,9 @@ class Filters extends BaseConfig
                     // your login API route
                     'api/*',        // if you have more APIs
                     'ai-chat',
+                    'network_sync/*',        // AJAX sync endpoint
+                    'network_updateSplitter', // AJAX splitter update
+                    'employee-portal/*',     // Employee portal AJAX endpoints
                 ],
             ],
             // 'subscriptionguard' => [

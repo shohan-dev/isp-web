@@ -196,7 +196,7 @@ if (request()->getHeaderLine('X-IPB-Nav') === '1') {
       /* Pre-hide dashboard widgets from saved prefs before paint (no flicker) */
       try {
         var WIDGET_PREFIX = "ipb_dash_widgets_";
-        var DEFAULT_HIDDEN = { admin: ["insights"] };
+        var DEFAULT_HIDDEN = { admin: ["insights"], sadmin: ["insights"] };
         var css = "";
         var seen = {};
         for (var i = 0; i < localStorage.length; i++) {

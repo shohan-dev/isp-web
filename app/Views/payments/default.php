@@ -84,27 +84,45 @@
 
 <script>
   $(document).ready(function() {
-
+    <?php
+      $showAction = userHasPermission('payment', 'invoice')
+        || userHasPermission('payment', 'payment')
+        || getSession('status') === 'inactive';
+      // Default sort: created_at (invoice date) — after serial
+      $orderCol = 5;
+    ?>
     $('.datatable').DataTable({
       // Skeleton tbody is the load cue (same as customers/all.php). processing:true
       // would stack the branded "Loading..." box on top of the skeleton.
       processing: false,
       serverSide: true,
+      order: [[<?= (int) $orderCol ?>, 'desc']],
       ajax: {
         url: '<?= route_to("route.payment.fetch"); ?>',
         type: 'post',
         beforeSend: function(req) {
-          req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>', );
+          req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
         }
       },
-      columnDefs: [
-            {
-              "targets": "_all",  
-              "defaultContent": "-"
-            }
-          ],
+      columns: [
+        { data: 'serial', orderable: false, searchable: false },
+        { data: 'invoice', orderable: true, searchable: true },
+        { data: 'amount', orderable: true, searchable: true },
+        { data: 'month', orderable: true, searchable: true },
+        { data: 'purpose', orderable: false, searchable: false },
+        { data: 'created_at', orderable: true, searchable: true },
+        { data: 'paid_at', orderable: true, searchable: true },
+        { data: 'paid_via', orderable: true, searchable: true },
+        { data: 'paid_to', orderable: false, searchable: false },
+        { data: 'method_trx', orderable: true, searchable: true },
+        { data: 'status', orderable: true, searchable: false }
+        <?php if ($showAction): ?>
+        ,{ data: 'action', orderable: false, searchable: false }
+        <?php endif; ?>
+      ],
+      columnDefs: [{ targets: '_all', defaultContent: '-' }]
     });
-  })
+  });
 </script>
 
 <?= $this->endSection('script'); ?>

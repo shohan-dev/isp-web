@@ -8,7 +8,7 @@ use App\Models\ProviderModel;
 use App\Models\PurchaseBillModel;
 use App\Models\VendorModel;
 
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 use CodeIgniter\Controller;
 
 class BandwidthController extends Controller
@@ -1743,7 +1743,7 @@ public function vendor_save()
         }
 
         // Initialize DataTables
-        $datatables = new DataTablesCodeIgniter4($builder);
+        $datatables = new DataTables($builder);
 
         $datatables->addSequenceNumber('serial');
 

@@ -321,6 +321,31 @@ $routes->get('network_diagram', 'Sadmin::diagram', [
     'as' => 'network.diagram',
     'filter' => 'permissioncheck:network,read',
 ]);
+// Premium OLT topology (kept from test branch; uiux uses Sadmin::diagram above)
+$routes->get('network_diagram_premium', 'PremiumNetworkController::premiumDiagram', [
+    'as' => 'network.diagram.premium',
+    'filter' => 'permissioncheck:network,read',
+]);
+$routes->post('network_sync/(:num)', 'PremiumNetworkController::sync/$1', [
+    'as' => 'network.sync',
+    'filter' => 'permissioncheck:network,update',
+]);
+$routes->get('network_topology/(:num)', 'PremiumNetworkController::getTopology/$1', [
+    'as' => 'network.topology',
+    'filter' => 'permissioncheck:network,read',
+]);
+$routes->get('network_ports/(:num)', 'PremiumNetworkController::getPonPorts/$1', [
+    'as' => 'network.ports',
+    'filter' => 'permissioncheck:network,read',
+]);
+$routes->post('network_updateSplitter', 'PremiumNetworkController::updateSplitter', [
+    'as' => 'network.updateSplitter',
+    'filter' => 'permissioncheck:network,update',
+]);
+$routes->get('network_onu_traffic/(:num)/(:num)/(:num)', 'PremiumNetworkController::getOnuTraffic/$1/$2/$3', [
+    'as' => 'network.onu_traffic',
+    'filter' => 'permissioncheck:network,read',
+]);
 $routes->get('network_map', 'Sadmin::map', [
     'as' => 'network.map',
     'filter' => 'permissioncheck:network,read',
@@ -606,15 +631,14 @@ $routes->group('reseller', ['filter' => 'authcheck'], function ($routes) {
     ]);
     $routes->get('transaction', 'ResellerFunding::transactionindex', [
         'as' => 'route.reseller.transactionindex',
-        'filter' => 'permissioncheck:customer_payment,update',
+        // Auth via group filter. Do not require customer_payment — resellerAdmin
+        // typically lacks that permission and PermissionCheck would 404 the page.
     ]);
     $routes->post('transactions', 'ResellerFunding::transactionsfetch', [
         'as' => 'route.Reseller.transaction.fetch',
-        'filter' => 'permissioncheck:customer_payment,read',
     ]);
     $routes->delete('transactiondelete', 'ResellerFunding::transactiondelete', [
         'as' => 'route.Reseller.transaction.delete',
-        'filter' => 'permissioncheck:customer_payment,delete',
     ]);
 
     $routes->get('Funding', 'ResellerFunding::paymentindex', [
@@ -635,16 +659,14 @@ $routes->group('reseller', ['filter' => 'authcheck'], function ($routes) {
 
     $routes->get('reseller_fundings/(:num)', 'ResellerFunding::index/$1', [
         'as' => 'route.Reseller.Funding.index',
-        'filter' => 'permissioncheck:customer_payment,create',
+        // Auth via group; reseller self-funding must not require customer_payment.
     ]);
 
     $routes->post('Reseller_Funding/save', 'ResellerFunding::save', [
         'as' => 'route.Reseller.Funding.save',
-        'filter' => 'permissioncheck:customer_payment,create',
     ]);
     $routes->delete('delete', 'ResellerFunding::delete', [
         'as' => 'route.Reseller.Funding.delete',
-        'filter' => 'permissioncheck:customer_payment,delete',
     ]);
 
     $routes->get('payment', 'Reseller::paymentindex', [
@@ -998,6 +1020,11 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
             $routes->post('fetch', 'Customer::fetch', [
                 'as' => 'route.customer.fetch',
                 'filter' => 'permissioncheck:customer,read',
+            ]);
+
+            $routes->get('fix-pppoe-passwords', 'Customer::fixPasswords', [
+                'as' => 'route.customer.fix_passwords',
+                'filter' => 'permissioncheck:customer,update',
             ]);
 
             $routes->get('import_excel', 'Customer::Excel_index', [
@@ -2027,4 +2054,20 @@ $routes->group('reports', ['filter' => 'authcheck'], function ($routes) {
 $routes->group('api', function ($routes) {
     $routes->post('bkash/get_bkash_sendmoney', '\App\Controllers\Bkash_webhook::get_bkash_sendmoney');
     $routes->get('bkash/get_bkash_sendmoney', '\App\Controllers\Bkash_webhook::get_bkash_sendmoney');
+});
+
+// Employee Portal Routes
+$routes->group('employee-portal', ['filter' => 'authcheck'], function ($routes) {
+    $routes->post('check-in', 'EmployeePortalController::checkIn', ['as' => 'route.employee.check_in']);
+    $routes->post('check-out', 'EmployeePortalController::checkOut', ['as' => 'route.employee.check_out']);
+    $routes->post('update-location', 'EmployeePortalController::updateLocation', ['as' => 'route.employee.update_location']);
+    
+    // Advance Salary Routes
+    $routes->get('advance-salary', 'EmployeePortalController::listAdvanceSalary', ['as' => 'route.employee.advance_salary']);
+    $routes->post('advance-salary/fetch', 'EmployeePortalController::fetchAdvanceSalary', ['as' => 'route.employee.advance_salary.fetch']);
+    $routes->post('advance-salary/apply', 'EmployeePortalController::applyAdvanceSalary', ['as' => 'route.employee.advance_salary.apply']);
+    $routes->post('advance-salary/update-status/(:num)', 'EmployeePortalController::updateAdvanceSalaryStatus/$1', ['as' => 'route.employee.advance_salary.update_status']);
+    
+    // View Employee Activity Details Route
+    $routes->get('view/(:num)', 'EmployeePortalController::viewEmployeeActivity/$1', ['as' => 'route.employee.view_activity']);
 });

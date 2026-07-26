@@ -1,6 +1,6 @@
 <?php
 namespace App\Controllers;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 use CodeIgniter\Controller;
 
 use App\Controllers\BaseController;

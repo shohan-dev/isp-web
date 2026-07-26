@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 use App\Models\User;
 use App\Models\Area;
 use App\Models\Package;
@@ -86,7 +86,7 @@ class Reports extends BaseController
             ->join('connection_details', 'connection_details.user_id = users.id', 'left')
             ->where('users.role', 'user');
 
-        if ($userRole === 'super_admin' || $userRole === 'admin') {
+        if ($userRole === 'super_admin' || (function_exists('isTenantAdminRole') ? isTenantAdminRole($userRole) : in_array($userRole, ['admin', 'sAdmin'], true))) {
             $builder->groupStart()
                 ->where('users.admin_id', $userId)
                 ->orWhereIn('users.admin_id', function ($subquery) use ($userId) {
@@ -130,7 +130,7 @@ class Reports extends BaseController
         $filters = $this->request->getPost();
         $builder = $this->getBtrcQuery($filters);
 
-        $datatables = new DataTablesCodeIgniter4($builder);
+        $datatables = new DataTables($builder);
         $datatables->asObject();
         $datatables->addSequenceNumber('serial');
 

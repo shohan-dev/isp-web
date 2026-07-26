@@ -28,6 +28,7 @@
   /** Default-hidden widgets when user has no saved prefs for that dashboard */
   var DEFAULT_HIDDEN_BY_DASH = {
     admin: ["insights"],
+    sadmin: ["insights"],
   };
 
   var SIZE_SPAN = { third: 4, half: 6, twoThird: 8, full: 12 };
@@ -963,17 +964,21 @@
     }
   }
 
+  function reinitDashboards() {
+    activeDash = null;
+    document.querySelectorAll("[data-ipb-dashboard]").forEach(initDashboard);
+    /* Safety: never leave a freshly swapped dashboard invisible if init fails */
+    setTimeout(function () {
+      document.querySelectorAll("[data-ipb-dashboard]:not(.ipb-dash-ready)").forEach(markDashReady);
+    }, 1500);
+  }
+
   function boot() {
     if (!bodyEl() || !bodyEl().classList.contains("ipb")) return;
     applyBrandTheme(loadTheme());
     initChrome();
     initThemeStudio();
-    document.querySelectorAll("[data-ipb-dashboard]").forEach(initDashboard);
-
-    /* Safety: never leave dashboard invisible if init fails */
-    setTimeout(function () {
-      document.querySelectorAll("[data-ipb-dashboard]:not(.ipb-dash-ready)").forEach(markDashReady);
-    }, 1500);
+    reinitDashboards();
   }
 
   applyBrandTheme(loadTheme());
@@ -1017,6 +1022,7 @@
     openThemeStudio: openThemeStudio,
     openDashboardCustomize: openDashboardCustomize,
     clearUserDashboardPrefs: clearUserDashboardPrefs,
+    reinitDashboards: reinitDashboards,
   };
 })();
 

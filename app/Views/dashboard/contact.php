@@ -416,8 +416,11 @@
             }, 3000);
         });
         
-        // Animation on load
-        document.addEventListener('DOMContentLoaded', function() {
+        // Animation on load (SPA-safe: DOMContentLoaded already fired on partial-nav)
+        (window.IpbReady || function (fn) {
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+            else fn();
+        })(function () {
             const infoCards = document.querySelectorAll('.info-card');
             
             infoCards.forEach((card, index) => {

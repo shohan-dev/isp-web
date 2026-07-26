@@ -57,22 +57,22 @@ class UsageBufferService
 
     public function keyPrev(int $userId): string
     {
-        return "usage:prev:{$userId}";
+        return "usage.prev.{$userId}";
     }
 
     public function keyBuf(string $date, int $userId): string
     {
-        return "usage:buf:{$date}:{$userId}";
+        return "usage.buf.{$date}.{$userId}";
     }
 
     public function keyDirty(string $date): string
     {
-        return "usage:dirty:{$date}";
+        return "usage.dirty.{$date}";
     }
 
     public function keyCache(int $userId, string $date): string
     {
-        return "usage:cache:{$userId}:{$date}";
+        return "usage.cache.{$userId}.{$date}";
     }
 
     // ── WRITE PATH ────────────────────────────────────────────────────────────
@@ -385,7 +385,7 @@ class UsageBufferService
     public function getMonthlyCache(int $userId, string $yearMonth): ?array
     {
         try {
-            $v = $this->cache->get("usage:monthly:{$userId}:{$yearMonth}");
+            $v = $this->cache->get("usage.monthly.{$userId}.{$yearMonth}");
             return is_array($v) ? $v : null;
         } catch (\Throwable $e) {
             return null;
@@ -395,14 +395,14 @@ class UsageBufferService
     public function saveMonthlyCache(int $userId, string $yearMonth, array $data): void
     {
         try {
-            $this->cache->save("usage:monthly:{$userId}:{$yearMonth}", $data, self::TTL_CACHE);
+            $this->cache->save("usage.monthly.{$userId}.{$yearMonth}", $data, self::TTL_CACHE);
         } catch (\Throwable $e) { /* non-fatal */ }
     }
 
     public function invalidateMonthlyCache(int $userId, string $yearMonth): void
     {
         try {
-            $this->cache->delete("usage:monthly:{$userId}:{$yearMonth}");
+            $this->cache->delete("usage.monthly.{$userId}.{$yearMonth}");
         } catch (\Throwable $e) { /* non-fatal */ }
     }
 }

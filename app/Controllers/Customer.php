@@ -81,7 +81,7 @@ class Customer extends BaseController
 
         if ($userRole === 'employee' && $details) {
             $Pre_created_by = $details->created_by;
-            if ($Pre_created_by === 'admin') {
+            if ($Pre_created_by === 'admin' || $Pre_created_by === 'sAdmin') {
                 $userId = $details->admin_id;
                 $details = $this->user_model->where(['id' => $userId])->first();
             } else {
@@ -111,7 +111,7 @@ class Customer extends BaseController
 
         if ($userRole === 'employee' && $details) {
             $Pre_created_by = $details->created_by;
-            if ($Pre_created_by === 'admin') {
+            if ($Pre_created_by === 'admin' || $Pre_created_by === 'sAdmin') {
                 $userId = $details->admin_id;
                 $details = $this->user_model->where(['id' => $userId])->first();
             } else {
@@ -137,7 +137,7 @@ class Customer extends BaseController
 
         if ($userRole === 'employee' && $details) {
             $Pre_created_by = $details->created_by;
-            if ($Pre_created_by === 'admin') {
+            if ($Pre_created_by === 'admin' || $Pre_created_by === 'sAdmin') {
                 $userId = $details->admin_id;
                 $details = $this->user_model->where(['id' => $userId])->first();
             } else {
@@ -164,7 +164,7 @@ class Customer extends BaseController
 
         if ($userRole === 'employee' && $details) {
             $Pre_created_by = $details->created_by;
-            if ($Pre_created_by === 'admin') {
+            if ($Pre_created_by === 'admin' || $Pre_created_by === 'sAdmin') {
                 $userId = $details->admin_id;
                 $details = $this->user_model->where(['id' => $userId])->first();
             } else {
@@ -333,35 +333,52 @@ class Customer extends BaseController
         $file = $this->request->getFile('excel_file');
 
         if (!$file->isValid()) {
-            return redirect()->back()->with('error', 'Invalid file upload');
+            return $this->response->setJSON([
+                'error' => 'Invalid file upload: ' . $file->getErrorString(),
+                'csrf_token' => csrf_hash()
+            ]);
         }
 
         $ext = $file->getExtension();
         if (!in_array(strtolower($ext), ['xlsx', 'xls', 'csv'])) {
-            return redirect()->back()->with('error', 'Invalid file type. Only Excel files (xlsx, xls, csv) are allowed.');
+            return $this->response->setJSON([
+                'error' => 'Invalid file type. Only Excel files (xlsx, xls, csv) are allowed.',
+                'csrf_token' => csrf_hash()
+            ]);
         }
-
-        // log_message, 'File uploaded: ' . $file->getName());
 
         // Validate file upload
         if (!$file->isValid() || $file->hasMoved()) {
             log_message('error', 'File upload failed: ' . $file->getErrorString());
-            return redirect()->back()->with('error', 'Failed to upload file.');
+            return $this->response->setJSON([
+                'error' => 'Failed to upload file: ' . $file->getErrorString(),
+                'csrf_token' => csrf_hash()
+            ]);
         }
 
         $filePath = $file->getTempName();
 
-        // try {
-        // Use PhpSpreadsheet's reader in read-only mode for performance
-        $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
-        $reader->setReadDataOnly(true);
-        $spreadsheet = $reader->load($filePath);
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheetData = $sheet->toArray();
+        try {
+            // Use PhpSpreadsheet's reader in read-only mode for performance
+            $reader = IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheetData = $sheet->toArray();
+        } catch (\Exception $e) {
+            log_message('error', 'Error parsing excel file: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return $this->response->setJSON([
+                'error' => 'Error parsing the excel file: ' . $e->getMessage(),
+                'csrf_token' => csrf_hash()
+            ]);
+        }
 
         if (empty($sheetData)) {
             log_message('error', 'Error loading spreadsheet: Sheet data is empty');
-            return redirect()->back()->with('error', 'Sheet data is empty.');
+            return $this->response->setJSON([
+                'error' => 'Sheet data is empty.',
+                'csrf_token' => csrf_hash()
+            ]);
         }
 
         // $rowCount = count($sheetData);
@@ -401,32 +418,51 @@ class Customer extends BaseController
             ]);
         }
 
-        // Check overall customer limit
-        $allcustomer = getAllCostomer();
-        $existingCount = $allcustomer['count'];
-        $newRows = $rowCount - 1; // exclude header row
-        if (!empty($allcustomer['package']['duration']) && (($existingCount + $newRows) > $allcustomer['package']['duration'])) {
-            // return redirect()->back()
-            //     ->with('error', "You are at your limit! Update your package to create a new customer.")
-            //     ->with('limitReached', true);
-            return $this->response->setJSON([
-                'error' => 'You are at your limit! Update your package to create a new customer.',
-                'csrf_token' => csrf_hash()
-                // 'sheetData' => $sheetData,
-                // 'errors' => $errors  // No errors
-            ]);
-        }
-
-
-        $data = [];
-        $routerDataMap = [];
-        $errors = [];
-        $routerSecretsMaps = [];
         $userId = session()->get('user_id');
         $userModel = model('App\Models\User');
         $details = $userModel->where(['id' => $userId])->first();
         log_message('info', 'Fetched count details: ' . json_encode($details));
         $created_by = $details->role;
+
+        // Run pre-validation count to check how many users are actually new
+        $newUsersCount = 0;
+        for ($i = 1; $i < $rowCount; $i++) {
+            $row = $sheetData[$i];
+            $pppoeSecret = isset($mapping['pppoeSecret']) ? ($row[$mapping['pppoeSecret']] ?? 1234) : 1234;
+            $emailCol = $mapping['email'] ?? null;
+            $email = ($emailCol !== null && !empty($row[$emailCol]) && trim((string) $row[$emailCol]) !== '')
+                ? trim((string) $row[$emailCol])
+                : $pppoeSecret;
+            $mobileRaw = isset($mapping['mobile']) ? ($row[$mapping['mobile']] ?? '') : '';
+            $mobileRaw = trim((string) $mobileRaw);
+            $mobile = ($mobileRaw !== '' && $mobileRaw !== '0') ? '0' . ltrim($mobileRaw, '0') : null;
+
+            $exists = false;
+            if (!empty($email)) {
+                $checkEmailUser = $userModel->where('email', $email)->first();
+                if ($checkEmailUser) {
+                    $exists = true;
+                }
+            }
+            if (!$exists) {
+                $newUsersCount++;
+            }
+        }
+
+        // Check overall customer limit using only the newUsersCount
+        $allcustomer = getAllCostomer();
+        $existingCount = $allcustomer['count'];
+        if (isset($allcustomer['package']['duration']) && (($existingCount + $newUsersCount) > $allcustomer['package']['duration'])) {
+            return $this->response->setJSON([
+                'error' => 'You are at your limit! Update your package to create a new customer.',
+                'csrf_token' => csrf_hash()
+            ]);
+        }
+
+        $data = [];
+        $routerDataMap = [];
+        $errors = [];
+        $routerSecretsMaps = [];
 
 
         // Loop through the sheetData starting after the header row
@@ -472,34 +508,36 @@ class Customer extends BaseController
                 continue;
             }
 
-            // --- SMART EMAIL DUPLICATION RESOLUTION ---
-            $isDuplicateEmail = false;
-            if (in_array($email, $processedEmails ?? [])) {
-                $isDuplicateEmail = true;
-            } else {
-                $existingUser = $userModel->where('email', $email)->get()->getRowArray();
-                if ($existingUser) {
-                    $isDuplicateEmail = true;
+            // --- DUPLICATE CHECK AND SKIP ---
+            // Only use email/PPPoE username to detect already-imported users.
+            // Mobile is NOT used here because many users share placeholder numbers (e.g. 01000000000),
+            // which would cause genuinely new users to be incorrectly skipped.
+            $dbExistCheck = false;
+            if (!empty($email)) {
+                $checkEmailUser = $userModel->where('email', $email)->first();
+                if ($checkEmailUser) {
+                    $dbExistCheck = true;
                 }
             }
 
-            if ($isDuplicateEmail) {
-                $email = $pppoeSecret;
+            // Skip row if already imported in the DB
+            if ($dbExistCheck) {
+                log_message('info', "Row $i: Skipping user because email/username ($email) already exists in DB.");
+                continue;
             }
+
+            // --- batch tracking ---
             $processedEmails[] = $email;
 
-            // --- SMART MOBILE DUPLICATION RESOLUTION ---
             // If mobile is empty/null, assign a unique placeholder so NOT NULL constraint is satisfied
             if (empty($mobile)) {
                 $mobile = 'no-mobile-' . uniqid();
             }
 
-            // Check if this mobile already exists in DB or in current batch
+            // Check if this mobile already exists in current batch
+            $isDuplicateMobile = false;
             if (in_array($mobile, $processedMobiles ?? [])) {
                 $isDuplicateMobile = true;
-            } else {
-                $existingNumber = $userModel->where('mobile', $mobile)->get()->getRowArray();
-                $isDuplicateMobile = (bool) $existingNumber;
             }
 
             if ($isDuplicateMobile) {
@@ -508,20 +546,23 @@ class Customer extends BaseController
                 do {
                     $mobile = substr($originalMobile, 0, 15) . '-d' . $suffix;
                     $suffix++;
-                    $existsInDB = $userModel->where('mobile', $mobile)->get()->getRowArray();
                     $existsInExcel = in_array($mobile, $processedMobiles ?? []);
-                } while ($existsInDB || $existsInExcel);
+                } while ($existsInExcel);
             }
 
             $processedMobiles[] = $mobile;
             $created_by = $detail->role;
             log_message('info', 'Fetched count created_by: ' . json_encode($created_by));
             // Fetch package detail based on user role
-            if (getSession('user_role') === 'admin') {
+            $sessionRole = (string) getSession('user_role');
+            $isTenantAdmin = function_exists('isTenantAdminRole')
+                ? isTenantAdminRole($sessionRole)
+                : in_array($sessionRole, ['admin', 'sAdmin'], true);
+            if ($isTenantAdmin) {
                 $package_model = model('App\Models\Package');
                 $packages = $package_model->where('user_id', $userId)->where(['package_name' => $package])->first();
-            } elseif (getSession('user_role') === 'employee') {
-                if ($created_by === 'admin') {
+            } elseif ($sessionRole === 'employee') {
+                if ($created_by === 'admin' || $created_by === 'sAdmin') {
                     $userId = $detail->admin_id;
                     $package_model = model('App\Models\Package');
                     $packages = $package_model->where('user_id', $userId)->where(['package_name' => $package])->first();
@@ -542,7 +583,11 @@ class Customer extends BaseController
 
             // Get area info
             $area_model = model('App\Models\Area');
-            $datas = $area_model->where('user_id', $userId)->where(['area_name' => $area])->first();
+            $lookupUserId = $userId;
+            if (getSession('user_role') === 'employee') {
+                $lookupUserId = $details->admin_id;
+            }
+            $datas = $area_model->where('user_id', $lookupUserId)->where(['area_name' => $area])->first();
             $area_id = $datas->id ?? '--';
             if (!$datas) {
                 if (!empty($area)) {
@@ -552,29 +597,22 @@ class Customer extends BaseController
 
             // Get router information
             $routerModel = model('App\Models\Router');
-            if (getSession('user_role') === 'admin') {
-                $router = $routerModel->where(['user_id' => $userId, 'name' => $routername])->first();
-            } elseif (getSession('user_role') === 'employee') {
+            $sessionRole = (string) getSession('user_role');
+            $isTenantAdmin = function_exists('isTenantAdminRole')
+                ? isTenantAdminRole($sessionRole)
+                : in_array($sessionRole, ['admin', 'sAdmin'], true);
+            if ($isTenantAdmin) {
+                $router = $routerModel->where(['user_id' => $lookupUserId, 'name' => $routername])->first();
+            } elseif ($sessionRole === 'employee') {
                 log_message('info', 'Fetched count created_by: ' . json_encode($created_by));
 
-                if ($created_by === 'admin') {
-                    $userId = $detail->admin_id;
-                    $router = $routerModel->where(['user_id' => $userId, 'name' => $routername])->first();
+                if ($created_by === 'admin' || $created_by === 'sAdmin') {
+                    $router = $routerModel->where(['user_id' => $lookupUserId, 'name' => $routername])->first();
                 } else {
-                    log_message('info', 'Fetched count detail%%: ' . json_encode($detail));
-
-                    $userId = $detail->admin_id;
-                    $detail = $userModel->where(['id' => $userId])->first();
-                    log_message('info', 'Fetched count detail%%%%: ' . json_encode($detail));
-
-                    $admin_id = $detail->admin_id;
+                    $routerAdminDetail = $userModel->where(['id' => $lookupUserId])->first();
+                    $admin_id = $routerAdminDetail->admin_id ?? null;
                     $router = $routerModel->where(['user_id' => $admin_id, 'name' => $routername])->first();
                 }
-                // log_message('info', 'Fetched count admin_id: ' . json_encode($admin_id));
-
-            } else {
-                $admin_id = $detail->admin_id;
-                $router = $routerModel->where(['user_id' => $admin_id, 'name' => $routername])->first();
             }
             if (!$router) {
                 $errors[] = "Row $i: Failed to get the router ($routername). Data will not be inserted with default router.";
@@ -659,16 +697,16 @@ class Customer extends BaseController
             }
 
             $data[] = [
-                'package_id' => $package_id ?? '--',
-                'area_id' => $area_id ?? '--',
-                'router_id' => $router_id ?? '--',
+                'package_id' => (!empty($package_id) && $package_id !== '--') ? (int) $package_id : null,
+                'area_id' => (!empty($area_id) && $area_id !== '--') ? (int) $area_id : null,
+                'router_id' => (!empty($router_id) && $router_id !== '--') ? (int) $router_id : null,
                 'name' => $name ?? '--',
                 'mobile' => $mobile ?? '--',
                 'email' => $email,
                 'code' => $pppoePassword ?? 1234,
                 'password' => password_hash((string) ($pppoePassword ?? 1234), PASSWORD_DEFAULT),
                 'address' => $address ?? '--',
-                'pppoe_id' => $pppoe_id ?? '--',
+                'pppoe_id' => (!empty($pppoe_id) && $pppoe_id !== '--') ? $pppoe_id : null,
                 'last_renewed' => date('Y-m-d H:i:s'),
                 'will_expire' => $final_expiry,
                 'created_at' => date('Y-m-d H:i:s'),
@@ -709,203 +747,229 @@ class Customer extends BaseController
 
     public function process_import()
     {
-        $dataRaw = $this->request->getPost('data');
-        $routerDataMapRaw = $this->request->getPost('routerDataMap');
+        try {
+            $dataRaw = $this->request->getPost('data');
+            $routerDataMapRaw = $this->request->getPost('routerDataMap');
 
-        $data = is_string($dataRaw) ? json_decode($dataRaw, true) : $dataRaw;
-        $routerDataMap = is_string($routerDataMapRaw) ? json_decode($routerDataMapRaw, true) : $routerDataMapRaw;
+            $data = is_string($dataRaw) ? json_decode($dataRaw, true) : $dataRaw;
+            $routerDataMap = is_string($routerDataMapRaw) ? json_decode($routerDataMapRaw, true) : $routerDataMapRaw;
 
-        if (empty($data)) {
-            return $this->response->setJSON([
-                'error' => 'No data received for import.',
-                'csrf_token' => csrf_hash()
-            ]);
-        }
-
-        $userId = session()->get('user_id');
-        $userModel = model('App\Models\User');
-        $details = $userModel->where(['id' => $userId])->first();
-        $created_by = $details->role;
-
-        if (session()->get('user_role') === 'employee') {
-            $userId = $details->admin_id;
-            $created_by = $details->created_by;
-        }
-
-        $areaModel = model('App\Models\Area');
-        $packageModel = (getSession('user_role') === 'admin' || $created_by === 'admin')
-            ? model('App\Models\Package')
-            : model('App\Models\ResellerPackages');
-
-        // Handle fund check for reseller
-        if ($details->role === 'resellerAdmin' || $created_by === 'resellerAdmin') {
-            $totalPackagePrice = 0;
-            foreach ($data as $entry) {
-                if (!empty($entry['package_id']) && $entry['package_id'] !== '--') {
-                    $totalPackagePrice += ResellerPackagePrice($entry['package_id']) ?? 0;
-                }
+            if (empty($data)) {
+                return $this->response->setJSON([
+                    'error' => 'No data received for import.',
+                    'csrf_token' => csrf_hash()
+                ]);
             }
 
-            $hasPermission = userHasPermission('Resellers', 'daily_payment_generate') || userHasPermission('reseller', 'daily_payment_generate');
+            $userId = session()->get('user_id');
+            $userModel = model('App\Models\User');
+            $details = $userModel->where(['id' => $userId])->first();
+            $created_by = $details->role;
 
-            if (!$hasPermission) {
-                $fund = $details->fund ?? 0;
-                $billing_type = $details->billing_type ?? 'postpaid';
-                if ($billing_type === 'prepaid' && $fund < $totalPackagePrice) {
-                    return $this->response->setJSON([
-                        'error' => 'Dont have enough fund. Please recharge!',
-                        'csrf_token' => csrf_hash()
-                    ]);
-                }
-                // Deduct fund — atomic & race-safe. The `$fund < $totalPackagePrice`
-                // guard above enforces sufficiency; this closes the TOCTOU window so two
-                // concurrent requests cannot both pass the check and overdraw the balance.
-                if (! (new \App\Services\FundService())->deduct((int) $userId, (float) $totalPackagePrice)) {
-                    return $this->response->setJSON([
-                        'error' => 'Dont have enough fund. Please recharge!',
-                        'csrf_token' => csrf_hash()
-                    ]);
-                }
-            }
-        }
-
-        $successCount = 0;
-        $transationModel = model('App\Models\ResellerTransactions');
-
-        foreach ($data as $index => $row) {
-            // --- AUTO CREATE AREA ---
-            if (($row['area_id'] === '--' || empty($row['area_id'])) && !empty($row['area_name'])) {
-                $existingArea = $areaModel->where('user_id', $userId)->where('area_name', $row['area_name'])->first();
-                if ($existingArea) {
-                    $row['area_id'] = $existingArea->id;
-                } else {
-                    $areaModel->insert([
-                        'user_id' => $userId,
-                        'area_name' => $row['area_name'],
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]);
-                    $row['area_id'] = $areaModel->getInsertID();
-                }
+            if (session()->get('user_role') === 'employee') {
+                $userId = $details->admin_id;
+                $created_by = $details->created_by;
             }
 
-            // --- AUTO CREATE PACKAGE ---
-            if (($row['package_id'] === '--' || empty($row['package_id'])) && !empty($row['package_name'])) {
-                $existingPkg = $packageModel->where('user_id', $userId)->where('package_name', $row['package_name'])->first();
-                if ($existingPkg) {
-                    $row['package_id'] = $existingPkg->id ?? $existingPkg['id'];
-                } else {
-                    $packageModel->insert([
-                        'user_id' => $userId,
-                        'package_name' => $row['package_name'],
-                        'price' => 0, // Manual update later
-                        'selling_price' => '--',
-                        'bandwidth' => 0,      // Manual update later
-                        'status' => 'active',
-                        'pricing_type' => 'monthly',
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]);
-                    $newPkgId = $packageModel->getInsertID();
-                    $row['package_id'] = $newPkgId;
+            $areaModel = model('App\Models\Area');
+            $tenantPkg = function_exists('isTenantAdminRole')
+                ? (isTenantAdminRole((string) getSession('user_role')) || isTenantAdminRole((string) $created_by))
+                : in_array((string) getSession('user_role'), ['admin', 'sAdmin'], true) || in_array((string) $created_by, ['admin', 'sAdmin'], true);
+            $packageModel = $tenantPkg
+                ? model('App\Models\Package')
+                : model('App\Models\ResellerPackages');
 
-                    // Append to all_reseller_packages JSON for this reseller
-                    $allResellerPackageModel = model('App\Models\allResellerPackage');
-                    $existingRecord = $allResellerPackageModel->where('user_id', $userId)->first();
-                    
-                    $newPkgDetails = [
-                        'id' => $newPkgId,
-                        'package_name' => $row['package_name'],
-                        'price' => 0,
-                        'selling_price' => '--',
-                        'bandwidth' => 0,
-                        'package_type' => 'monthly',
-                        'preview' => '--'
-                    ];
+            // Handle fund check for reseller
+            if ($details->role === 'resellerAdmin' || $created_by === 'resellerAdmin') {
+                $totalPackagePrice = 0;
+                foreach ($data as $entry) {
+                    if (!empty($entry['package_id']) && $entry['package_id'] !== '--') {
+                        $totalPackagePrice += ResellerPackagePrice($entry['package_id']) ?? 0;
+                    }
+                }
 
-                    if ($existingRecord) {
-                        $detailsArr = is_string($existingRecord['package_details'])
-                            ? json_decode($existingRecord['package_details'], true)
-                            : $existingRecord['package_details'];
-                        if (!is_array($detailsArr)) {
-                            $detailsArr = [];
-                        }
-                        
-                        $found = false;
-                        foreach ($detailsArr as $d) {
-                            if (($d['id'] ?? '') == $newPkgId) {
-                                $found = true;
-                                break;
-                            }
-                        }
-                        if (!$found) {
-                            $detailsArr[] = $newPkgDetails;
-                            $allResellerPackageModel->update($existingRecord['id'], [
-                                'package_details' => json_encode($detailsArr)
-                            ]);
-                        }
-                    } else {
-                        $allResellerPackageModel->insert([
-                            'user_id' => $userId,
-                            'package_details' => json_encode([$newPkgDetails])
+                $hasPermission = userHasPermission('Resellers', 'daily_payment_generate') || userHasPermission('reseller', 'daily_payment_generate');
+
+                if (!$hasPermission) {
+                    $fund = $details->fund ?? 0;
+                    $billing_type = $details->billing_type ?? 'postpaid';
+                    if ($billing_type === 'prepaid' && $fund < $totalPackagePrice) {
+                        return $this->response->setJSON([
+                            'error' => 'Dont have enough fund. Please recharge!',
+                            'csrf_token' => csrf_hash()
+                        ]);
+                    }
+                    // Deduct fund — atomic & race-safe.
+                    if (! (new \App\Services\FundService())->deduct((int) $userId, (float) $totalPackagePrice)) {
+                        return $this->response->setJSON([
+                            'error' => 'Dont have enough fund. Please recharge!',
+                            'csrf_token' => csrf_hash()
                         ]);
                     }
                 }
             }
 
-            // Remove helper fields used for preview
-            unset($row['pppoe_secret'], $row['pppoe_password'], $row['router_name'], $row['package_name'], $row['area_name'], $row['pppoe_profile']);
+            $successCount = 0;
+            $transationModel = model('App\Models\ResellerTransactions');
 
-            // --- RE-VALIDATE MOBILE UNIQUENESS BEFORE INSERT ---
-            // The preview may have assigned a suffix, but a previous partial import run
-            // may have already inserted it. Always re-check and re-resolve here.
-            $insertMobile = $row['mobile'] ?? '';
-            if (empty($insertMobile) || $insertMobile === '--') {
-                $insertMobile = 'no-mobile-' . uniqid();
-            }
-            $existsInDB = $userModel->where('mobile', $insertMobile)->get()->getRowArray();
-            if ($existsInDB) {
-                $suffix = 1;
-                $originalMobile = $insertMobile;
-                do {
-                    $insertMobile = substr($originalMobile, 0, 15) . '-d' . $suffix;
-                    $suffix++;
-                    $existsInDB = $userModel->where('mobile', $insertMobile)->get()->getRowArray();
-                } while ($existsInDB);
-            }
-            $row['mobile'] = $insertMobile;
-
-            if ($this->user_model->insert($row)) {
-                $insertId = $this->user_model->getInsertID();
-                $successCount++;
-
-                // Router data insertion
-                $rMap = $routerDataMap[$index] ?? null;
-                if ($rMap) {
-                    $this->user_router_model->insert([
-                        'user_id' => $insertId,
-                        'router_id' => $rMap['router_id'],
-                        'pppoe_secret' => $rMap['pppoe_secret'],
-                        'router_password' => $rMap['router_password'],
-                        'pppoe_profile' => $rMap['pppoe_profile'] ?? null,
-                        'last_updated' => date('Y-m-d H:i:s'),
-                    ]);
+            foreach ($data as $index => $row) {
+                // --- AUTO CREATE AREA ---
+                if (empty($row['area_id']) && !empty($row['area_name'])) {
+                    $existingArea = $areaModel->where('user_id', $userId)->where('area_name', $row['area_name'])->first();
+                    if ($existingArea) {
+                        $row['area_id'] = (int) $existingArea->id;
+                    } else {
+                        $areaModel->insert([
+                            'user_id' => $userId,
+                            'area_name' => $row['area_name'],
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                        $row['area_id'] = (int) $areaModel->getInsertID();
+                    }
                 }
 
-                // Transaction log for reseller
-                if (($details->role === 'resellerAdmin' || $created_by === 'resellerAdmin') && !isset($hasPermission)) {
-                    $transationModel->insert([
-                        'customer' => $insertId,
-                        'admin_id' => $userId,
-                        'amount' => ResellerPackagePrice($row['package_id']) ?? 0,
-                        'comments' => 'Customer Created via Excel'
-                    ]);
+                // If area_id is still empty/null, find first available area for this user or default to 0/1 to avoid DB NOT NULL restriction
+                if (empty($row['area_id'])) {
+                    $firstArea = $areaModel->where('user_id', $userId)->first();
+                    if ($firstArea) {
+                        $row['area_id'] = (int) $firstArea->id;
+                    } else {
+                        // Create a default area if none exists
+                        $areaModel->insert([
+                            'user_id' => $userId,
+                            'area_name' => 'Default Area',
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                        $row['area_id'] = (int) $areaModel->getInsertID();
+                    }
+                }
+
+                // --- AUTO CREATE PACKAGE ---
+                if (($row['package_id'] === '--' || empty($row['package_id'])) && !empty($row['package_name'])) {
+                    $existingPkg = $packageModel->where('user_id', $userId)->where('package_name', $row['package_name'])->first();
+                    if ($existingPkg) {
+                        $row['package_id'] = $existingPkg->id ?? $existingPkg['id'];
+                    } else {
+                        $packageModel->insert([
+                            'user_id' => $userId,
+                            'package_name' => $row['package_name'],
+                            'price' => 0, // Manual update later
+                            'selling_price' => '--',
+                            'bandwidth' => 0,      // Manual update later
+                            'status' => 'active',
+                            'pricing_type' => 'monthly',
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+                        $newPkgId = $packageModel->getInsertID();
+                        $row['package_id'] = $newPkgId;
+
+                        // Append to all_reseller_packages JSON for this reseller
+                        $allResellerPackageModel = model('App\Models\allResellerPackage');
+                        $existingRecord = $allResellerPackageModel->where('user_id', $userId)->first();
+                        
+                        $newPkgDetails = [
+                            'id' => $newPkgId,
+                            'package_name' => $row['package_name'],
+                            'price' => 0,
+                            'selling_price' => '--',
+                            'bandwidth' => 0,
+                            'package_type' => 'monthly',
+                            'preview' => '--'
+                        ];
+
+                        if ($existingRecord) {
+                            $detailsArr = is_string($existingRecord['package_details'])
+                                ? json_decode($existingRecord['package_details'], true)
+                                : $existingRecord['package_details'];
+                            if (!is_array($detailsArr)) {
+                                $detailsArr = [];
+                            }
+                            
+                            $found = false;
+                            foreach ($detailsArr as $d) {
+                                if (($d['id'] ?? '') == $newPkgId) {
+                                    $found = true;
+                                    break;
+                                }
+                            }
+                            if (!$found) {
+                                $detailsArr[] = $newPkgDetails;
+                                $allResellerPackageModel->update($existingRecord['id'], [
+                                    'package_details' => json_encode($detailsArr)
+                                ]);
+                            }
+                        } else {
+                            $allResellerPackageModel->insert([
+                                'user_id' => $userId,
+                                'package_details' => json_encode([$newPkgDetails])
+                            ]);
+                        }
+                    }
+                }
+
+                // Remove helper fields used for preview
+                unset($row['pppoe_secret'], $row['pppoe_password'], $row['router_name'], $row['package_name'], $row['area_name'], $row['pppoe_profile']);
+
+                // --- RE-VALIDATE MOBILE UNIQUENESS BEFORE INSERT ---
+                $insertMobile = $row['mobile'] ?? '';
+                if (empty($insertMobile) || $insertMobile === '--') {
+                    $insertMobile = 'no-mobile-' . uniqid();
+                }
+                $existsInDB = $userModel->where('mobile', $insertMobile)->get()->getRowArray();
+                if ($existsInDB) {
+                    $suffix = 1;
+                    $originalMobile = $insertMobile;
+                    do {
+                        $insertMobile = substr($originalMobile, 0, 15) . '-d' . $suffix;
+                        $suffix++;
+                        $existsInDB = $userModel->where('mobile', $insertMobile)->get()->getRowArray();
+                    } while ($existsInDB);
+                }
+                $row['mobile'] = $insertMobile;
+
+                if ($this->user_model->insert($row)) {
+                    $insertId = $this->user_model->getInsertID();
+                    $successCount++;
+
+                    // Router data insertion
+                    $rMap = $routerDataMap[$index] ?? null;
+                    if ($rMap) {
+                        $this->user_router_model->insert([
+                            'user_id' => $insertId,
+                            'router_id' => $rMap['router_id'],
+                            'pppoe_secret' => $rMap['pppoe_secret'],
+                            'router_password' => $rMap['router_password'],
+                            'pppoe_profile' => $rMap['pppoe_profile'] ?? null,
+                            'last_updated' => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+
+                    // Transaction log for reseller
+                    if (($details->role === 'resellerAdmin' || $created_by === 'resellerAdmin') && !isset($hasPermission)) {
+                        $transationModel->insert([
+                            'customer' => $insertId,
+                            'admin_id' => $userId,
+                            'amount' => ResellerPackagePrice($row['package_id']) ?? 0,
+                            'comments' => 'Customer Created via Excel'
+                        ]);
+                    }
+                } else {
+                    $dbErrors = $this->user_model->errors();
+                    log_message('error', 'Excel import: Failed to insert row index ' . $index . '. Row data: ' . json_encode($row) . '. DB errors: ' . json_encode($dbErrors));
                 }
             }
+
+            return $this->response->setJSON([
+                'success' => "Successfully imported $successCount customers!",
+                'csrf_token' => csrf_hash()
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Process Import Exception: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return $this->response->setJSON([
+                'error' => 'An exception occurred during import: ' . $e->getMessage(),
+                'csrf_token' => csrf_hash()
+            ]);
         }
-
-        return $this->response->setJSON([
-            'success' => "Successfully imported $successCount customers!",
-            'csrf_token' => csrf_hash()
-        ]);
     }
 
 
@@ -1006,11 +1070,17 @@ class Customer extends BaseController
             $totalBuilder->where('users.admin_id', $userId);
         }
         if ($status === 'due') {
+            $totalBuilder->where('users.status', 'active');
+            // Exclude free users via subquery
+            $totalBuilder->where('((SELECT COUNT(*) FROM connection_details WHERE user_id = users.id AND (billing_status = "free" OR billing_status = "Free")) = 0)');
+            // Exclude free users by 2050 year check
+            $totalBuilder->where('(users.will_expire IS NULL OR YEAR(users.will_expire) != 2050)');
+            // Include only due users (subscription inactive, or expired, or empty expiry date)
             $totalBuilder->groupStart()
                 ->where('users.subscription_status !=', 'active')
-                ->orWhere('users.will_expire <', $now)
-                ->orWhere("(SELECT COUNT(*) FROM payments WHERE user_id = users.id AND month = {$escCur} AND status = 'successful') = 0", null, false)
-                ->groupEnd();
+                ->orWhere('users.will_expire <', date('Y-m-d H:i:s'))
+                ->orWhere('users.will_expire IS NULL')
+            ->groupEnd();
         } elseif ($status === 'active') {
             $totalBuilder->where('users.subscription_status', 'active')->where('users.will_expire >=', date('Y-m-d H:i:s'))->where('users.conn_status', 'conn');
         } elseif ($status === 'expired') {
@@ -1043,11 +1113,17 @@ class Customer extends BaseController
             ->where('users.role', 'user');
 
         if ($status === 'due') {
+            $data->where('users.status', 'active');
+            // Exclude free users via subquery
+            $data->where('((SELECT COUNT(*) FROM connection_details WHERE user_id = users.id AND (billing_status = "free" OR billing_status = "Free")) = 0)');
+            // Exclude free users by 2050 year check
+            $data->where('(users.will_expire IS NULL OR YEAR(users.will_expire) != 2050)');
+            // Include only due users (subscription inactive, or expired, or empty expiry date)
             $data->groupStart()
                 ->where('users.subscription_status !=', 'active')
-                ->orWhere('users.will_expire <', $now)
-                ->orWhere('(pay_cur.status IS NULL OR pay_cur.status != \'successful\')', null, false)
-                ->groupEnd();
+                ->orWhere('users.will_expire <', date('Y-m-d H:i:s'))
+                ->orWhere('users.will_expire IS NULL')
+            ->groupEnd();
         }
 
         if ($userole === 'employee') {
@@ -2547,7 +2623,7 @@ class Customer extends BaseController
         if ($packages === null) {
         // log_message('info', 'Fetched user data: ' . json_encode($details));
 
-        if ($role === 'admin') {
+        if ($role === 'admin' || $role === 'sAdmin') {
             if ($details === null || $details->status === 'inactive' || $details->subscription_status === 'inactive' || $details->conn_status != 'conn') {
                 return requestResponse('error', "Your account is not active.Update your account to create new customer", 500);
             }
@@ -2741,7 +2817,7 @@ class Customer extends BaseController
                 ->findAll();
         } else {
             $created_by = (string) ($details->created_by ?? '');
-            if ($created_by === 'admin') {
+            if ($created_by === 'admin' || $created_by === 'sAdmin') {
                 $userId = (int) ($details->admin_id ?? 0);
                 if ($userId <= 0) {
                     return requestResponse('error', 'Admin account is not linked to your profile.', 500);
@@ -3272,7 +3348,7 @@ class Customer extends BaseController
                 }
             } elseif ($created_by === 'resellerAdmin') {
                 $will_expire = calPackageExpireDate($package_id, date('Y-m-d H:i:s'));
-            } elseif ($created_by === 'admin') {
+            } elseif ($created_by === 'admin' || $created_by === 'sAdmin') {
 
                 //if custoimer less then then or error
                 $will_expire = calsAdminPackageExpireDate($package_id, date('Y-m-d H:i:s'));
@@ -3384,6 +3460,7 @@ class Customer extends BaseController
                         'status' => getPostInput('status'),
                         'admin_id' => $userId,
                         'created_by' => $created_by,
+                        'pre_package' => 0,
                     ];
 
 
@@ -3416,18 +3493,25 @@ class Customer extends BaseController
                         }
                     }
 
-                    if ($isReferralComplete && $legacyRefereeId > 0) {
-                        $result = $this->user_model->update($legacyRefereeId, $data);
-                        $insertId = $legacyRefereeId;
-                    } else {
-                        $result = $this->user_model->insert($data, false);
-                        $insertId = $this->user_model->getInsertID();
-                    }
-                    log_message('info', 'Fetched result data: ' . json_encode($data));
+                    $db = \Config\Database::connect();
+                    $db->transStart();
 
-                    if (!empty($insertId)) {
+                    try {
+                        if ($isReferralComplete && $legacyRefereeId > 0) {
+                            $result = $this->user_model->update($legacyRefereeId, $data);
+                            $insertId = $legacyRefereeId;
+                        } else {
+                            $result = $this->user_model->insert($data, false);
+                            $insertId = $this->user_model->getInsertID();
+                        }
+                        log_message('info', 'Fetched result data: ' . json_encode($data));
+
+                        if (empty($insertId) || !$result) {
+                            throw new \RuntimeException("Failed to insert customer record into the database.");
+                        }
+
                         // Insert into user_router_data
-                        $this->user_router_model->insert([
+                        $router_data_result = $this->user_router_model->insert([
                             'user_id' => $insertId,
                             'router_id' => $data['router_id'],
                             'pppoe_secret' => $pppoe_name,
@@ -3435,6 +3519,10 @@ class Customer extends BaseController
                             'pppoe_profile' => $pppoe_profile ?? null,
                             'last_updated' => date('Y-m-d H:i:s'),
                         ]);
+                        if (!$router_data_result) {
+                            throw new \RuntimeException("Failed to insert customer router mapping data.");
+                        }
+
                         $connection_data = [
                             // New Connection Details Fields
                             'user_id' => $insertId ?? '--',
@@ -3447,14 +3535,15 @@ class Customer extends BaseController
                             'client_type' => getPostInput('client_type'),
                             'billing_status' => $billing_status,
                             'otc' => getPostInput('otc') ?? '00',
-                            // 'created_at' => date('Y-m-d H:i:s')
                         ];
-
 
                         log_message('info', 'Fetched connection_data data: ' . json_encode($connection_data));
                         $ConnectionDetails = model('App\Models\ConnectionData');
 
-                        $result = $ConnectionDetails->insert($connection_data);
+                        $connection_result = $ConnectionDetails->insert($connection_data);
+                        if (!$connection_result) {
+                            throw new \RuntimeException("Failed to insert customer connection details.");
+                        }
 
                         if ($is_reseller_creation && ($billing_status === 'free' || $billing_status === 'Free')) {
                             $loggedInUserId = session()->get('user_id');
@@ -3473,12 +3562,15 @@ class Customer extends BaseController
                             }
                             
                             $freeReqModel = model('App\Models\FreeUserRequest');
-                            $freeReqModel->insert([
+                            $free_req_result = $freeReqModel->insert([
                                 'user_id' => $insertId,
                                 'reseller_id' => $resellerId,
                                 'admin_id' => $parentAdminId,
                                 'status' => 'pending'
                             ]);
+                            if (!$free_req_result) {
+                                throw new \RuntimeException("Failed to record free user request.");
+                            }
 
                             $parentAdmin = $userModel->find($parentAdminId);
                             if ($parentAdmin) {
@@ -3493,18 +3585,42 @@ class Customer extends BaseController
                         }
 
                         if ($details->role === 'resellerAdmin') {
+                            $activeFor = $this->formatDuration($difference);
                             $transationdata = [
                                 'customer' => $insertId,
                                 'admin_id' => $userId,
                                 'amount' => $new_price ?? '0',
                                 'package_price' => $price,
-                                'active_for' => $difference,
-                                'comments' => 'Single Customer Created'
+                                'active_for' => $activeFor,
+                                'comments' => "Single Customer Created for {$activeFor}"
                             ];
                             log_message('info', 'Fetched transationdata data: ' . json_encode($transationdata));
                             $transationModel = model('App\Models\ResellerTransactions');
-                            $result = $transationModel->insert($transationdata);
+                            $tx_result = $transationModel->insert($transationdata);
+                            if (!$tx_result) {
+                                throw new \RuntimeException("Failed to insert reseller transaction record.");
+                            }
                         }
+
+                        $db->transComplete();
+                        if ($db->transStatus() === false) {
+                            throw new \RuntimeException("Database transaction failed to complete.");
+                        }
+                    } catch (\Throwable $e) {
+                        $db->transRollback();
+                        $dbError = $db->error();
+                        $dbErrorMessage = !empty($dbError['message']) ? $dbError['message'] : $e->getMessage();
+                        
+                        log_message('critical', 'Database operation failed after MikroTik creation, rolling back MikroTik PPPoE user. DB Error: ' . $dbErrorMessage . ' | Exception: ' . $e->getMessage());
+                        
+                        if (!empty($pppoe_id)) {
+                            try {
+                                removePPPoEUser($router_client, $pppoe_id);
+                            } catch (\Throwable $rollbackEx) {
+                                log_message('critical', 'Failed to roll back/remove PPPoE user from MikroTik: ' . $rollbackEx->getMessage());
+                            }
+                        }
+                        return requestResponse('error', 'Failed to save customer record in software: ' . $dbErrorMessage, 500);
                     }
 
 
@@ -3645,6 +3761,7 @@ class Customer extends BaseController
 
     public function refreshOltData()
     {
+        session_write_close(); // Release session lock for concurrent requests
         $callerid = $this->request->getGet('callerid');
         log_message('info', 'Received callerid: ' . $callerid);
 
@@ -3706,7 +3823,7 @@ class Customer extends BaseController
             }
         }
 
-        if ($role === 'admin' && $ownerId !== 0) {
+        if (($role === 'admin' || $role === 'sAdmin') && $ownerId !== 0) {
             helper('user');
             if (function_exists('getSAdminIdForUser') && (int) getSAdminIdForUser($ownerId) === $actorId) {
                 return true;
@@ -4042,13 +4159,16 @@ class Customer extends BaseController
     private function resolveCustomerFormPackages($userId, $userole, $created_by): array
     {
         $packages = [];
+        $isTenantPkg = function_exists('isTenantAdminRole')
+            ? (isTenantAdminRole((string) $userole) || isTenantAdminRole((string) $created_by))
+            : in_array((string) $userole, ['admin', 'sAdmin'], true) || in_array((string) $created_by, ['admin', 'sAdmin'], true);
 
-        if ($userole === 'admin' || $created_by === 'admin') {
+        if ($isTenantPkg) {
             $package_model = model('App\Models\Package');
             $packages = $package_model->where('user_id', $userId)->where('status', 'active')->findAll();
         }
 
-        if ($userole != 'admin' && $created_by != 'admin') {
+        if (!$isTenantPkg) {
             $packageModel = model('App\Models\allResellerPackage');
             $rawPackages = $packageModel->where('user_id', $userId)->findAll();
 
@@ -4299,6 +4419,21 @@ class Customer extends BaseController
             $pppoe_name = getPostInput('pppoe_name');
             $pppoe_password = getPostInput('pppoe_password');
 
+            // If the password submitted consists only of asterisks, retain the existing non-starred password
+            if (preg_match('/^\*+$/', $pppoe_password)) {
+                $routerDataModel = model('App\Models\UserRouterDataModel');
+                $routerData = $routerDataModel->where('user_id', $id)->first();
+                $db_password = $routerData ? (is_object($routerData) ? $routerData->router_password : ($routerData['router_password'] ?? '')) : '';
+                if (!empty($db_password) && !preg_match('/^\*+$/', $db_password)) {
+                    $pppoe_password = $db_password;
+                } else {
+                    $code_password = is_object($user_data) ? ($user_data->code ?? '') : ($user_data['code'] ?? '');
+                    if (!empty($code_password) && !preg_match('/^\*+$/', $code_password)) {
+                        $pppoe_password = $code_password;
+                    }
+                }
+            }
+
             if ($router_client instanceof \RouterOS\Client) {
 
                 $pppoe = getPPPoEUserUserId($router_client, $user_data->id);
@@ -4492,6 +4627,24 @@ class Customer extends BaseController
      */
     public function subscription($id)
     {
+        $details = $this->user_model->where(['id' => $id])->first();
+
+        $showDailyBill = false;
+        $user_role = session()->get('user_role');
+        if ($user_role === 'sAdmin' || $user_role === 'admin' || $user_role === 'super_admin') {
+            $showDailyBill = true;
+        } else {
+            $showDailyBill = userHasPermission('Resellers', 'daily_payment_generate') || userHasPermission('reseller', 'daily_payment_generate');
+        }
+
+        // Show Daily Bill Generate option if the customer belongs to a prepaid reseller
+        if (!$showDailyBill && $details) {
+            $admin = $this->user_model->where(['id' => $details->admin_id])->first();
+            if ($admin && ($admin->billing_type ?? 'postpaid') === 'prepaid') {
+                $showDailyBill = true;
+            }
+        }
+
         // backupDatabaseAndSendEmail();
         $ids = $this->request->getGet('ids');
         if (!empty($ids)) {
@@ -4515,7 +4668,6 @@ class Customer extends BaseController
             log_message('info', 'Fetched package IDs: ' . json_encode($packageIds));
         }
 
-        $details = $this->user_model->where(['id' => $id])->first();
         $payment_model = model('App\Models\Payment');
 
         // Get current month name
@@ -4581,6 +4733,7 @@ class Customer extends BaseController
                     'pppoe_profile' => $storedProfile,
                     'package_profile_map' => $packageProfileMap,
                     'mikrotik_pending' => true,
+                    'show_daily_bill' => $showDailyBill,
                 ];
             } else {
 
@@ -4598,6 +4751,7 @@ class Customer extends BaseController
                     'packageIds' => $packageIds ?? [],
                     'packages' => $package_model->where(['status' => 'active'])->where(['user_id' => $details->admin_id])->findAll(),
                     'payment_months' => $payment_months ?? [],
+                    'show_daily_bill' => $showDailyBill,
                 ];
                 log_message('info', 'Fetched data2: ' . json_encode($data));
             }
@@ -4751,6 +4905,22 @@ class Customer extends BaseController
     {
         $details = $this->user_model->where(['id' => $id, 'role' => 'user'])->first();
 
+        $showDailyBill = false;
+        $user_role = session()->get('user_role');
+        if ($user_role === 'sAdmin' || $user_role === 'admin' || $user_role === 'super_admin') {
+            $showDailyBill = true;
+        } else {
+            $showDailyBill = userHasPermission('Resellers', 'daily_payment_generate') || userHasPermission('reseller', 'daily_payment_generate');
+        }
+
+        // Show Daily Bill Generate option if the customer belongs to a prepaid reseller
+        if (!$showDailyBill && $details) {
+            $admin = $this->user_model->where(['id' => $details->admin_id])->first();
+            if ($admin && ($admin->billing_type ?? 'postpaid') === 'prepaid') {
+                $showDailyBill = true;
+            }
+        }
+
         if (!empty($details)) {
 
             if ($details->created_by === 'resellerAdmin') {
@@ -4761,6 +4931,7 @@ class Customer extends BaseController
                     'title' => 'Customer\'s Subscription',
                     'details' => $details,
                     'packages' => $package_model->where(['status' => 'active'])->findAll(),
+                    'show_daily_bill' => $showDailyBill,
                 ];
             }
             // else {
@@ -4874,6 +5045,12 @@ class Customer extends BaseController
 
     private function processMultipleSubscriptions($id)
     {
+        // Prevent script timeout and release session lock for large batch recharges
+        set_time_limit(0);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $ids = json_decode($this->request->getPost('userNames'), true);
         $ids = explode(',', $ids);
         $ids = array_map('trim', $ids);
@@ -5006,6 +5183,11 @@ class Customer extends BaseController
                 'subscription_status' => $isActive ? 'active' : 'inactive',
                 'conn_status'         => $isActive ? 'conn' : 'disconn'
             ];
+
+            $daily_bill = getPostInput('s2_daily_bill');
+            if ($daily_bill !== null) {
+                $updateData['daily_bill'] = (int)$daily_bill;
+            }
 
             $created_at = getPostInput('created_at');
             if (!empty($created_at)) {
@@ -5189,13 +5371,13 @@ class Customer extends BaseController
             // Calculate days difference
             if ($pre_package_id != $package_id) {
                 // Package changed → reset calculation
-                $difference = ceil(($will_expire_timestamp - $now) / (60 * 60 * 24));
+                $difference = ($will_expire_timestamp - $now) / (60 * 60 * 24);
             } elseif ($user_details->subscription_status === 'active' && $prewill_expire > $now) {
                 // Same package & active → extend from previous expiry
-                $difference = ceil(($will_expire_timestamp - $prewill_expire) / (60 * 60 * 24));
+                $difference = ($will_expire_timestamp - $prewill_expire) / (60 * 60 * 24);
             } else {
                 // Expired or inactive → fresh calculation
-                $difference = ceil(($will_expire_timestamp - $now) / (60 * 60 * 24));
+                $difference = ($will_expire_timestamp - $now) / (60 * 60 * 24);
             }
         }
 
@@ -5213,7 +5395,7 @@ class Customer extends BaseController
             // Phase 5 (MT-1): canonical proration via the BillingService seam.
             // round to 2dp for the varchar payments.amount the gateway reads.
             $price = round((new \App\Services\BillingService())
-                ->quote((float) $tprice, (int) $difference), 2);
+                ->quote((float) $tprice, (float) $difference), 2);
 
             // Check fund availability
             $current_user_id = session()->get('user_id');
@@ -5271,6 +5453,21 @@ class Customer extends BaseController
 
                     $pppoe_name = $user_ppp[0]['name'] ?? '--';
                     $pppoe_password = $user_ppp[0]['password'] ?? '--';
+
+                    if (preg_match('/^\*+$/', $pppoe_password)) {
+                        $router_model = model('App\Models\UserRouterDataModel');
+                        $routerData = $router_model->where('user_id', $user->id)->first();
+                        $db_password = $routerData ? (is_object($routerData) ? $routerData->router_password : ($routerData['router_password'] ?? '')) : '';
+                        if (!empty($db_password) && !preg_match('/^\*+$/', $db_password)) {
+                            $pppoe_password = $db_password;
+                        } else {
+                            $code_password = is_object($user) ? ($user->code ?? '') : ($user['code'] ?? '');
+                            if (!empty($code_password) && !preg_match('/^\*+$/', $code_password)) {
+                                $pppoe_password = $code_password;
+                            }
+                        }
+                    }
+
                     $pppoe_service = $user_ppp[0]['service'] ?? '--';
                     // $pppoe_profile = $user_ppp[0]['profile'] ?? '--';
 
@@ -5319,18 +5516,33 @@ class Customer extends BaseController
                         $mktPass = $freshMkt[0]['password'] ?? '';
                         $mktProf = $freshMkt[0]['profile'] ?? '';
 
+                        $isMktPassMasked = preg_match('/^\*+$/', $mktPass);
+
                         $syncData = [
                             'user_id' => $user->id,
                             'router_id' => $user_details->router_id,
                             'pppoe_secret' => $mktName,
-                            'router_password' => $mktPass,
                             'pppoe_profile' => $mktProf,
                             'last_updated' => date('Y-m-d H:i:s')
                         ];
 
+                        if (!$isMktPassMasked && $mktPass !== '') {
+                            $syncData['router_password'] = $mktPass;
+                        }
+
                         if ($existingRouterData) {
                             $routerDataModel->update($existingRouterData->id, $syncData);
                         } else {
+                            if ($isMktPassMasked || $mktPass === '') {
+                                $codePass = is_object($user) ? ($user->code ?? '') : ($user['code'] ?? '');
+                                if (!empty($codePass) && !preg_match('/^\*+$/', $codePass)) {
+                                    $syncData['router_password'] = $codePass;
+                                } else {
+                                    $syncData['router_password'] = $mktPass;
+                                }
+                            } else {
+                                $syncData['router_password'] = $mktPass;
+                            }
                             $routerDataModel->insert($syncData);
                         }
                     }
@@ -5393,6 +5605,7 @@ class Customer extends BaseController
                 return ['success' => false, 'error' => 'Insufficient fund'];
             }
 
+            $activeFor = $this->formatDuration($subscriptionData['difference']);
             // Create transaction record
             $transationModel = model('App\Models\ResellerTransactions');
             $transationdata = [
@@ -5400,8 +5613,8 @@ class Customer extends BaseController
                 'admin_id' => $current_user_id,
                 'amount' => $subscriptionData['price'],
                 'package_price' => $subscriptionData['tprice'],
-                'active_for' => $subscriptionData['difference'],
-                'comments' => 'Customer Subscription Updated'
+                'active_for' => $activeFor,
+                'comments' => "Customer Subscription Updated for {$activeFor}"
             ];
             $transationModel->insert($transationdata);
         }
@@ -5428,8 +5641,11 @@ class Customer extends BaseController
         }
 
         log_message('info', "Processing reseller payment: " . json_encode($paydata));
+        
         // Update or insert payment
-        if ($existing) {
+        // Only update if the existing payment record has the exact same status (e.g. Paid + Paid, or Pending + Pending)
+        // If the statuses are different (e.g. existing is Paid, and new extension is Due), insert a separate record
+        if ($existing && $existing->status === $status) {
             $paydata['amount'] = (float) $existing->amount + (float) $subscriptionData['price'];
             $payment_model->update($existing->id, $paydata);
         } else {
@@ -5444,6 +5660,7 @@ class Customer extends BaseController
         $payment_model = model('App\Models\Payment');
         $package = getUserPackage($userId);
         $tprice = is_array($package) ? $package['price'] : (is_object($package) ? $package->price : 0);
+        $status = getPostInput('status');
 
         $paydata = [
             'user_id' => $userId,
@@ -5457,15 +5674,18 @@ class Customer extends BaseController
             'paid_via' => getPostInput('paid_via'),
             'paid_to' => session()->get('user_id'),
             'method_trx' => getPostInput('method_trx'),
-            'status' => getPostInput('status'),
+            'status' => $status,
             'created_at' => date('Y-m-d H:i:s')
         ];
 
-        if (getPostInput('status') === 'successful') {
+        if ($status === 'successful') {
             $paydata['paid_at'] = date('Y-m-d H:i:s');
         }
 
-        if ($existing) {
+        // Only update if the existing payment record has the exact same status (e.g. Paid + Paid, or Pending + Pending)
+        // If the statuses are different (e.g. existing is Paid, and new extension is Due), insert a separate record
+        if ($existing && $existing->status === $status) {
+            $paydata['amount'] = (float) $existing->amount + (float) $tprice;
             $payment_model->update($existing->id, $paydata);
         } else {
             $payment_model->insert($paydata);
@@ -5505,6 +5725,19 @@ class Customer extends BaseController
 
         // Replace 'T' with space (common in datetime-local inputs)
         $datetime = str_replace('T', ' ', $datetime);
+
+        // Try robust parsing if slash or AM/PM exists
+        if (strpos($datetime, '/') !== false || stripos($datetime, 'M') !== false) {
+            $timestamp = strtotime($datetime);
+            if ($timestamp !== false) {
+                return date('Y-m-d H:i:s', $timestamp);
+            }
+            // Try replacing / with - (interprets as DD-MM-YYYY in strtotime)
+            $timestamp = strtotime(str_replace('/', '-', $datetime));
+            if ($timestamp !== false) {
+                return date('Y-m-d H:i:s', $timestamp);
+            }
+        }
 
         // Ensure will_expire has seconds, if not, append ":00"
         // YYYY-MM-DD HH:MM is 16 characters
@@ -5955,8 +6188,9 @@ class Customer extends BaseController
 
     public function freeRequests()
     {
+        helper('user');
         $role = session()->get('user_role');
-        if (!in_array($role, ['super_admin', 'admin'])) {
+        if ($role !== 'super_admin' && !isTenantAdminRole($role)) {
             return show_404();
         }
 
@@ -5981,8 +6215,9 @@ class Customer extends BaseController
 
     public function approveFreeRequest()
     {
+        helper('user');
         $role = session()->get('user_role');
-        if (!in_array($role, ['super_admin', 'admin'])) {
+        if ($role !== 'super_admin' && !isTenantAdminRole($role)) {
             return requestResponse('error', 'Unauthorized', 403);
         }
 
@@ -6030,8 +6265,9 @@ class Customer extends BaseController
 
     public function rejectFreeRequest()
     {
+        helper('user');
         $role = session()->get('user_role');
-        if (!in_array($role, ['super_admin', 'admin'])) {
+        if ($role !== 'super_admin' && !isTenantAdminRole($role)) {
             return requestResponse('error', 'Unauthorized', 403);
         }
 
@@ -6074,6 +6310,155 @@ class Customer extends BaseController
         }
 
         return requestResponse('success', 'Request rejected successfully', 200);
+    }
+
+    private function formatDuration($difference)
+    {
+        $daysInt = floor($difference);
+        $hoursFraction = ($difference - $daysInt) * 24;
+        $hoursInt = round($hoursFraction);
+        if ($hoursInt >= 24) {
+            $daysInt += 1;
+            $hoursInt = 0;
+        }
+
+        if ($daysInt > 0 && $hoursInt > 0) {
+            return "{$daysInt}d {$hoursInt}h";
+        } elseif ($daysInt > 0) {
+            return "{$daysInt}d";
+        } else {
+            return "{$hoursInt}h";
+        }
+    }
+
+    public function fixPasswords()
+    {
+        // Set unlimited execution time for fixing passwords
+        set_time_limit(0);
+
+        helper('router');
+        $routerDataModel = model('App\Models\UserRouterDataModel');
+        $userModel = model('App\Models\User');
+
+        $loggedInUserId = session()->get('user_id');
+        $loggedInUserRole = session()->get('user_role');
+
+        $db = \Config\Database::connect();
+        $builder = $db->table('user_router_data');
+        $builder->select('user_router_data.*, users.code, users.name');
+        $builder->join('users', 'users.id = user_router_data.user_id');
+        $builder->like('user_router_data.router_password', '*');
+
+        // Scope database access based on user roles
+        if ($loggedInUserRole === 'employee') {
+            $details = $userModel->find($loggedInUserId);
+            $emp_admin_id = $details->admin_id ?? null;
+            if ($emp_admin_id) {
+                $builder->where('users.admin_id', $emp_admin_id);
+            }
+        } elseif ($loggedInUserRole === 'resellerAdmin') {
+            $builder->where('users.admin_id', $loggedInUserId);
+        }
+        
+        $query = $builder->get();
+        $rows = $query->getResultArray();
+
+        $fixed = [];
+        $errors = [];
+
+        foreach ($rows as $row) {
+            $userId = $row['user_id'];
+            $routerId = $row['router_id'];
+            $pppoeName = $row['pppoe_secret'];
+            $starredPassword = $row['router_password'];
+            $backupPassword = $row['code'] ?? '';
+
+            if (empty($backupPassword) || preg_match('/^\*+$/', $backupPassword)) {
+                $errors[] = [
+                    'user_id' => $userId,
+                    'name' => $row['name'],
+                    'pppoe_name' => $pppoeName,
+                    'error' => 'No valid plain-text password found in users.code'
+                ];
+                continue;
+            }
+
+            // Attempt to update the router password on MikroTik
+            $router_client = routerClient($routerId);
+            if (!is_array($router_client)) {
+                $pppoe = getPPPoEUserUserId($router_client, $userId);
+                $pppoe_id = $pppoe[0]['.id'] ?? null;
+
+                if ($pppoe_id) {
+                    $user_ppp = getPPPoEUser($router_client, $pppoe_id);
+                    $pppoe_profile = $user_ppp[0]['profile'] ?? '--';
+                    $pppoe_service = $user_ppp[0]['service'] ?? 'pppoe';
+
+                    $router_action = updatePPPoEUser($router_client, [
+                        'pppoe_name' => $pppoeName,
+                        'pppoe_password' => $backupPassword,
+                        'pppoe_service' => $pppoe_service,
+                        'pppoe_profile' => $pppoe_profile,
+                        'pppoe_id' => $pppoe_id,
+                    ]);
+
+                    if (is_array($router_action) && $router_action['status'] === 'success') {
+                        // Router successfully updated. Now update local DB.
+                        $routerDataModel->update($row['id'], [
+                            'router_password' => $backupPassword,
+                            'last_updated' => date('Y-m-d H:i:s')
+                        ]);
+                        $fixed[] = [
+                            'user_id' => $userId,
+                            'name' => $row['name'],
+                            'pppoe_name' => $pppoeName,
+                            'restored_password' => $backupPassword
+                        ];
+                    } else {
+                        $errorMsg = is_array($router_action) ? ($router_action['error'] ?? 'Unknown MikroTik error') : 'MikroTik update failed';
+                        $errors[] = [
+                            'user_id' => $userId,
+                            'name' => $row['name'],
+                            'pppoe_name' => $pppoeName,
+                            'error' => "Router update failed: " . $errorMsg
+                        ];
+                    }
+                } else {
+                    // Update database only as fallback
+                    $routerDataModel->update($row['id'], [
+                        'router_password' => $backupPassword,
+                        'last_updated' => date('Y-m-d H:i:s')
+                    ]);
+                    $errors[] = [
+                        'user_id' => $userId,
+                        'name' => $row['name'],
+                        'pppoe_name' => $pppoeName,
+                        'error' => 'PPPoE account not found on MikroTik. Database entry was updated.'
+                    ];
+                }
+            } else {
+                // Update database only as fallback
+                $routerDataModel->update($row['id'], [
+                    'router_password' => $backupPassword,
+                    'last_updated' => date('Y-m-d H:i:s')
+                ]);
+                $errors[] = [
+                    'user_id' => $userId,
+                    'name' => $row['name'],
+                    'pppoe_name' => $pppoeName,
+                    'error' => 'Failed to connect to MikroTik router client. Database entry was updated.'
+                ];
+            }
+        }
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'message' => 'Password repair job completed.',
+            'fixed_count' => count($fixed),
+            'failed_count' => count($errors),
+            'fixed_list' => $fixed,
+            'failed_list' => $errors
+        ]);
     }
 
     /**
@@ -6138,7 +6523,7 @@ class Customer extends BaseController
         }
 
         $inScope = false;
-        if ($role === 'admin') {
+        if ($role === 'admin' || $role === 'sadmin') {
             $inScope = (int) $actor->id === $ownerId;
         } elseif ($role === 'reselleradmin') {
             $inScope = (int) ($actor->admin_id ?? 0) === $ownerId;

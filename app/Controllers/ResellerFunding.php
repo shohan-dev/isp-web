@@ -14,7 +14,7 @@ use CodeIgniter\CLI\Console;
 use App\Models\Registration;
 
 use App\Models\User;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 
 class ResellerFunding extends BaseController
@@ -43,7 +43,7 @@ class ResellerFunding extends BaseController
     }
     public function Funding_index()
     {
-        if (!userHasPermission('Resellers', 'read') && userHasPermission('reseller', 'read')) {
+        if (!userHasPermission('Resellers', 'read') && !userHasPermission('reseller', 'read')) {
             return requestResponse("error", "You don't have permission to view.", 500);
         }
         $userId = session()->get('user_id');
@@ -95,26 +95,39 @@ class ResellerFunding extends BaseController
     public function transactionindex()
     {
         $userId = session()->get('user_id');
+        $role = session()->get('user_role');
 
-        // Fetch reseller data
-        $resellerData = $this->user_model->builder()
-            ->select('*')
-            ->where('role', 'resellerAdmin')
-            ->where('admin_id', $userId)
+        // Reseller may always view own POP transactions; tenant needs POP/payment permission.
+        if ($role !== 'resellerAdmin') {
+            $canView = userHasPermission('Resellers', 'read')
+                || userHasPermission('reseller', 'read')
+                || userHasPermission('customer_payment', 'read');
+            if (! $canView) {
+                return requestResponse('error', "You don't have permission to view.", 403);
+            }
+        }
 
-            ->orderBy('id', 'desc')
-            ->get()
-            ->getResult();  // This returns objects by default
+        if ($role === 'resellerAdmin') {
+            $resellerData = $this->user_model->builder()
+                ->select('*')
+                ->where('id', $userId)
+                ->get()
+                ->getResult();
+        } else {
+            $resellerData = $this->user_model->builder()
+                ->select('*')
+                ->where('role', 'resellerAdmin')
+                ->where('admin_id', $userId)
+                ->orderBy('id', 'desc')
+                ->get()
+                ->getResult();
+        }
 
-
-
-        // Prepare the data array for the view
         $data = [
             'title' => 'Reseller transactions',
-            'resellers' => $resellerData // Add reseller data to the array
+            'resellers' => $resellerData,
         ];
 
-        // Load the view with the data
         return view('resellerFunding/transactions', $data);
     }
 
@@ -147,9 +160,18 @@ class ResellerFunding extends BaseController
                 ->where('reseller_transaction.admin_id', $userId)
                 ->orderBy('reseller_transaction.id', 'desc');
         } else {
+            // Tenant admin: only transactions for their POP resellers (never cross-tenant).
+            $popIds = $this->user_model
+                ->select('id')
+                ->where(['role' => 'resellerAdmin', 'admin_id' => $userId])
+                ->findColumn('id');
+            if (empty($popIds)) {
+                $popIds = [0];
+            }
             $data = $model->builder()
                 ->select('reseller_transaction.*, joined_customer.name as joined_customer_name')
                 ->join('users as joined_customer', 'joined_customer.id = reseller_transaction.customer', 'left')
+                ->whereIn('reseller_transaction.admin_id', $popIds)
                 ->orderBy('reseller_transaction.id', 'desc');
         }
 
@@ -179,7 +201,7 @@ class ResellerFunding extends BaseController
         }
 
         // Generate DataTables with the filtered data
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -253,10 +275,9 @@ class ResellerFunding extends BaseController
                 ->where('reseller_funding.admin_id', $userId)
                 ->orderBy('reseller_funding.id', 'desc');
 
-            // Apply filters based on the input values
-            // Apply filters based on the input values
+            // Filter by POP reseller (customer column); admin_id is the tenant owner.
             if (!empty($reseller)) {
-                $data->where('reseller_funding.admin_id', $reseller);
+                $data->where('reseller_funding.customer', $reseller);
             }
         } else {
             $data = $model->builder()
@@ -288,7 +309,7 @@ class ResellerFunding extends BaseController
 
 
         // Generate DataTables with the filtered data
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -373,10 +394,17 @@ class ResellerFunding extends BaseController
     public function new()
     {
         $userId = session()->get('user_id');
+        $role = session()->get('user_role');
+
+        if ($role === 'resellerAdmin') {
+            $customers = $this->user_model->where(['role' => 'resellerAdmin', 'id' => $userId])->findAll();
+        } else {
+            $customers = $this->user_model->where(['role' => 'resellerAdmin', 'admin_id' => $userId])->findAll();
+        }
 
         $data = [
             'title' => 'New funding',
-            'customers' => $this->user_model->where(['role' => 'resellerAdmin'])->where('admin_id', $userId)->findAll()
+            'customers' => $customers,
         ];
 
         return view('resellerFunding/NewFunding', $data);
@@ -419,24 +447,45 @@ class ResellerFunding extends BaseController
         $model = new ResellerFundingModel();
 
         $data = $this->request->getPost();
+        $sessionId = (int) session()->get('user_id');
+        $role = (string) session()->get('user_role');
+        $isReseller = ($role === 'resellerAdmin');
 
-        $adminId = session()->get('user_id');
-
-        $data['admin_id'] = $adminId;
+        // reseller_funding.admin_id = tenant owner; .customer = POP reseller
+        if ($isReseller) {
+            $self = $this->user_model->where(['id' => $sessionId, 'role' => 'resellerAdmin'])->first();
+            if (! $self) {
+                return redirect()->back()->with('error', 'Reseller account not found.');
+            }
+            $tenantAdminId = (int) ($self->admin_id ?? 0);
+            $customerId = $sessionId;
+            $data['admin_id'] = $tenantAdminId;
+            $data['customer'] = $customerId;
+        } else {
+            $tenantAdminId = $sessionId;
+            $data['admin_id'] = $tenantAdminId;
+            $customerId = (int) ($data['customer'] ?? 0);
+        }
 
         $amount = (float) ($data['amount'] ?? 0);
         if ($amount <= 0 || $amount > 500000) {
             return redirect()->back()->with('error', 'Amount must be greater than zero and not exceed 500000.');
         }
 
-        $customerId = (int) ($data['customer'] ?? 0);
         if ($customerId <= 0) {
             return redirect()->back()->with('error', 'Reseller is required.');
         }
 
-        $userModel = model('App\Models\User');
-        $details = $userModel->where(['id' => $customerId, 'role' => 'resellerAdmin'])->first();
-        if (! $details || (int) ($details->admin_id ?? 0) !== (int) $adminId) {
+        $details = $this->user_model->where(['id' => $customerId, 'role' => 'resellerAdmin'])->first();
+        if (! $details) {
+            return redirect()->back()->with('error', 'Reseller not found or not owned by your account.');
+        }
+        // Tenant must own the POP; reseller may only fund themselves under their parent.
+        if ($isReseller) {
+            if ((int) $details->id !== $sessionId || (int) ($details->admin_id ?? 0) !== $tenantAdminId) {
+                return redirect()->back()->with('error', 'Reseller not found or not owned by your account.');
+            }
+        } elseif ((int) ($details->admin_id ?? 0) !== $tenantAdminId) {
             return redirect()->back()->with('error', 'Reseller not found or not owned by your account.');
         }
 
@@ -444,8 +493,12 @@ class ResellerFunding extends BaseController
         $previous_amount = (float) ($funding_details['amount'] ?? 0);
 
         if (!empty($data['id'])) {
-            $existing = $model->where(['id' => $data['id'], 'admin_id' => $adminId])->first();
+            $existing = $model->where(['id' => $data['id'], 'admin_id' => $tenantAdminId])->first();
             if (! $existing) {
+                return redirect()->back()->with('error', 'Funding record not found.');
+            }
+            // Reseller may only edit their own funding rows
+            if ($isReseller && (int) ($existing['customer'] ?? 0) !== $sessionId) {
                 return redirect()->back()->with('error', 'Funding record not found.');
             }
             $result = $model->update($data['id'], $data);
@@ -463,7 +516,7 @@ class ResellerFunding extends BaseController
                     $delta,
                     'resellerfund:' . (int) $data['id'],
                     'Reseller funding credit',
-                    (int) $adminId
+                    (int) $tenantAdminId
                 );
             } elseif ($delta < 0) {
                 if (! $fundService->deduct(
@@ -471,7 +524,7 @@ class ResellerFunding extends BaseController
                     abs($delta),
                     'resellerfund:adj:' . (int) $data['id'] . ':' . round($amount, 2),
                     'Reseller funding adjustment',
-                    (int) $adminId
+                    (int) $tenantAdminId
                 )) {
                     return redirect()->back()->with('error', 'Reseller does not have enough fund for this adjustment.');
                 }
@@ -492,7 +545,14 @@ class ResellerFunding extends BaseController
     {
         $ids = getRawInput('ids');
         $model = new ResellerFundingModel();
-        $adminId = (int) session()->get('user_id');
+        $sessionId = (int) session()->get('user_id');
+        $role = (string) session()->get('user_role');
+        $isReseller = ($role === 'resellerAdmin');
+        $tenantAdminId = $sessionId;
+        if ($isReseller) {
+            $self = $this->user_model->find($sessionId);
+            $tenantAdminId = (int) ($self->admin_id ?? 0);
+        }
         $fundService = new \App\Services\FundService();
         $userModel = model('App\Models\User');
 
@@ -500,14 +560,17 @@ class ResellerFunding extends BaseController
             $deleted = 0;
 
             foreach ($ids as $id) {
-                $fund = $model->where(['id' => $id, 'admin_id' => $adminId])->first();
+                $fund = $model->where(['id' => $id, 'admin_id' => $tenantAdminId])->first();
                 if (!$fund) {
+                    continue;
+                }
+                if ($isReseller && (int) ($fund['customer'] ?? 0) !== $sessionId) {
                     continue;
                 }
 
                 $customerId = (int) ($fund['customer'] ?? 0);
                 $details = $userModel->where(['id' => $customerId])->first();
-                if (! $details || (int) ($details->admin_id ?? 0) !== $adminId) {
+                if (! $details || (int) ($details->admin_id ?? 0) !== $tenantAdminId) {
                     return requestResponse('error', 'Reseller ownership verification failed.', 403);
                 }
 
@@ -518,7 +581,7 @@ class ResellerFunding extends BaseController
                         $fundAmount,
                         'resellerfund:delete:' . (int) $id,
                         'Reseller funding record deleted',
-                        $adminId
+                        $tenantAdminId
                     )) {
                         return requestResponse('error', "Can't be deleted, Reseller doesn't have that much fund.", 500);
                     }
@@ -549,20 +612,35 @@ class ResellerFunding extends BaseController
     {
         $ids = getRawInput('ids');
         $model = new ResellerTransactions();
+        $sessionId = (int) session()->get('user_id');
+        $role = (string) session()->get('user_role');
 
-
-        if (!empty($ids) && is_array($ids) && count($ids) > 0) {
-
-            $result = $model->whereIn('id', $ids)->delete();
-
-            if ($result) {
-
-                return requestResponse("success", "Selected records deleted successfully", 200);
-            }
-
-            return requestResponse("error", "Something went wrong! Please try again", 500);
+        if (empty($ids) || ! is_array($ids) || count($ids) === 0) {
+            return requestResponse('error', 'Nothing is selected!', 400);
         }
 
-        return requestResponse("error", "Nothing is selected!", 400);
+        $allowedIds = [];
+        if ($role === 'resellerAdmin') {
+            $rows = $model->whereIn('id', $ids)->where('admin_id', $sessionId)->findAll();
+            $allowedIds = array_map(static fn ($r) => (int) (is_array($r) ? $r['id'] : $r->id), $rows);
+        } else {
+            $popIds = $this->user_model
+                ->select('id')
+                ->where(['role' => 'resellerAdmin', 'admin_id' => $sessionId])
+                ->findColumn('id') ?: [0];
+            $rows = $model->whereIn('id', $ids)->whereIn('admin_id', $popIds)->findAll();
+            $allowedIds = array_map(static fn ($r) => (int) (is_array($r) ? $r['id'] : $r->id), $rows);
+        }
+
+        if (empty($allowedIds)) {
+            return requestResponse('error', 'Nothing is selected!', 400);
+        }
+
+        $result = $model->whereIn('id', $allowedIds)->delete();
+        if ($result) {
+            return requestResponse('success', 'Selected records deleted successfully', 200);
+        }
+
+        return requestResponse('error', 'Something went wrong! Please try again', 500);
     }
 }

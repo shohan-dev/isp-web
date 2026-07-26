@@ -175,7 +175,7 @@ class CronJob extends BaseController
 
             try {
                 // ONE MikroTik query per router — batch fetch all PPPoE interfaces.
-                $allInterfacesRaw = $router_client->query(new \RouterOS\Query('/interface/print'))->read();
+                $allInterfacesRaw = $router_client->query(new Query('/interface/print'))->read();
             } catch (\Throwable $e) {
                 $this->cron_log("customer_data_usages: router_id $router_id - interface query failed: " . $e->getMessage(), 'error');
                 continue;
@@ -581,7 +581,7 @@ class CronJob extends BaseController
 
             try {
                 // Batch fetch secrets
-                $secrets = $router_client->query(new \RouterOS\Query('/ppp/secret/print'))->read();
+                $secrets = $router_client->query(new Query('/ppp/secret/print'))->read();
                 $secretsByComment = [];
                 foreach ($secrets as $s) {
                     if (isset($s['comment']))
@@ -1761,7 +1761,7 @@ class CronJob extends BaseController
 
                 try {
                     // 3. Fetch ALL Secrets from MikroTik in one go
-                    $mktSecrets = $router_client->query(new \RouterOS\Query('/ppp/secret/print'))->read();
+                    $mktSecrets = $router_client->query(new Query('/ppp/secret/print'))->read();
 
                     // Index secrets by Name and ID for O(1) matching
                     $mktByName = [];
@@ -1858,32 +1858,41 @@ class CronJob extends BaseController
                             $this->cron_log("FIXED ID: User ID {$user->id} linked to MikroTik ID {$mktInternalId}");
                         }
 
+                        $isMktPasswordMasked = preg_match('/^\*+$/', $mktPassword);
+
                         // B. Sync RouterData Model (Password, Secret & Profile)
                         if ($cred) {
                             $needsUpdate = (
-                                $cred->router_password !== $mktPassword ||
+                                (!$isMktPasswordMasked && $cred->router_password !== $mktPassword) ||
                                 $cred->pppoe_secret !== $mktSecretName ||
                                 ($cred->pppoe_profile ?? '') !== $mktProfile ||
                                 $cred->router_id != $router->id // CRITICAL: Ensure router_id is correct for the join
                             );
 
                             if ($needsUpdate) {
-                                $routerDataModel->update($cred->id, [
+                                $updateFields = [
                                     'router_id' => $router->id, // Fixed: Ensure consistency
                                     'pppoe_secret' => $mktSecretName,
-                                    'router_password' => $mktPassword,
                                     'pppoe_profile' => $mktProfile,
                                     'last_updated' => $now
-                                ]);
+                                ];
+                                if (!$isMktPasswordMasked) {
+                                    $updateFields['router_password'] = $mktPassword;
+                                }
+                                $routerDataModel->update($cred->id, $updateFields);
                                 $this->cron_log("FIXED DATA: User ID {$user->id} credentials synced (Secret: {$mktSecretName}, Profile: {$mktProfile})");
                             }
                         } else {
                             // C. ADD MISSING: If user exists but table Record is missing, create it.
+                            $insertPassword = $mktPassword;
+                            if ($isMktPasswordMasked && !empty($user->code) && !preg_match('/^\*+$/', $user->code)) {
+                                $insertPassword = $user->code;
+                            }
                             $routerDataModel->insert([
                                 'user_id' => $user->id,
                                 'router_id' => $router->id,
                                 'pppoe_secret' => $mktSecretName,
-                                'router_password' => $mktPassword,
+                                'router_password' => $insertPassword,
                                 'pppoe_profile' => $mktProfile,
                                 'last_updated' => $now
                             ]);

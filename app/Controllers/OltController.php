@@ -107,7 +107,7 @@ class OltController extends BaseController
 
     public function delete($id = null)
     {
-        $model = new \App\Models\OltModel();
+        $model = new OltModel();
 
         // Check if the OLT exists first
         if ($model->find($id)) {
@@ -350,7 +350,10 @@ class OltController extends BaseController
         $this->loadUserOlt($userId); // load user’s assigned OLT id
         $output = $this->connect($action); // run Python script
         // log_message('info', "OLT Output: " . print_r($output, true));
-        // 🔹 Check if output is valid JSON
+        // 🔹 Extract JSON portion from output in case of warning/debug messages
+        if (preg_match('/\{.*\}/s', $output, $matches)) {
+            $output = $matches[0];
+        }
         $isJson = is_string($output) && is_array(json_decode($output, true)) && (json_last_error() == JSON_ERROR_NONE);
 
         if ($isJson) {
@@ -505,10 +508,11 @@ class OltController extends BaseController
             // 1. Give PHP more time to breathe
             set_time_limit(90);
 
-            $output = shell_exec($command);
+            $output = shell_exec($command . " 2>&1");
+            log_message('info', "OLT Script Raw Output: " . $output);
 
             // 2. shell_exec returns NULL if it fails or produces no output
-            if (is_null($output) || $output === false) {
+            if (is_null($output) || $output === false || trim($output) === "") {
                 log_message('error', "OLT Script failed or timed out.");
                 return json_encode(["error" => "Command timed out or failed to execute."]);
             }

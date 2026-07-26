@@ -29,6 +29,13 @@ abstract class BaseController extends Controller
     protected $request;
 
     /**
+     * Instance of the main Response object.
+     *
+     * @var ResponseInterface
+     */
+    protected $response;
+
+    /**
      * Form validation
      */
     protected $validation;

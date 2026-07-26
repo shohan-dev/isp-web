@@ -115,18 +115,30 @@ if (!function_exists('getRouterPassById')) {
 
 			// log_message('debug', 'System user_ppp Resources Data: ' . print_r($user_ppp, true));
 
+			$isPasswordMasked = preg_match('/^\*+$/', $password);
+
 			// Update or insert router data in the database
 			if ($routerData) {
-				$routerDataModel->update($routerData->id, [
-					'router_password' => $password,
+				$updateData = [
 					'pppoe_secret' => $pppoe_name,
 					'last_updated' => date('Y-m-d H:i:s')
-				]);
+				];
+				if (!$isPasswordMasked && $password !== 'No password available') {
+					$updateData['router_password'] = $password;
+				}
+				$routerDataModel->update($routerData->id, $updateData);
 			} else {
+				$insertPassword = $password;
+				if ($isPasswordMasked || $password === 'No password available') {
+					$codePass = is_object($details) ? ($details->code ?? '') : ($details['code'] ?? '');
+					if (!empty($codePass) && !preg_match('/^\*+$/', $codePass)) {
+						$insertPassword = $codePass;
+					}
+				}
 				$routerDataModel->insert([
 					'user_id' => $id,
 					'router_id' => $details->router_id,
-					'router_password' => $password,
+					'router_password' => $insertPassword,
 					'pppoe_secret' => $pppoe_name,
 					'last_updated' => date('Y-m-d H:i:s')
 				]);
@@ -394,6 +406,22 @@ if (!function_exists('routerClient')) {
 		}
 
 		$host = is_array($router) ? $router['host'] : $router->host;
+		if (!filter_var($host, FILTER_VALIDATE_IP)) {
+			$cachedIp = cache("resolved_ip_{$host}");
+			if ($cachedIp) {
+				$host = $cachedIp;
+			} else {
+				$resolvedIp = @gethostbyname($host);
+				if ($resolvedIp && $resolvedIp !== $host) {
+					cache()->save("resolved_ip_{$host}", $resolvedIp, 300);
+					$host = $resolvedIp;
+				} else {
+					log_message('error', "❌ DNS resolution failed for host: $host");
+					cache()->save("router_down_{$id}", 1, 45);
+					return null;
+				}
+			}
+		}
 		$user = is_array($router) ? $router['username'] : $router->username;
 		$pass = is_array($router) ? $router['password'] : $router->password;
 		$port = is_array($router) ? $router['port'] : $router->port;
@@ -1615,6 +1643,11 @@ function readSentence($fp)
 
 function connect_using_Fsocket($id)
 {
+	if (cache("router_down_{$id}")) {
+		log_message('warning', "⛔ [Fsock] Circuit OPEN for Router ID $id — skipping connect (recently unreachable)");
+		return null;
+	}
+
 	$router = getRouterById($id);
 
 	if (!$router) {
@@ -1623,6 +1656,23 @@ function connect_using_Fsocket($id)
 	}
 
 	$host = is_array($router) ? $router['host'] : $router->host;
+	if (!filter_var($host, FILTER_VALIDATE_IP)) {
+		$cachedIp = cache("resolved_ip_{$host}");
+		if ($cachedIp) {
+			$host = $cachedIp;
+		} else {
+			$resolvedIp = @gethostbyname($host);
+			if ($resolvedIp && $resolvedIp !== $host) {
+				cache()->save("resolved_ip_{$host}", $resolvedIp, 300);
+				$host = $resolvedIp;
+			} else {
+				log_message('error', "❌ [Fsock] DNS resolution failed for host: $host");
+				cache()->save("router_down_{$id}", 1, 45);
+				return null;
+			}
+		}
+	}
+
 	$user = is_array($router) ? $router['username'] : $router->username;
 	$pass = is_array($router) ? $router['password'] : $router->password;
 	$port = is_array($router) ? $router['port'] : $router->port;
@@ -1659,6 +1709,7 @@ function connect_using_Fsocket($id)
 	}
 
 	log_message('error', "❌ Fsock: All ports failed for Router ID $id");
+	cache()->save("router_down_{$id}", 1, 45);
 	return null;
 }
 
@@ -1756,6 +1807,11 @@ function disablePPPoEUserFsock($id, $ppp_id)
  */
 function disablePPPoEUserSSH($id, $ppp_id)
 {
+	if (cache("router_down_{$id}")) {
+		log_message('warning', "⛔ [SSH] Circuit OPEN for Router ID $id — skipping connect (recently unreachable)");
+		return false;
+	}
+
 	if (!class_exists('\phpseclib3\Net\SSH2')) {
 		log_message('error', "[SSH] phpseclib not available. Cannot use SSH fallback for Router ID $id.");
 		return false;
@@ -1778,6 +1834,7 @@ function disablePPPoEUserSSH($id, $ppp_id)
 
 		if (!$ssh->login($user, $pass)) {
 			log_message('error', "[SSH] Login failed for Router ID $id ({$host})");
+			cache()->save("router_down_{$id}", 1, 45);
 			return false;
 		}
 
@@ -1798,6 +1855,7 @@ function disablePPPoEUserSSH($id, $ppp_id)
 
 	} catch (\Exception $e) {
 		log_message('error', "[SSH] Exception for Router ID $id: " . $e->getMessage());
+		cache()->save("router_down_{$id}", 1, 45);
 		return false;
 	}
 }
@@ -1808,6 +1866,11 @@ function disablePPPoEUserSSH($id, $ppp_id)
  */
 function enablePPPoEUserSSH($id, $ppp_id)
 {
+	if (cache("router_down_{$id}")) {
+		log_message('warning', "⛔ [SSH-Enable] Circuit OPEN for Router ID $id — skipping connect (recently unreachable)");
+		return false;
+	}
+
 	if (!class_exists('\phpseclib3\Net\SSH2')) {
 		log_message('error', "[SSH-Enable] phpseclib not available. Cannot use SSH fallback for Router ID $id.");
 		return false;
@@ -1830,6 +1893,7 @@ function enablePPPoEUserSSH($id, $ppp_id)
 
 		if (!$ssh->login($user, $pass)) {
 			log_message('error', "[SSH-Enable] Login failed for Router ID $id ({$host})");
+			cache()->save("router_down_{$id}", 1, 45);
 			return false;
 		}
 
@@ -1846,6 +1910,7 @@ function enablePPPoEUserSSH($id, $ppp_id)
 
 	} catch (\Exception $e) {
 		log_message('error', "[SSH-Enable] Exception for Router ID $id: " . $e->getMessage());
+		cache()->save("router_down_{$id}", 1, 45);
 		return false;
 	}
 }

@@ -35,7 +35,16 @@
     ]); ?>
 
 <div class="box box-warning">
-      <?php if (getSession('user_role') === 'admin'): ?>
+      <?php
+        $pkgRole = (string) getSession('user_role');
+        $isTenantAdmin = function_exists('isTenantAdminRole')
+          ? isTenantAdminRole($pkgRole)
+          : in_array($pkgRole, ['admin', 'sAdmin'], true);
+        $canEditPkg = $isTenantAdmin || $pkgRole === 'resellerAdmin' || $pkgRole === 'super_admin';
+        $canSyncPkg = $isTenantAdmin || $pkgRole === 'super_admin';
+        $showRouterCols = $isTenantAdmin || $pkgRole === 'super_admin';
+      ?>
+      <?php if ($canSyncPkg): ?>
         <button class="btn btn-primary" id="syncPackagesBtn">
           <i class="fa fa-plus"></i> Sync Package
         </button>
@@ -54,7 +63,7 @@
               <th scope="col">Bandwidth</th>
               <th scope="col">Package Type</th>
               <th scope="col">Preview</th>
-              <?php if (in_array(session()->get('user_role'), ['super_admin', 'admin'])): ?>
+              <?php if ($showRouterCols): ?>
                 <th scope="col">Router</th>
                 <th scope="col">Profile</th>
               <?php endif; ?>
@@ -83,7 +92,7 @@
                     <?= isset($package['package_type']) && !empty($package['package_type']) ? esc($package['package_type']) : '--' ?>
                   </td>
                   <td><?= isset($package['preview']) && $package['preview'] !== '' ? esc($package['preview']) : 0 ?></td>
-                  <?php if (in_array(session()->get('user_role'), ['super_admin', 'admin'])): ?>
+                  <?php if ($showRouterCols): ?>
                     <?php
                     $routerName = '--';
                     if (!empty($package['mikrotik_router_id']) && !empty($routers)) {
@@ -102,7 +111,7 @@
                   <?php endif; ?>
 
                   <td>
-                    <?php if (session()->get('user_role') === 'admin'): ?>
+                    <?php if ($canEditPkg): ?>
                       <!-- Use hyphenated data attribute names so jQuery converts them to camelCase -->
                       <button class="btn btn-sm btn-primary editPackagesBtn"
                         data-package-name="<?= isset($package['package_name']) ? esc($package['package_name']) : '--' ?>"
@@ -120,7 +129,7 @@
               <?php endforeach; ?>
             <?php else: ?>
               <tr>
-                <td colspan="<?= in_array(session()->get('user_role'), ['super_admin', 'admin']) ? 10 : 8 ?>">No packages found.</td>
+                <td colspan="<?= (function_exists('isTenantAdminRole') ? isTenantAdminRole() : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true)) || session()->get('user_role') === 'super_admin' ? 10 : 8 ?>">No packages found.</td>
               </tr>
             <?php endif; ?>
           </tbody>

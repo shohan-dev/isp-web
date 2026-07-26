@@ -4,23 +4,71 @@ namespace App\Libraries;
 
 use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
 
+/**
+ * Safe server-side DataTables for this app.
+ *
+ * Vendor order/filter blindly SQL-orders by the client column `data` name.
+ * Checkbox/serial/action/addColumn fields are not DB columns, so that yields
+ * "Unknown column 'serial|select|…' in order clause" and kills the Ajax grid.
+ * This subclass skips virtual columns and only orders real query fields.
+ */
 class DataTables extends DataTablesCodeIgniter4
 {
     /**
-     * Columns added in PHP (not in SQL). serial maps to id for sorting.
+     * Columns added in PHP (not in SQL). Never emit them into ORDER BY / LIKE.
      */
     protected function resolveSqlColumn(string $column): ?string
     {
-        if (in_array($column, ['select', 'action', 'pricing', 'package'], true)) {
+        if ($column === '' || ctype_digit($column)) {
             return null;
         }
 
-        if ($column === 'serial') {
-            $column = 'id';
+        // addColumn() callbacks are never SQL-sortable/searchable
+        if (isset($this->extraColumns[$column])) {
+            return null;
+        }
+
+        // Sequence numbers are computed in PHP — controllers already set a default ORDER BY
+        if ($this->sequenceNumber && ($column === $this->sequenceNumberKey || $column === 'serial')) {
+            return null;
+        }
+
+        static $virtual = [
+            'select', 'action', 'pricing', 'package', 'employee', 'area',
+            'purpose', 'checkbox', 'options', 'btn', 'buttons',
+        ];
+        if (in_array($column, $virtual, true)) {
+            return null;
         }
 
         if (isset($this->columnAliases[$column])) {
             $column = $this->columnAliases[$column];
+        }
+
+        // Reject unknown fields (stops ORDER BY on junk / renamed UI keys)
+        $bare = strpos($column, '.') !== false
+            ? substr($column, strrpos($column, '.') + 1)
+            : $column;
+        $known = array_merge(
+            $this->fieldNames ?? [],
+            $this->returnedFieldNames ?? [],
+            array_keys($this->columnAliases ?? []),
+            array_values($this->columnAliases ?? [])
+        );
+        $knownBare = [];
+        foreach ($known as $f) {
+            $f = (string) $f;
+            $knownBare[] = $f;
+            if (strpos($f, '.') !== false) {
+                $knownBare[] = substr($f, strrpos($f, '.') + 1);
+            }
+            // strip SQL aliases: "users.name as name"
+            if (preg_match('/\bas\s+`?(\w+)`?$/i', $f, $m)) {
+                $knownBare[] = $m[1];
+            }
+        }
+        if (!in_array($column, $knownBare, true) && !in_array($bare, $knownBare, true)) {
+            return null;
         }
 
         if (strpos($column, '.') !== false) {
@@ -52,9 +100,12 @@ class DataTables extends DataTablesCodeIgniter4
 
             foreach ($this->request->get('order') as $order) {
                 $column_idx = $order['column'];
-                $request_column = $this->request->get('columns')[$column_idx];
+                $request_column = $this->request->get('columns')[$column_idx] ?? null;
+                if ($request_column === null) {
+                    continue;
+                }
 
-                if (! filter_var($request_column['orderable'], FILTER_VALIDATE_BOOLEAN)) {
+                if (! filter_var($request_column['orderable'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     continue;
                 }
 
@@ -105,7 +156,7 @@ class DataTables extends DataTablesCodeIgniter4
             $escapedKeyword = $db->escapeLikeString($keyword);
 
             foreach ($this->request->get('columns', []) as $request_column) {
-                if (! filter_var($request_column['searchable'], FILTER_VALIDATE_BOOLEAN)) {
+                if (! filter_var($request_column['searchable'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                     continue;
                 }
 
@@ -136,8 +187,8 @@ class DataTables extends DataTablesCodeIgniter4
 
         foreach ($this->request->get('columns', []) as $request_column) {
             if (
-                filter_var($request_column['searchable'], FILTER_VALIDATE_BOOLEAN)
-                && ($colKeyword = $request_column['search']['value']) != ''
+                filter_var($request_column['searchable'] ?? false, FILTER_VALIDATE_BOOLEAN)
+                && ($colKeyword = $request_column['search']['value'] ?? '') != ''
             ) {
                 $column = $request_column['data'];
 

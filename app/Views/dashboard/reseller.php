@@ -121,7 +121,11 @@ $clientsDisabled = (int) ($users_inactive ?? 0) + (int) ($expired_inactive ?? 0)
           <div class="ipb-card ipb-router-card">
             <div class="ipb-card-head">
               <div>
-                <div class="ipb-card-title"><?= esc($router->name ?? 'Router'); ?></div>
+                <div class="ipb-card-title">
+                  <a href="<?= route_to('route.routers.allusers') . '?routerId=' . (int) $router->id; ?>">
+                    <?= esc($router->name ?? 'Router'); ?>
+                  </a>
+                </div>
                 <div class="ipb-card-sub" id="last_updated_<?= (int) $router->id; ?>"><?= esc($lastUpdated); ?></div>
               </div>
               <div class="ipb-status-pill <?= $statusClass; ?>" id="status_<?= (int) $router->id; ?>">
@@ -130,24 +134,24 @@ $clientsDisabled = (int) ($users_inactive ?? 0) + (int) ($expired_inactive ?? 0)
               </div>
             </div>
             <div class="ipb-dash-mini">
-              <div class="ipb-kpi tone-brand compact">
+              <a href="<?= route_to('route.routers.allusers') . '?routerId=' . (int) $router->id; ?>" class="ipb-kpi tone-brand compact">
                 <div class="ipb-kpi-top"><span class="ipb-kpi-icon"><i class="fa-solid fa-users"></i></span></div>
                 <div class="ipb-kpi-value" id="total_user_count_<?= (int) $router->id; ?>" data-cached="<?= (int) ($router->cached_total ?? 0); ?>">0</div>
                 <div class="ipb-kpi-label">Total Users</div>
-                <a href="#" class="ipb-kpi-cta view-all-users" data-router-id="<?= (int) $router->id; ?>">View details <i class="fa fa-chevron-right"></i></a>
-              </div>
-              <div class="ipb-kpi tone-success compact">
+                <span class="ipb-kpi-cta">View details <i class="fa fa-chevron-right"></i></span>
+              </a>
+              <a href="<?= route_to('route.routers.activeusers') . '?routerId=' . (int) $router->id; ?>" class="ipb-kpi tone-success compact">
                 <div class="ipb-kpi-top"><span class="ipb-kpi-icon"><i class="fa-solid fa-wifi"></i></span></div>
                 <div class="ipb-kpi-value" id="active_user_count_<?= (int) $router->id; ?>" data-cached="<?= (int) ($router->cached_active ?? 0); ?>">0</div>
                 <div class="ipb-kpi-label">Users Online</div>
-                <a href="#" class="ipb-kpi-cta view-active-users" data-router-id="<?= (int) $router->id; ?>">View details <i class="fa fa-chevron-right"></i></a>
-              </div>
-              <div class="ipb-kpi tone-error compact">
+                <span class="ipb-kpi-cta">View details <i class="fa fa-chevron-right"></i></span>
+              </a>
+              <a href="<?= route_to('route.routers.inactiveusers') . '?routerId=' . (int) $router->id; ?>" class="ipb-kpi tone-error compact">
                 <div class="ipb-kpi-top"><span class="ipb-kpi-icon"><i class="fa-solid fa-power-off"></i></span></div>
                 <div class="ipb-kpi-value" id="inactive_user_count_<?= (int) $router->id; ?>" data-cached="<?= (int) (($router->cached_total ?? 0) - ($router->cached_active ?? 0)); ?>">0</div>
                 <div class="ipb-kpi-label">Users Offline</div>
-                <a href="#" class="ipb-kpi-cta view-inactive-users" data-router-id="<?= (int) $router->id; ?>">View details <i class="fa fa-chevron-right"></i></a>
-              </div>
+                <span class="ipb-kpi-cta">View details <i class="fa fa-chevron-right"></i></span>
+              </a>
             </div>
           </div>
         <?php endforeach; ?>
@@ -383,7 +387,12 @@ $clientsDisabled = (int) ($users_inactive ?? 0) + (int) ($expired_inactive ?? 0)
 
 
 
-  document.addEventListener("DOMContentLoaded", () => {
+  (window.IpbReady || function (fn) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fn);
+    else fn();
+  })(function () {
+    if (typeof ApexCharts === "undefined" || !window.IpbTheme) return;
+    if (!document.querySelector("#customerPaymentReportChart")) return;
     const p = window.IpbTheme.chartPalette();
 
     //customer payment resport chart
@@ -450,7 +459,9 @@ $clientsDisabled = (int) ($users_inactive ?? 0) + (int) ($expired_inactive ?? 0)
     customerPaymentReportChart.render();
 
     //employee payment chart
-    const employeePaymentReportChart = new ApexCharts(document.querySelector("#employeePaymentReportChart"), {
+    const empHost = document.querySelector("#employeePaymentReportChart");
+    if (!empHost) return;
+    const employeePaymentReportChart = new ApexCharts(empHost, {
       series: [{
         name: 'Successful',
         data: [<?= '"' . implode('","', $employee_payment_statistics["successful"]) . '"' ?>],

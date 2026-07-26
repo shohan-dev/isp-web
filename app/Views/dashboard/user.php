@@ -540,6 +540,8 @@ $router_id = is_array($details) ? $details['router_id'] : $details->router_id;
         success: function (response) {
           const result = response.response;
           if (!bandwidthChart) {
+            const host = document.querySelector("#bandwidth_chart");
+            if (!host || !window.IpbTheme || typeof ApexCharts === "undefined") return;
             const p = window.IpbTheme.chartPalette();
             let options = {
               series: [
@@ -590,7 +592,7 @@ $router_id = is_array($details) ? $details['router_id'] : $details->router_id;
                   })
                 : []
             };
-            bandwidthChart = new ApexCharts(document.querySelector("#bandwidth_chart"), options);
+            bandwidthChart = new ApexCharts(host, options);
             window.IpbTheme.registerChart(bandwidthChart);
             bandwidthChart.render();
           } else if (result && result.data && result.data.traffic) {
@@ -619,7 +621,12 @@ $router_id = is_array($details) ? $details['router_id'] : $details->router_id;
   });
 </script>
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
+  (window.IpbReady || function (fn) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fn);
+    else fn();
+  })(function () {
+    if (typeof ApexCharts === "undefined" || !window.IpbTheme) return;
+    if (!document.querySelector("#payment_chart")) return;
     const p = window.IpbTheme.chartPalette();
     const paymentChart = new ApexCharts(document.querySelector("#payment_chart"), {
       series: [{

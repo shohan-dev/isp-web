@@ -35,7 +35,7 @@ final class BillingService
      * Canonical price for a renewal/upgrade: the new monthly price prorated
      * across the billed days.  price = (newMonthly / 30) * days.
      */
-    public function quote(float $newMonthly, int $days): float
+    public function quote(float $newMonthly, float $days): float
     {
         return ($newMonthly / self::DAYS_PER_MONTH) * $days;
     }

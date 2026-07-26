@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use CodeIgniter\CLI\Console;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 use App\Models\UserRouterDataModel;
 use App\Models\User;
 use \RouterOS\Client;
@@ -55,9 +55,10 @@ class Routers extends BaseController
     }
     public function allusers()
     {
-        if (!userHasPermission('routers', 'read'))
-            show_404();
         $routerId = getGetInput('routerId') ?? null;
+        if (! $this->canAccessRouterUserPages($routerId !== null && $routerId !== '' ? (int) $routerId : null)) {
+            show_404();
+        }
 
         log_message('info', 'routerId: ' . $routerId);
 
@@ -70,9 +71,10 @@ class Routers extends BaseController
     }
     public function inactiveusers()
     {
-        if (!userHasPermission('routers', 'read'))
-            show_404();
         $routerId = getGetInput('routerId') ?? null;
+        if (! $this->canAccessRouterUserPages($routerId !== null && $routerId !== '' ? (int) $routerId : null)) {
+            show_404();
+        }
 
         log_message('info', 'routerId: ' . $routerId);
 
@@ -88,19 +90,9 @@ class Routers extends BaseController
     {
         $routerId = getGetInput('routerId') ?? null;
 
-        //     log_message('info', 'routerId: ' . $routerId);
-
-        //     // Use CodeIgniter's request object to get the 'routerId' from the query parameters
-        // $routerId = $this->request->getGet('routerId'); 
-
-        // Log the routerId to verify if it's being retrieved
-        // log_message('info', 'routers routerId: ' . $routerId);
-
-
-        if (!userHasPermission('routers', 'read'))
+        if (! $this->canAccessRouterUserPages($routerId !== null && $routerId !== '' ? (int) $routerId : null)) {
             show_404();
-
-
+        }
 
         $data = [
             'title' => 'Active Router Users',
@@ -108,6 +100,44 @@ class Routers extends BaseController
         ];
 
         return view('RouterUsers/activeUsers', $data);
+    }
+
+    /**
+     * Dashboard POP cards link here. Allow tenant admins and assigned POP
+     * resellers even when the default permission JSON omits "routers".
+     */
+    protected function canAccessRouterUserPages(?int $routerId = null): bool
+    {
+        helper('user');
+        if (userHasPermission('routers', 'read')) {
+            return true;
+        }
+
+        $role = (string) session()->get('user_role');
+        $userId = (int) session()->get('user_id');
+
+        if (function_exists('isTenantAdminRole') && isTenantAdminRole($role)) {
+            if ($routerId === null || $routerId <= 0) {
+                return true;
+            }
+
+            return (bool) $this->router_model->where(['id' => $routerId, 'user_id' => $userId])->first();
+        }
+
+        if ($role === 'resellerAdmin') {
+            $me = model('App\Models\User')->find($userId);
+            $assigned = (int) ($me->router_id ?? 0);
+            if ($assigned <= 0) {
+                return false;
+            }
+            if ($routerId === null || $routerId <= 0) {
+                return true;
+            }
+
+            return $assigned === $routerId;
+        }
+
+        return false;
     }
 
 
@@ -131,7 +161,7 @@ class Routers extends BaseController
             ->where('user_id', $userId)
             ->orderBy('id', 'desc');
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -524,11 +554,10 @@ class Routers extends BaseController
             $username = getPostInput('username');
             $password = getPostInput('password');
             $name = getPostInput('name');
-            // $email = getPostInput('email');
-            // $address = getPostInput('address');
             $package_id = getPostInput('package_id');
             $area_id = getPostInput('area_id');
-            // $mobile = getPostInput('mobile');
+            $will_expire = getPostInput('will_expire');
+            $profile = getPostInput('profile');
 
             $count = count($pppoeId);
 
@@ -536,11 +565,14 @@ class Routers extends BaseController
             $userModel = model('App\Models\User');
             $details = $userModel->where(['id' => $userId])->first();
             $created_by = $details->role;
-            $data = [];
+
+            $db = \Config\Database::connect();
+            $db->transStart();
+
+            $userRouterModel = model('App\Models\UserRouterDataModel');
 
             for ($i = 0; $i < $count; $i++) {
-
-                array_push($data, [
+                $userData = [
                     'package_id' => $package_id[$i],
                     'area_id' => $area_id[$i],
                     'router_id' => $id,
@@ -553,7 +585,7 @@ class Routers extends BaseController
                     'pppoe_id' => $pppoeId[$i],
 
                     'last_renewed' => date('Y-m-d H:i:s'),
-                    'will_expire' => date('Y-m-d H:i:s'),
+                    'will_expire' => !empty($will_expire[$i]) ? $will_expire[$i] . ' 23:59:59' : date('Y-m-d H:i:s'),
 
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
@@ -561,23 +593,28 @@ class Routers extends BaseController
                     'role' => 'user',
                     'admin_id' => $userId,
                     'created_by' => $created_by,
+                ];
 
+                $this->user_model->insert($userData);
+                $insertId = $this->user_model->getInsertID();
+
+                $userRouterModel->insert([
+                    'user_id' => $insertId,
+                    'router_id' => $id,
+                    'pppoe_secret' => $username[$i],
+                    'router_password' => $password[$i],
+                    'pppoe_profile' => !empty($profile[$i]) ? $profile[$i] : null,
+                    'last_updated' => date('Y-m-d H:i:s'),
                 ]);
             }
 
-            if (!empty($data)) {
+            $db->transComplete();
 
-                $result = $this->user_model->insertBatch($data, null, $count);
-
-                if ($result) {
-
-                    return requestResponse('success', 'All user data imported successfully', 200);
-                }
-
-                return requestResponse('error', 'Something went wrong! Please try again', 500);
+            if ($db->transStatus() !== FALSE) {
+                return requestResponse('success', 'All user data imported successfully', 200);
             }
 
-            return requestResponse('error', 'No data to import', 500);
+            return requestResponse('error', 'Something went wrong! Please try again', 500);
         }
 
         return requestResponse('validation-error', array_values($this->validation->getErrors())[0], 400);
@@ -1116,6 +1153,7 @@ class Routers extends BaseController
 
     public function UsersloadTraffic($id)
     {
+        session_write_close(); // Release session lock for concurrent requests
         $pppoeName = $this->request->getGet('pppoe_name');
         $cacheKey = 'traffic_user_' . $id . '_' . md5((string)$pppoeName);
 

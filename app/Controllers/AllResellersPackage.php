@@ -46,7 +46,7 @@ class AllResellersPackage extends BaseController
         // Fallback to reseller_packages table directly if empty
         if (empty($packages)) {
             $resellerPkgModel = model('App\Models\ResellerPackages');
-            $fallbackPkgs = $resellerPkgModel->where('user_id', $userId)->where('status', 'active')->findAll();
+            $fallbackPkgs = $resellerPkgModel->where('user_id', $userId)->groupStart()->where('status', 'active')->orWhere('status', 'Active')->groupEnd()->findAll();
             foreach ($fallbackPkgs as $pkg) {
                 $packages[] = [
                     'id' => $pkg['id'] ?? ($pkg->id ?? null),
@@ -195,7 +195,7 @@ class AllResellersPackage extends BaseController
         // Fallback to reseller_packages table directly if empty
         if (empty($packages)) {
             $resellerPkgModel = model('App\Models\ResellerPackages');
-            $fallbackPkgs = $resellerPkgModel->where('user_id', $userId)->where('status', 'active')->findAll();
+            $fallbackPkgs = $resellerPkgModel->where('user_id', $userId)->groupStart()->where('status', 'active')->orWhere('status', 'Active')->groupEnd()->findAll();
             foreach ($fallbackPkgs as $pkg) {
                 $packages[] = [
                     'id' => $pkg['id'] ?? ($pkg->id ?? null),

@@ -8,7 +8,7 @@ use App\Models\ResellerPackages;
 use App\Models\NetworkModel;
 
 
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 class Sadmin extends BaseController
 {
@@ -27,7 +27,7 @@ class Sadmin extends BaseController
 
     public function diagram()
     {
-        if (!userHasPermission('network', 'read'))
+        if (!userHasPermission('network', 'read') && !(function_exists('isTenantAdminRole') && isTenantAdminRole()))
             show_404();
         $data['title'] = 'Network Diagram';
 
@@ -35,7 +35,7 @@ class Sadmin extends BaseController
     }
     public function map()
     {
-        if (!userHasPermission('network', 'read'))
+        if (!userHasPermission('network', 'read') && !(function_exists('isTenantAdminRole') && isTenantAdminRole()))
             show_404();
         $data['title'] = 'Network Map';
 

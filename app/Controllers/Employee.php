@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Services\TrashService;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 class Employee extends BaseController
 {
@@ -63,15 +63,9 @@ class Employee extends BaseController
 
 
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
-
-
-        // Log the processed data
-        log_message('info', 'Processed Data: ' . print_r($data, true));
-
-
 
         if (userHasPermission('employee', 'delete')) {
 
@@ -132,7 +126,9 @@ class Employee extends BaseController
 
         if (userHasPermission('employee', 'update')) {
             $datatables->addColumn('action', function ($row) {
-                return '<div class="ipb-row-actions"><a href="' . route_to('route.employee.edit', $row->id) . '" class="ipb-row-btn tone-brand" title="Update"><i class="far fa-pen-to-square"></i> Update</a></div>';
+                $updateBtn = '<a href="' . route_to('route.employee.edit', $row->id) . '" class="ipb-row-btn tone-brand" title="Update"><i class="far fa-pen-to-square"></i> Update</a>';
+                $viewBtn = '<a href="' . base_url('employee-portal/view/' . $row->id) . '" class="ipb-row-btn" title="View Activity"><i class="fa fa-eye"></i> View</a>';
+                return '<div class="ipb-row-actions">' . $updateBtn . $viewBtn . '</div>';
             });
         }
 
@@ -278,6 +274,8 @@ class Employee extends BaseController
                 'status'            => getPostInput('status'),
                 'admin_id'            => $userId,
                 'created_by'          => $created_by,
+                'location_required'   => getPostInput('location_required') !== null ? (int) getPostInput('location_required') : 1,
+                'location_interval'   => getPostInput('location_interval') !== null ? (int) getPostInput('location_interval') : 60,
             ];
 
 
@@ -438,6 +436,8 @@ class Employee extends BaseController
                 'address'           => getPostInput('address'),
                 'email'             => getPostInput('email'),
                 'status'            => getPostInput('status'),
+                'location_required'   => getPostInput('location_required') !== null ? (int) getPostInput('location_required') : 1,
+                'location_interval'   => getPostInput('location_interval') !== null ? (int) getPostInput('location_interval') : 60,
             ];
             log_message('debug', 'New Employee Data: ' . print_r($data, true));
 

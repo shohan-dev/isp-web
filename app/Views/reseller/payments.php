@@ -33,7 +33,13 @@
               <i class="far fa-trash-can" aria-hidden="true"></i> Delete Selected
             </button>
           <?php endif; ?>
-          <?php if (getSession('user_role') != 'admin') : ?>
+          <?php
+            $payRole = (string) getSession('user_role');
+            $payIsTenantAdmin = function_exists('isTenantAdminRole')
+              ? isTenantAdminRole($payRole)
+              : in_array($payRole, ['admin', 'sAdmin'], true);
+          ?>
+          <?php if (! $payIsTenantAdmin) : ?>
             <a class="btn btn-primary" href="<?= route_to('route.customer.payment.new'); ?>">
               <i class="fa fa-plus" aria-hidden="true"></i> New Payment
             </a>

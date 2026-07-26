@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use App\Services\TrashService;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 class SupportTicket extends BaseController
 {
@@ -165,7 +165,7 @@ class SupportTicket extends BaseController
     public function fetch()
     {
         $data = $this->ticketListBuilder();
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 

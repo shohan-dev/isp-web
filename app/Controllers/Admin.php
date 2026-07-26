@@ -10,7 +10,7 @@ use App\Models\UserRouterDataModel;
 use App\Models\ContactModel;
 
 use CodeIgniter\CLI\Console;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 
 class Admin extends BaseController
@@ -59,7 +59,7 @@ class Admin extends BaseController
             ->select('*')
             ->orderBy('id', 'desc');
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -540,7 +540,7 @@ class Admin extends BaseController
                 ->orderBy('id', 'desc');
         }
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -936,8 +936,9 @@ class Admin extends BaseController
             show_404();
         }
 
-        if ($role === 'admin') {
-            $details = $this->user_model->where(['id' => $id, 'role' => 'admin'])->first();
+        if ($role === 'admin' || $role === 'sAdmin') {
+            $details = $this->user_model->where(['id' => $id])->groupStart()
+                ->where('role', 'admin')->orWhere('role', 'sAdmin')->groupEnd()->first();
             $rdetails = $this->reseller_model->where(['userid' => $id])->first();
 
             if (!empty($details)) {
@@ -954,7 +955,7 @@ class Admin extends BaseController
 
                 return view('SecondAdmin/subscription', $data);
             }
-        }elseif($role === 'resellerAdmin'){
+        } elseif ($role === 'resellerAdmin') {
             $details = $this->user_model->where(['id' => $id])->first();
             log_message('info', 'User Data: ' . json_encode($details));
 
@@ -1229,6 +1230,42 @@ class Admin extends BaseController
         }
 
         return requestResponse('validation-error', $this->validation->getErrors(), 400);
+    }
+
+    private function normalizeDateTime($datetime)
+    {
+        if (empty($datetime)) {
+            return date('Y-m-d H:i:s');
+        }
+
+        // Replace 'T' with space (common in datetime-local inputs)
+        $datetime = str_replace('T', ' ', $datetime);
+
+        // Try robust parsing if slash or AM/PM exists
+        if (strpos($datetime, '/') !== false || stripos($datetime, 'M') !== false) {
+            $timestamp = strtotime($datetime);
+            if ($timestamp !== false) {
+                return date('Y-m-d H:i:s', $timestamp);
+            }
+            // Try replacing / with - (interprets as DD-MM-YYYY in strtotime)
+            $timestamp = strtotime(str_replace('/', '-', $datetime));
+            if ($timestamp !== false) {
+                return date('Y-m-d H:i:s', $timestamp);
+            }
+        }
+
+        // Ensure will_expire has seconds, if not, append ":00"
+        // YYYY-MM-DD HH:MM is 16 characters
+        if (strlen($datetime) === 16) {
+            $datetime .= ":00";
+        }
+
+        // If it's only YYYY-MM-DD (10 chars), append current time
+        if (strlen($datetime) === 10) {
+            $datetime .= ' ' . date('H:i:s');
+        }
+
+        return $datetime;
     }
 
     /**
@@ -1740,3 +1777,4 @@ class Admin extends BaseController
         ];
     }
 }
+

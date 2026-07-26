@@ -82,9 +82,16 @@
 <?= $this->section('script'); ?>
 <script>
   $(document).ready(function () {
+    <?php
+      $hasDelete = userHasPermission('employee', 'delete');
+      $hasUpdate = userHasPermission('employee', 'update');
+      // Default sort: created_at column index (after optional select + serial)
+      $orderCol = ($hasDelete ? 1 : 0) + 6; // select?, serial, name, designation, area, mobile, email, created_at
+    ?>
     var table = $('.datatable').DataTable({
       processing: true,
       serverSide: true,
+      order: [[<?= (int) $orderCol ?>, 'desc']],
       ajax: {
         url: '<?= route_to("route.employee.fetch"); ?>',
         type: 'post',
@@ -92,10 +99,26 @@
           req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
         }
       },
+      columns: [
+        <?php if ($hasDelete): ?>
+        { data: 'select', orderable: false, searchable: false },
+        <?php endif; ?>
+        { data: 'serial', orderable: false, searchable: false },
+        { data: 'name', orderable: true, searchable: true },
+        { data: 'designation', orderable: true, searchable: true },
+        { data: 'area', orderable: false, searchable: false },
+        { data: 'mobile', orderable: true, searchable: true },
+        { data: 'email', orderable: true, searchable: true },
+        { data: 'created_at', orderable: true, searchable: true },
+        { data: 'status', orderable: true, searchable: false },
+        <?php if ($hasUpdate): ?>
+        { data: 'action', orderable: false, searchable: false }
+        <?php endif; ?>
+      ],
       columnDefs: [{ targets: '_all', defaultContent: '-' }]
     });
 
-    <?php if (userHasPermission('employee', 'delete')): ?>
+    <?php if ($hasDelete): ?>
       $('#select_all').on('click', function () {
         $('input:checkbox').prop('checked', this.checked);
       });

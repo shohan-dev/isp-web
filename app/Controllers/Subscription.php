@@ -775,22 +775,17 @@ class Subscription extends BaseController
             }
 
             if ($user->role != 'resellerAdmin') {
-                $duration = null;
-                if (!empty($payment->custom_data)) {
-                    $customDecoded = json_decode($payment->custom_data, true);
-                    if (isset($customDecoded['duration'])) {
-                        $duration = (int) $customDecoded['duration'];
-                    }
-                }
-                helper('subscription');
-                $data = buildSubscriptionRenewUserData((int) $payment->user_id, $payment, $duration);
+                // The gateway callback or applyGatewaySuccess helper has already updated
+                // the user's subscription dates and enabled their router. We skip updating
+                // the user again here to prevent double date extension.
+                session()->remove('pid');
+                return redirect()->route('route.subscription');
             } else {
                 $data = [
                     'last_renewed' => date("Y-m-d H:i:s"),
-
                 ];
             }
-            // $this->user_model->update($payment->user_id, ['conn_status' => 'conn']);
+
             log_message('info', 'Fetched payment data: on callback' . json_encode($data));
             $result = $this->user_model->update($payment->user_id, $data);
 

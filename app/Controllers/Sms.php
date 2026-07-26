@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 use App\Libraries\BulkSmsBd;
 
@@ -67,7 +67,7 @@ class Sms extends BaseController
             ->where('user_id', $userId)
             ->orderBy('id', 'desc');
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 

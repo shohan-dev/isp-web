@@ -737,6 +737,46 @@
       });
     });
 
+    function showOltErrorModal(name, reason) {
+      reason = String(reason || 'Unknown error').toLowerCase();
+      var title, icon, color, cause, fix;
+      if (reason.includes('session') || reason.includes('busy') || reason.includes('locked') || reason.includes('302')) {
+        title = 'OLT Session Locked'; icon = 'fa fa-lock'; color = '#f59e0b';
+        cause = 'Another session is already active on the OLT. The device only allows one login at a time.';
+        fix = 'Wait 5–15 minutes for the existing session to expire, then try again. Avoid clicking Diagnostics multiple times in quick succession.';
+      } else if (reason.includes('timed out') || reason.includes('timeout') || reason.includes('connect timeout')) {
+        title = 'OLT Unreachable (Timeout)'; icon = 'fa fa-clock'; color = '#ef4444';
+        cause = 'The OLT is not responding. It may be offline, temporarily blocking this IP after failed logins, or the management port may be blocked.';
+        fix = 'Wait 15–30 minutes, then retry. Confirm the OLT is powered on and reachable on the local network.';
+      } else if (reason.includes('refused') || reason.includes('111')) {
+        title = 'OLT Connection Refused'; icon = 'fa fa-ban'; color = '#ef4444';
+        cause = 'The OLT actively refused the connection. The web management service may be disabled or the port may be blocked.';
+        fix = 'Check that the OLT web management port is open and the management service is running.';
+      } else if (reason.includes('credential') || reason.includes('-1') || reason.includes('invalid') || reason.includes('auth')) {
+        title = 'Authentication Failed'; icon = 'fa fa-key'; color = '#ef4444';
+        cause = 'The username or password provided is incorrect.';
+        fix = 'Edit the OLT and verify the username and password are correct.';
+      } else {
+        title = 'Connection Failed'; icon = 'fa fa-exclamation-circle'; color = '#ef4444';
+        cause = reason.charAt(0).toUpperCase() + reason.slice(1);
+        fix = 'Check that the OLT IP address, port, and credentials are correct. Make sure the OLT is online and reachable.';
+      }
+      $('#modalTitle').text(name + ' — Connection Error');
+      $('#summaryCards').html(
+        '<div class="ipb-olt-metric" style="grid-column:1/-1">' +
+          '<span class="ipb-olt-metric-label"><i class="' + icon + '" aria-hidden="true" style="color:' + color + '"></i> ' + title + '</span>' +
+          '<p class="ipb-olt-metric-value" style="font-size:14px;font-weight:600;color:' + color + '">' + cause + '</p>' +
+          '<p class="text-muted" style="margin:8px 0 0;font-size:13px"><strong>What to do:</strong> ' + fix + '</p>' +
+        '</div>'
+      );
+      $('#portSummaryWrapper').html('');
+      $('#oltDataBody').html('');
+      $('#oltDataCards').html('');
+      $('#onuSearchInput').closest('.mb-3').hide();
+      $('#oltResultModal').addClass('show').attr('aria-hidden', 'false');
+      try { document.body.style.overflow = 'hidden'; } catch (e) {}
+    }
+
     $(document).on('click', '.btn-connect', function () {
       var oltId = $(this).data('id');
       var oltName = $(this).data('name');
@@ -755,21 +795,23 @@
             if (typeof data !== 'object' || data === null) {
               try { data = JSON.parse(response.result); } catch (e) { data = {}; }
             }
-            renderOltModal(oltName, data || {});
+            if (data.onu_id && data.onu_id[0] === 'ERROR') {
+              showOltErrorModal(oltName, (data.reason && data.reason[0]) ? data.reason[0] : 'Connection Error');
+            } else {
+              $('#onuSearchInput').closest('.mb-3').show();
+              renderOltModal(oltName, data || {});
+            }
           } else {
             var errorMsg = 'Failed to fetch data';
             try {
               var errData = typeof response.result === 'object' ? response.result : JSON.parse(response.result);
               errorMsg = errData.error || errorMsg;
             } catch (e) {}
-            if (window.tata) tata.error("Couldn't run diagnostics", errorMsg);
-            else alert(errorMsg);
+            showOltErrorModal(oltName, errorMsg);
           }
         },
         error: function (xhr, status, error) {
-          var msg = 'Diagnostics query failed: ' + status + ' / ' + error;
-          if (window.tata) tata.error("Couldn't run diagnostics", msg);
-          else alert(msg);
+          showOltErrorModal(oltName, 'HTTP ' + status + ': ' + error);
         },
         complete: function () {
           btn.html(original).attr('disabled', false);
@@ -788,6 +830,7 @@
     });
 
     function renderOltModal(name, data) {
+      $('#onuSearchInput').closest('.mb-3').show();
       $('#onuSearchInput').val('');
       $('#modalTitle').text(name + ' — Device Diagnostics');
 

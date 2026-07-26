@@ -141,6 +141,26 @@
         </div>
 
         <div class="form-group">
+          <label>Location Tracking Required?</label>
+          <?= form_dropdown('location_required', [
+            '1' => 'Yes',
+            '0' => 'No (Don\'t need to give location)'
+          ], $details->location_required ?? '0', 'class="form-control"'); ?>
+          <small id="location_required-error" class="error text-danger"></small>
+        </div>
+
+        <div class="form-group">
+          <label>Location Update Interval</label>
+          <?= form_dropdown('location_interval', [
+            '20' => '20 Minutes',
+            '30' => '30 Minutes',
+            '60' => '1 Hour',
+            '120' => '2 Hours'
+          ], $details->location_interval ?? '30', 'class="form-control"'); ?>
+          <small id="location_interval-error" class="error text-danger"></small>
+        </div>
+
+        <div class="form-group">
           <label>Status</label>
 
           <div class="radio">

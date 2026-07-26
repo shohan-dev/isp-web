@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 use Extention;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 class EmployeePayment extends BaseController
 {
@@ -60,16 +60,6 @@ class EmployeePayment extends BaseController
 
         if ($userRole === 'employee') {
             $admin_id = $details->admin_id;
-            // $Pre_created_by = $details->created_by;
-            // if ($Pre_created_by === 'admin') {
-            //     $userId = $details->admin_id;
-            //     // $details = $this->user_model->where(['id' => $userId])->first();
-            // } else {
-            //     $userId = $details->admin_id;
-            //     $details = $this->user_model->where(['id' => $userId])->first();
-            //     $userId = $details->admin_id;
-            // }
-
 
             $data = $this->payment_model->builder()
                 ->select('payments.*')
@@ -77,9 +67,9 @@ class EmployeePayment extends BaseController
                 ->select('joined_area.area_name as joined_area_name, joined_area.area_code as joined_area_code')
                 ->join('users as joined_emp', 'joined_emp.id = payments.user_id', 'left')
                 ->join('areas as joined_area', 'joined_area.id = joined_emp.area_id', 'left')
-                ->where('user_type', 'employee')
-                ->where('user_id ', $userId)
-                ->where('admin_id', $admin_id)
+                ->where('payments.user_type', 'employee')
+                ->where('payments.user_id', $userId)
+                ->where('payments.admin_id', $admin_id)
                 ->orderBy('payments.id', 'desc');
         } else {
             $data = $this->payment_model->builder()
@@ -88,8 +78,8 @@ class EmployeePayment extends BaseController
                 ->select('joined_area.area_name as joined_area_name, joined_area.area_code as joined_area_code')
                 ->join('users as joined_emp', 'joined_emp.id = payments.user_id', 'left')
                 ->join('areas as joined_area', 'joined_area.id = joined_emp.area_id', 'left')
-                ->where(['user_type' => 'employee'])
-                ->where('admin_id', $userId)
+                ->where('payments.user_type', 'employee')
+                ->where('payments.admin_id', $userId)
                 ->orderBy('payments.id', 'desc');
         }
 
@@ -97,7 +87,7 @@ class EmployeePayment extends BaseController
             $data->where('payments.status', $status);
         }
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -141,7 +131,24 @@ class EmployeePayment extends BaseController
             });
         }
 
-        $datatables->except(['id', 'user_id', 'created_at', 'user_type', 'method_trx']);
+        $datatables->except([
+            'id',
+            'user_id',
+            'created_at',
+            'user_type',
+            'method_trx',
+            'admin_id',
+            'joined_employee_name',
+            'joined_area_name',
+            'joined_area_code',
+            'pay_amount',
+            'trx_id',
+            'paidby',
+            'paid_to',
+            'package_id',
+            'notes',
+            'updated_at',
+        ]);
 
         $datatables->asObject();
 

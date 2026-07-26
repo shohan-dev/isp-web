@@ -32,6 +32,18 @@ if (!function_exists('getUserById')) {
 }
 
 /**
+ * Tenant ISP owner roles: current `admin` and legacy `sAdmin` (pre role-rename).
+ * Platform owner is `super_admin` and must not match this helper.
+ */
+if (!function_exists('isTenantAdminRole')) {
+    function isTenantAdminRole(?string $role = null): bool
+    {
+        $role = $role ?? (string) (function_exists('getSession') ? getSession('user_role') : session()->get('user_role'));
+        return $role === 'admin' || $role === 'sAdmin';
+    }
+}
+
+/**
  * Resolve the top-level tenant (ISP owner) user id for a given user (hierarchy traversal).
  *
  * @return int|null Tenant owner user id, or null when the hierarchy cannot be resolved.
@@ -1286,6 +1298,46 @@ if (!function_exists('getAllCostomer')) {
 
 
 
+/**
+ * Core menus every POP/resellerAdmin needs to operate (sidebar + route filters).
+ * Tenant defaults are often incomplete; without this baseline those pages 404.
+ *
+ * @return list<string>
+ */
+if (!function_exists('resellerCoreMenus')) {
+    function resellerCoreMenus(): array
+    {
+        return [
+            'area',
+            'customer',
+            'customer_payment',
+            'packages',
+            'referral',
+            'support_ticket',
+            'payment',
+            'profile_update',
+            'password_change',
+            'subscription',
+            'employee',
+            'employee_payment',
+        ];
+    }
+}
+
+/**
+ * Whether a menu is in the resellerAdmin core allowlist.
+ */
+if (!function_exists('resellerHasCorePermission')) {
+    function resellerHasCorePermission(?string $menu): bool
+    {
+        if ($menu === null || $menu === '') {
+            return false;
+        }
+
+        return in_array($menu, resellerCoreMenus(), true);
+    }
+}
+
 if (!function_exists('userHasPermission')) {
     function userHasPermission($menu, $sub_menu = null, $role = null, $user_id = null, $admin_id = null)
     {
@@ -1320,6 +1372,12 @@ if (!function_exists('userHasPermission')) {
         if (strtolower($role) === 'super_admin')
             return $__permCache[$__k] = true;
 
+        // POP/reseller baseline: keep core operations available even when the
+        // tenant's default permission JSON omits these menus.
+        if ($role === 'resellerAdmin' && resellerHasCorePermission((string) $menu)) {
+            return $__permCache[$__k] = true;
+        }
+
         // L2 cross-request cache (Phase 2 / C1): cache the final decision keyed by
         // the same inputs as the per-request memo, mixed with a version stamp that
         // Permission/CustomAccess model writes bump (afterInsert/Update/Delete). A
@@ -1348,6 +1406,9 @@ if (!function_exists('userHasPermission')) {
         if ($role === 'admin') {
             // Tenants check default permissions from the platform owner (user_id = 2)
             $defaultPermission = $__defCache['admin|2'] ??= $model->where(['user_type' => 'admin', 'user_id' => 2])->first();
+        } elseif ($role === 'sAdmin') {
+            // Legacy sAdmin role still resolves against platform owner defaults
+            $defaultPermission = $__defCache['sAdmin|2'] ??= $model->where(['user_type' => 'sAdmin', 'user_id' => 2])->first();
         } else {
             // resellers, employees, and users check their sAdmin's given permissions based on their role
             $sAdminId = getSAdminIdForUser($user_id);

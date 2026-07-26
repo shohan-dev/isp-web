@@ -21,6 +21,19 @@
       !!(document.body && document.body.classList.contains("ipb-reduce-motion"));
   };
 
+  /* SPA-safe ready: DOMContentLoaded never re-fires after the first full load,
+     so dashboard/chart scripts re-injected by ipb-nav must run immediately when
+     document.readyState is already past "loading". Falls back to DOMContentLoaded
+     on a cold full-page load. */
+  window.IpbReady = function (fn) {
+    if (typeof fn !== "function") return;
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", fn);
+    } else {
+      fn();
+    }
+  };
+
   function applyTheme(theme) {
     var el = bodyEl();
     if (!el) return;
@@ -106,16 +119,31 @@
     var p = chartPalette();
     themedCharts.forEach(function (chart) {
       try {
-        chart.updateOptions(
-          {
-            grid: { borderColor: p.grid },
-            xaxis: { labels: { style: { colors: p.axis } } },
-            yaxis: { labels: { style: { colors: p.axis } } },
-            noData: { style: { color: p.axis } },
-          },
-          false,
-          false
-        );
+        // Only touch color tokens — never replace xaxis/yaxis wholesale or
+        // Apex can drop categories/series and leave empty axes on bar/line charts.
+        var patch = {
+          grid: { borderColor: p.grid },
+          noData: { style: { color: p.axis } },
+        };
+        var cfg = chart.w && chart.w.config ? chart.w.config : null;
+        if (cfg && cfg.xaxis) {
+          patch.xaxis = {
+            labels: {
+              style: Object.assign({}, (cfg.xaxis.labels && cfg.xaxis.labels.style) || {}, { colors: p.axis }),
+            },
+          };
+        }
+        if (cfg && cfg.yaxis) {
+          var y = Array.isArray(cfg.yaxis) ? cfg.yaxis[0] : cfg.yaxis;
+          if (y) {
+            patch.yaxis = {
+              labels: {
+                style: Object.assign({}, (y.labels && y.labels.style) || {}, { colors: p.axis }),
+              },
+            };
+          }
+        }
+        chart.updateOptions(patch, false, false);
       } catch (e) {
         /* chart already destroyed — drop it silently rather than break the toggle */
       }
@@ -1246,6 +1274,14 @@
       window.IpbNavIndicator.sync();
     }
     initTableScrollHints();
+    /* Dashboard customize prefs + ipb-dash-ready must re-apply after every
+       partial-nav swap — boot() only ran once on the session's first load. */
+    if (window.IpbCustomize && typeof window.IpbCustomize.reinitDashboards === "function") {
+      window.IpbCustomize.reinitDashboards();
+    }
+    try {
+      document.dispatchEvent(new CustomEvent("ipb:contentswap"));
+    } catch (e) {}
   };
 
   document.addEventListener("DOMContentLoaded", function () {

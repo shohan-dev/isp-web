@@ -1,8 +1,12 @@
-<aside class="main-sidebar" aria-label="Main navigation">
+﻿<aside class="main-sidebar" aria-label="Main navigation">
   <?php
   $uri = service('uri');
   $isExpiredSession = (getSession('status') === 'inactive');
   $currentRole = getSession('user_role');
+  $isTenantAdmin = function_exists('isTenantAdminRole')
+    ? isTenantAdminRole($currentRole)
+    : in_array((string) $currentRole, ['admin', 'sAdmin'], true);
+  $isReseller = ($currentRole === 'resellerAdmin');
   $currentUserId = (int) getSession('user_id');
   $sidebarPins = $currentUserId > 0 ? model('App\Models\SidebarPinModel')->getForUser($currentUserId) : [];
   $orgRow = getOrgById(getSession('user_id'));
@@ -45,7 +49,7 @@
       <!-- ========== EXPIRED USER: LIMITED SIDEBAR ========== -->
       <ul class="sidebar-menu" data-widget="tree">
 
-        <?php if ($currentRole === 'admin'): ?>
+        <?php if ($isTenantAdmin): ?>
           <li class="ipb-nav-section-li" aria-hidden="true"><span class="ipb-nav-section">Billing</span></li>
           <!-- Admin's Packages -->
           <li class="<?= ($uri->getSegment(2) === 'packages') ? 'active' : ''; ?>">
@@ -147,7 +151,7 @@
 
           <?php /* File Manager browses ROOTPATH (backend source + .env); it is a
                    platform-owner tool. FileManager::checkAccess() now enforces
-                   super_admin server-side — keep the menu item in step so tenant
+                   super_admin server-side ΓÇö keep the menu item in step so tenant
                    admins are not shown a link that 404s. */ ?>
           <?php if (getSession('user_role') === 'super_admin'): ?>
           <li class="<?= ($uri->getSegment(1) === 'file-manager') ? 'active' : ''; ?>">
@@ -177,7 +181,7 @@
 
         <?php else: ?>
 
-        <?php if (!in_array($currentRole, ['super_admin', 'user'], true) && userHasPermission('area')): ?>
+        <?php if (!in_array($currentRole, ['super_admin', 'user'], true) && ($isReseller || userHasPermission('area'))): ?>
           <li class="ipb-nav-section-li" aria-hidden="true"><span class="ipb-nav-section">Operations</span></li>
           <li class="<?= ($uri->getSegment(1) === 'area') ? 'active' : ''; ?>">
             <a href="<?= route_to('route.area'); ?>">
@@ -197,7 +201,7 @@
         }
         ?>
 
-        <?php if (userHasPermission('customer')): ?>
+        <?php if ($isReseller || userHasPermission('customer')): ?>
             <li class="treeview">
               <a href="#" class="dropdown-toggle">
                 <i class="fa fa-users-gear"></i>
@@ -213,13 +217,13 @@
                     <i class="fa fa-user-clock"></i>
                     <span>Expired Customers</span>
                   </a></li>
-                <?php if (in_array($currentRole, ['admin', 'super_admin'], true)): ?>
+                <?php if ($isTenantAdmin || $currentRole === 'super_admin'): ?>
                   <li><a href="<?= route_to('route.customer.free_requests'); ?>">
                       <i class="fa fa-hand-holding-heart"></i>
                       <span>Free User Requests</span>
                     </a></li>
                 <?php endif; ?>
-                <?php if (userHasPermission('customer_payment')): ?>
+                <?php if ($isReseller || userHasPermission('customer_payment')): ?>
                     <li>
                       <a href="<?= route_to('route.customer.payment'); ?>">
                         <i class="fa fa-file-invoice-dollar"></i>
@@ -232,7 +236,7 @@
         <?php endif; ?>
 
 
-        <?php if (getSession('user_role') === 'admin'): ?>
+        <?php if (($isTenantAdmin || $isReseller) && (userHasPermission('employee') || userHasPermission('employee_payment'))): ?>
           <li>
             <a href="#" class="dropdown-toggle">
               <i class="fa fa-user-group"></i>
@@ -274,7 +278,7 @@
         <?php endif; ?>
 
 
-        <?php if (getSession('user_role') === 'admin' || $createdBy === 'admin'): ?>
+        <?php if ($isTenantAdmin || in_array((string) $createdBy, ['admin', 'sAdmin'], true)): ?>
           <?php if (userHasPermission('packages')): ?>
 
             <li class="ipb-nav-section-li" aria-hidden="true"><span class="ipb-nav-section">Billing</span></li>
@@ -294,12 +298,12 @@
         <?php /* Was getUserById(getSession('user_id'))->created_by, dereferenced with
                  no null check. getUserById() returns null when the row is gone (e.g.
                  an admin deletes a reseller/employee whose session is still alive),
-                 and it can return an array rather than an object — so this fataled
+                 and it can return an array rather than an object ΓÇö so this fataled
                  with "Attempt to read property on null" and took the whole sidebar,
                  hence every page, down for that session. $createdBy is the guarded
                  value already computed from the same lookup above. */ ?>
-        <?php if (getSession('user_role') === 'resellerAdmin' || $createdBy === 'resellerAdmin'): ?>
-          <?php if (userHasPermission('packages')): ?>
+        <?php if ($isReseller || $createdBy === 'resellerAdmin'): ?>
+          <?php if ($isReseller || userHasPermission('packages')): ?>
 
             <li class="ipb-nav-section-li" aria-hidden="true"><span class="ipb-nav-section">Billing</span></li>
             <li class="<?= ($uri->getSegment(1) === 'packages') ? 'active' : ''; ?>">
@@ -315,7 +319,7 @@
           <?php
         endif; ?>
 
-        <?php if (getSession('user_role') === 'admin' && userHasPermission('accounting')): ?>
+        <?php if ($isTenantAdmin && userHasPermission('accounting')): ?>
           <li>
             <a href="#" class="dropdown-toggle">
               <i class="fa fa-calculator"></i>
@@ -346,7 +350,7 @@
           </li>
           <?php
         endif; ?>
-        <?php if (getSession('user_role') === 'resellerAdmin'): ?>
+        <?php if ($isReseller): ?>
 
           <li class="<?= ($uri->getSegment(2) === 'transaction') ? 'active' : ''; ?>">
             <a href="<?= route_to('route.reseller.transactionindex'); ?>">
@@ -364,7 +368,7 @@
           <?php
         endif; ?>
         <!-- || getSession('user_role') === 'resellerAdmin' -->
-        <?php if (getSession('user_role') === 'admin' || getSession('user_role') === 'employee'): ?>
+        <?php if ($isTenantAdmin || getSession('user_role') === 'employee'): ?>
           <?php if (userHasPermission('Resellers') || userHasPermission('reseller')): ?>
             <li class="treeview">
               <a href="#" class="dropdown-toggle">
@@ -394,7 +398,7 @@
 
 
 
-        <?php if (getSession('user_role') === 'admin'): ?>
+        <?php if ($isTenantAdmin): ?>
           <li class="ipb-nav-section-li" aria-hidden="true"><span class="ipb-nav-section">Inventory</span></li>
           <li>
             <a href="#" class="dropdown-toggle">
@@ -415,7 +419,7 @@
           <?php
         endif; ?>
 
-        <?php if (getSession('user_role') === 'admin'): ?>
+        <?php if ($isTenantAdmin): ?>
           <li>
             <a href="#" class="dropdown-toggle">
               <i class="fa fa-shop"></i>
@@ -440,7 +444,7 @@
 
 
 
-        <?php if (getSession('user_role') === 'admin' && userHasPermission('inventory_purchess', 'read')): ?>
+        <?php if ($isTenantAdmin && userHasPermission('inventory_purchess', 'read')): ?>
           <li>
             <a href="#" class="dropdown-toggle">
               <i class="fa fa-truck-moving"></i>
@@ -459,7 +463,7 @@
           </li>
           <?php
         endif; ?>
-        <?php if (getSession('user_role') === 'admin' && userHasPermission('inventory_purchess', 'read')): ?>
+        <?php if ($isTenantAdmin && userHasPermission('inventory_purchess', 'read')): ?>
 
           <li>
             <a href="#" class="dropdown-toggle">
@@ -483,7 +487,7 @@
           </li>
           <?php
         endif; ?>
-        <?php if (in_array(getSession('user_role'), ['admin']) && userHasPermission('reports', 'read')): ?>
+        <?php if ($isTenantAdmin && userHasPermission('reports', 'read')): ?>
 
           <li>
             <a href="#" class="dropdown-toggle">
@@ -537,7 +541,7 @@
           <?php
         endif; ?>
 
-        <?php if (getSession('user_role') === 'admin'): ?>
+        <?php if ($isTenantAdmin): ?>
 
           <li class="<?= ($uri->getSegment(1) === 'routers') ? 'active' : ''; ?>">
 
@@ -550,7 +554,7 @@
           <?php
         endif; ?>
 
-        <?php if (getSession('user_role') === 'admin' && userHasPermission('inventory_purchess', 'read')): ?>
+        <?php if ($isTenantAdmin): ?>
           <li>
             <a href="#" class="dropdown-toggle">
               <i class="fa fa-network-wired"></i>
@@ -559,6 +563,7 @@
             </a>
             <ul class="treeview-menu" style="display: none;">
               <li><a href="<?= route_to('network.diagram'); ?>"><i class="fa fa-diagram-project"></i>Diagram</a> </li>
+              <li><a href="<?= route_to('network.diagram.premium'); ?>"><i class="fa fa-sitemap"></i>Premium Diagram</a> </li>
               <li><a href="<?= route_to('network.map'); ?>"><i class="fa fa-map-location-dot"></i>Mapping</a> </li>
             </ul>
           </li>
@@ -604,7 +609,7 @@
         endif; ?>
 
 
-        <?php if (userHasPermission('referral')): ?>
+        <?php if ($isReseller || userHasPermission('referral')): ?>
           <li class="<?= ($uri->getSegment(1) === 'reward-center') ? 'active' : ''; ?>">
             <a href="<?= base_url('reward-center'); ?>">
               <i class="fa fa-gift"></i>
@@ -613,7 +618,7 @@
           </li>
         <?php endif; ?>
 
-        <?php if (userHasPermission('support_ticket')): ?>
+        <?php if ($isReseller || userHasPermission('support_ticket')): ?>
           <li class="<?= ($uri->getSegment(1) === 'support-tickets') ? 'active' : ''; ?>">
             <a href="<?= route_to('route.ticket'); ?>">
               <i class="fa fa-ticket"></i>
@@ -650,7 +655,7 @@
           </li>
         <?php endif; ?>
 
-        <?php if ($currentRole === 'admin'): ?>
+        <?php if ($isTenantAdmin): ?>
           <li class="<?= ($uri->getSegment(1) === 'user-access') ? 'active' : ''; ?>">
             <a href="<?= route_to('route.useraccess'); ?>">
               <i class="fa fa-user-lock"></i>
@@ -659,7 +664,7 @@
           </li>
         <?php endif; ?>
 
-        <?php if ($currentRole === 'admin' || getSession('status') === 'inactive'): ?>
+        <?php if ($isTenantAdmin || getSession('status') === 'inactive'): ?>
           <li class="ipb-nav-section-li" aria-hidden="true"><span class="ipb-nav-section">Billing</span></li>
           <li class="<?= ($uri->getSegment(2) === 'packages') ? 'active' : ''; ?>">
             <a href="<?= route_to('Admin.packages'); ?>"><i class="fa fa-table-list"></i> <span>Admin's Packages</span></a>
@@ -670,7 +675,7 @@
           </li>
         <?php endif; ?>
 
-        <?php if (in_array($currentRole, ['admin', 'resellerAdmin'], true) || getSession('status') === 'inactive'): ?>
+        <?php if ($isTenantAdmin || $isReseller || getSession('status') === 'inactive'): ?>
           <li>
             <a
               href="<?= route_to('route.Admin.subscription', (int) session()->get('user_id') ?: (int) session()->get('id') ?: 0); ?>">
@@ -680,7 +685,7 @@
           </li>
         <?php endif; ?>
 
-        <?php if ($currentRole === 'admin'): ?>
+        <?php if ($isTenantAdmin): ?>
           <li class="<?= ($uri->getSegment(1) === 'wallet') ? 'active' : ''; ?>">
             <a href="<?= route_to('route.wallet'); ?>">
               <i class="fa fa-wallet"></i>
@@ -708,7 +713,7 @@
           </li>
         <?php endif; ?>
 
-        <?php if ($currentRole !== 'employee' && (userHasPermission('payment') || getSession('status') === 'inactive')): ?>
+        <?php if ($currentRole !== 'employee' && ($isReseller || userHasPermission('payment') || getSession('status') === 'inactive')): ?>
           <li class="<?= ($uri->getSegment(1) === 'payment') ? 'active' : ''; ?>">
             <a href="<?= route_to('route.payment'); ?>">
               <i class="fa fa-money-bill-transfer"></i>
@@ -717,8 +722,17 @@
           </li>
         <?php endif; ?>
 
+        <?php if ($currentRole === 'employee'): ?>
+          <li class="<?= ($uri->getSegment(1) === 'employee-payments') ? 'active' : ''; ?>">
+            <a href="<?= route_to('route.employee.payment'); ?>">
+              <i class="fa fa-money-bill-wave"></i>
+              <span>My Salaries</span>
+            </a>
+          </li>
         <?php endif; ?>
-        <?php if (userHasPermission('profile_update')): ?>
+
+        <?php endif; ?>
+        <?php if ($isReseller || userHasPermission('profile_update')): ?>
 
           <li class="<?= ($uri->getSegment(1) === 'profile') ? 'active' : ''; ?>">
 
@@ -737,7 +751,7 @@
           </a>
         </li>
 
-        <?php if (userHasPermission('password_change')): ?>
+        <?php if ($isReseller || userHasPermission('password_change')): ?>
 
           <li class="<?= ($uri->getSegment(1) === 'change-password') ? 'active' : ''; ?>">
 
@@ -783,10 +797,10 @@
   'maxPins' => \App\Models\SidebarPinModel::MAX_PINS_PER_USER,
 ]); ?></script>
 
-<?php /* Parser-blocking BY DESIGN, and it must stay right here — directly after the
+<?php /* Parser-blocking BY DESIGN, and it must stay right here ΓÇö directly after the
          sidebar markup and before the page content. The menu ships closed and
          scrolled to the top; this opens the active section and restores the scroll
          position while the sidebar is parsed but not yet painted. Deferring it (or
          moving it down with the other bundles) puts that work after first paint,
          which is exactly the flip it exists to remove. */ ?>
-<?= saas_js('sidebar-boot.js') ?>
+<?= saas_js('sidebar-boot.js') ?>

@@ -89,9 +89,16 @@
 <?= $this->section('script'); ?>
 <script>
   $(document).ready(function () {
+    <?php
+      $hasDelete = userHasPermission('employee_payment', 'delete');
+      $hasUpdate = userHasPermission('employee_payment', 'update');
+      // Default sort: paid_at column (after optional select + serial + invoice + employee + area + amount + month)
+      $orderCol = ($hasDelete ? 1 : 0) + 6;
+    ?>
     var table = $('.datatable').DataTable({
       processing: true,
       serverSide: true,
+      order: [[<?= (int) $orderCol ?>, 'desc']],
       ajax: {
         url: '<?= route_to("route.employee.payment.fetch"); ?>',
         type: 'post',
@@ -102,10 +109,27 @@
           req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
         }
       },
+      columns: [
+        <?php if ($hasDelete): ?>
+        { data: 'select', orderable: false, searchable: false },
+        <?php endif; ?>
+        { data: 'serial', orderable: false, searchable: false },
+        { data: 'invoice', orderable: true, searchable: true },
+        { data: 'employee', orderable: false, searchable: false },
+        { data: 'area', orderable: false, searchable: false },
+        { data: 'amount', orderable: true, searchable: true },
+        { data: 'month', orderable: true, searchable: true },
+        { data: 'paid_at', orderable: true, searchable: true },
+        { data: 'paid_via', orderable: true, searchable: true },
+        { data: 'status', orderable: true, searchable: false },
+        <?php if ($hasUpdate): ?>
+        { data: 'action', orderable: false, searchable: false }
+        <?php endif; ?>
+      ],
       columnDefs: [{ targets: '_all', defaultContent: '-' }]
     });
 
-    <?php if (userHasPermission('employee_payment', 'delete')): ?>
+    <?php if ($hasDelete): ?>
       $('#select_all').on('click', function () {
         $('input:checkbox').prop('checked', this.checked);
       });

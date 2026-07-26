@@ -1181,7 +1181,8 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
               var result = jQuery.parseJSON(response.responseText);
 
               if (result && result.response && result.response.limitReached === true) {
-                var swalButtons = userRole === 'admin' ? ["No", {
+                var isTenantAdmin = (userRole === 'admin' || userRole === 'sAdmin');
+                var swalButtons = isTenantAdmin ? ["No", {
                   text: "Yes",
                   closeModal: false,
                 }] : ["No"];
@@ -1193,7 +1194,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
                   dangerMode: true,
                   buttons: swalButtons,
                 }).then((willUpdate) => {
-                  if (willUpdate && userRole === 'admin') {
+                  if (willUpdate && isTenantAdmin) {
                     window.location.href = '<?= route_to("Admin.packages"); ?>';
                   }
                 });

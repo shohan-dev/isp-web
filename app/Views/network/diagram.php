@@ -42,6 +42,9 @@
       </div>
 
       <div class="ipb-net-actions">
+        <a href="<?= route_to('network.diagram.premium'); ?>" class="btn btn-default">
+          <i class="fa fa-sitemap" aria-hidden="true"></i> Premium OLT Diagram
+        </a>
         <?php if (userHasPermission('network', 'create')): ?>
           <button type="button" id="addNodeBtn" class="btn btn-primary">
             <i class="fa fa-plus" aria-hidden="true"></i> Add node
@@ -301,5 +304,14 @@
   });
 
   fetchNetworkData();
+
+  (window.IpbPageTeardown = window.IpbPageTeardown || []).push(function () {
+    try {
+      if (network) {
+        network.destroy();
+        network = null;
+      }
+    } catch (e) {}
+  });
 </script>
 <?= $this->endSection('script'); ?>

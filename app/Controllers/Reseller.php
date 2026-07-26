@@ -12,7 +12,7 @@ use App\Models\Registration;
 
 use App\Models\User;
 use App\Services\TrashService;
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 
 class Reseller extends BaseController
@@ -133,7 +133,7 @@ class Reseller extends BaseController
         if (userHasPermission('Resellers', 'create') || userHasPermission('reseller', 'create')) {
             $userId = session()->get('user_id');
             $packageModel = new ResellerPackages();
-            $data['packages'] = $packageModel->where('status', 'active')->where('user_id', $userId)->findAll();
+            $data['packages'] = $packageModel->where('user_id', $userId)->groupStart()->where('status', 'active')->orWhere('status', 'Active')->groupEnd()->findAll();
             $data['userId'] = $userId;
             $data['routers'] = $this->router_model->where('status', 'active')->where('user_id', $userId)->findAll();
 
@@ -286,11 +286,29 @@ class Reseller extends BaseController
 
     public function packages()
     {
-        $userId = session()->get('user_id');
+        $userId = (int) session()->get('user_id');
+        $role = (string) session()->get('user_role');
 
         $packageModel = new ResellerPackages();
-        $data['packages'] = $packageModel->where('user_id', $userId)->findAll();
-        $data['routers']  = $this->router_model->where('status', 'active')->where('user_id', $userId)->findAll();
+        // Accept both legacy 'Active' and normalized 'active'
+        $data['packages'] = $packageModel
+            ->where('user_id', $userId)
+            ->groupStart()
+                ->where('status', 'active')
+                ->orWhere('status', 'Active')
+            ->groupEnd()
+            ->findAll();
+
+        // Routers belong to the tenant owner; resellers inherit via admin_id / assigned router_id
+        $routerOwnerId = $userId;
+        if ($role === 'resellerAdmin') {
+            $self = $this->user_model->find($userId);
+            $routerOwnerId = (int) ($self->admin_id ?? $userId);
+        }
+        $data['routers'] = $this->router_model
+            ->where('status', 'active')
+            ->where('user_id', $routerOwnerId)
+            ->findAll();
 
         return view('reseller/package', $data);
     }
@@ -328,7 +346,7 @@ class Reseller extends BaseController
             'bandwidth'          => $bandwidth,
             'price'              => $details,
             'preview'            => $preview,
-            'status'             => 'Active',
+            'status'             => 'active',
             'pricing_type'       => $pricing_type,
             'mikrotik_router_id' => $router_id,
             'mikrotik_profile'   => $mikrotik_profile,
@@ -553,7 +571,7 @@ class Reseller extends BaseController
 
 
 
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
         //userHasPermission('resellerAdmin', 'delete') ||
@@ -600,6 +618,17 @@ class Reseller extends BaseController
             $fund = $row->fund ?? 0;
             $color = $fund < 0 ? '#dc3545' : '#28a745';
             return '<span style="color:'.$color.';font-weight:bold;font-size:13px;">'. number_format((float)$fund, 2) .'</span>';
+        });
+
+        // Clickable POP name → details page
+        $datatables->format('name', function ($value, $row) {
+            $id = (int) ($row->id ?? 0);
+            $label = esc((string) ($value ?? '--'));
+            if ($id <= 0) {
+                return $label;
+            }
+
+            return '<a href="' . route_to('route.Reseller.details', $id) . '" class="ipb-link-strong">' . $label . '</a>';
         });
 
         // Reseller Enabled toggle (renamed to toggle_reseller to avoid except() conflict)
@@ -722,7 +751,7 @@ class Reseller extends BaseController
             $data = [
                 'title' => 'Reseller\'s Subscription',
                 'details' => $details,
-                'packages' => $package_model->where(['status' => 'Active'])->findAll(),
+                'packages' => $package_model->groupStart()->where('status', 'Active')->orWhere('status', 'active')->groupEnd()->findAll(),
             ];
 
             return view('reseller/subscription', $data);
@@ -1065,7 +1094,7 @@ class Reseller extends BaseController
         }
 
         // Generate DataTables with the filtered data
-        $datatables = new DataTablesCodeIgniter4($data);
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -1189,6 +1218,14 @@ class Reseller extends BaseController
 
         if (getSession('user_role') === 'super_admin') {
             return true;
+        }
+
+        $role = (string) getSession('user_role');
+        $isTenantAdmin = function_exists('isTenantAdminRole')
+            ? isTenantAdminRole($role)
+            : in_array($role, ['admin', 'sAdmin'], true);
+        if (! $isTenantAdmin) {
+            return false;
         }
 
         $target = $this->user_model->where(['id' => (int) $id, 'role' => 'resellerAdmin'])->first();

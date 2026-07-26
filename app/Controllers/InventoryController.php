@@ -10,7 +10,7 @@ use App\Models\InventoryCategory;
 use App\Models\UnitModel;
 
 
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 use CodeIgniter\Controller;
 
 class InventoryController extends Controller
@@ -1606,7 +1606,7 @@ class InventoryController extends Controller
         }
 
         // Initialize DataTables
-        $datatables = new DataTablesCodeIgniter4($builder);
+        $datatables = new DataTables($builder);
 
         $datatables->addSequenceNumber('serial');
 

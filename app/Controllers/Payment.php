@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\BaseController;
 
-use Ngekoding\CodeIgniterDataTables\DataTablesCodeIgniter4;
+use App\Libraries\DataTables;
 
 class Payment extends BaseController
 {
@@ -41,11 +41,18 @@ class Payment extends BaseController
      */
     public function fetch()
     {
-        // $userType = getSession('user_role') === 'admin' ? 'admin' : getSession('user_role');
-        $role = session()->get('user_role');
+        $role = (string) session()->get('user_role');
         $userId = getSession('user_id');
+        $userStatus = getSession('status');
+        $canInvoice = userHasPermission('payment', 'invoice');
+        $canPay = userHasPermission('payment', 'payment');
+        $canRenew = userHasPermission('subscription', 'renew');
+        $showActions = $canInvoice || $canPay || $userStatus === 'inactive';
+        $isTenantAdmin = function_exists('isTenantAdminRole')
+            ? isTenantAdminRole($role)
+            : in_array($role, ['admin', 'sAdmin'], true);
 
-        // Read-only grid; session is only read above, never written.
+        // Read-only grid; capture session values above before closing.
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
@@ -59,7 +66,19 @@ class Payment extends BaseController
                     'payments.paidby' => $userId,
                 ])
                 ->orderBy('payments.id', 'desc');
-        } elseif ($role === 'admin') {
+        } elseif ($isTenantAdmin) {
+            $data = $this->payment_model->builder()
+                ->select('payments.*, paid_to_user.name as paid_to_name, paid_to_user.role as paid_to_role')
+                ->join('users as paid_to_user', 'paid_to_user.id = payments.paid_to', 'left')
+                ->groupStart()
+                    ->where('payments.user_id', $userId)
+                    ->orWhere('payments.paidby', $userId)
+                    ->orWhere('payments.admin_id', $userId)
+                    ->orWhere('payments.paid_to', $userId)
+                ->groupEnd()
+                ->orderBy('payments.id', 'desc');
+        } elseif ($role === 'resellerAdmin') {
+            // Reseller "My Payment" = their own POP subscription / funding invoices.
             $data = $this->payment_model->builder()
                 ->select('payments.*, paid_to_user.name as paid_to_name, paid_to_user.role as paid_to_role')
                 ->join('users as paid_to_user', 'paid_to_user.id = payments.paid_to', 'left')
@@ -74,17 +93,15 @@ class Payment extends BaseController
             $data = $this->payment_model->builder()
                 ->select('payments.*, paid_to_user.name as paid_to_name, paid_to_user.role as paid_to_role')
                 ->join('users as paid_to_user', 'paid_to_user.id = payments.paid_to', 'left')
-                ->groupStart() // first OR group
-                ->orWhere('payments.paidby', $userId)
-                ->groupEnd()
-                ->orGroupStart() // second OR group
-                ->where('payments.admin_id', $userId)
-                ->orWhere('payments.paid_to', $userId)
+                ->groupStart()
+                    ->where('payments.paidby', $userId)
+                    ->orWhere('payments.admin_id', $userId)
+                    ->orWhere('payments.paid_to', $userId)
                 ->groupEnd()
                 ->orderBy('payments.id', 'desc');
         }
-        //'user_type' => $userType
-        $datatables = new DataTablesCodeIgniter4($data);
+
+        $datatables = new DataTables($data);
 
         $datatables->addSequenceNumber('serial');
 
@@ -135,23 +152,19 @@ class Payment extends BaseController
             }
         });
 
-        if (userHasPermission('payment', 'invoice') || userHasPermission('payment', 'payment') || getSession('status') === 'inactive') {
-
-            $datatables->addColumn('action', function ($row) {
-
+        if ($showActions) {
+            $datatables->addColumn('action', function ($row) use ($canInvoice, $canPay, $canRenew, $role, $isTenantAdmin) {
                 $html = '--';
 
-                if (userHasPermission('payment', 'invoice') && ($row->status === 'successful')) {
-
+                if ($canInvoice && ($row->status === 'successful')) {
                     $html = '<div class="ipb-row-actions"><a href="' . route_to('route.payment.invoice', $row->id) . '" class="ipb-row-btn tone-info" title="Invoice"><i class="fa fa-download"></i> Invoice</a></div>';
                 }
 
-                if ((getSession('user_role') === 'user')  && ($row->status === 'pending') && userHasPermission('payment', 'payment') && userHasPermission('subscription', 'renew')) {
-
+                if ($role === 'user' && $row->status === 'pending' && $canPay && $canRenew) {
                     $html = '<div class="ipb-row-actions"><a href="' . route_to('route.payment.pay', $row->id) . '" class="ipb-row-btn tone-brand" title="Payment"><i class="fa fa-money-bill-transfer"></i> Payment</a></div>';
                 }
-                if (((getSession('user_role') === 'admin') || getSession('user_role') === 'resellerAdmin') && ($row->status === 'pending')) {
 
+                if (($isTenantAdmin || $role === 'resellerAdmin') && $row->status === 'pending') {
                     $html = '<div class="ipb-row-actions"><a href="' . route_to('route.payment.pay', $row->id) . '" class="ipb-row-btn tone-brand" title="Payment"><i class="fa fa-money-bill-transfer"></i> Payment</a></div>';
                 }
 
@@ -159,7 +172,7 @@ class Payment extends BaseController
             });
         }
 
-        $datatables->except(['id', 'user_id', 'user_type']);
+        $datatables->except(['id', 'user_id', 'user_type', 'paid_to_name', 'paid_to_role', 'admin_id', 'paidby']);
 
         $datatables->asObject();
 
