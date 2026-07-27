@@ -37,6 +37,12 @@
   var ajaxPool = [];
   var navGeneration = 0;
 
+  /** Monotonic token for the in-flight sidebar navigation fetch. Bumped on
+   *  every navigateTo(); stale responses (from an older click) are ignored so
+   *  rapid sidebar clicks cannot apply the wrong page out of order. */
+  var navToken = 0;
+  var navAbort = null;
+
   /** Convention for pages with state that outlives a single request (a
    *  setInterval/recursive setTimeout poll, an ApexCharts instance holding a
    *  window resize listener, ...): push a cleanup callback here and it runs
@@ -56,6 +62,28 @@
     } catch (e) {
       return false;
     }
+  }
+
+  function normalizePath(href) {
+    try {
+      var u = new URL(href, window.location.href);
+      return u.pathname.replace(/\/+$/, "") || "/";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function isCurrentHref(href) {
+    return normalizePath(href) === normalizePath(window.location.href) &&
+      (function () {
+        try {
+          var a = new URL(href, window.location.href);
+          var b = new URL(window.location.href);
+          return a.search === b.search;
+        } catch (e2) {
+          return true;
+        }
+      })();
   }
 
   function eligible(a) {
@@ -145,6 +173,16 @@
         s.setAttribute(old.attributes[i].name, old.attributes[i].value);
       }
       s.text = old.textContent;
+      // Scope each inline SPA script in its own IIFE so top-level let/const
+      // from Customers (`let activeRequests`) cannot collide with Expired
+      // when both run in the same session — that SyntaxError left Expired
+      // stuck on skeleton with no DataTables POST.
+      if (!old.getAttribute("src") && old.textContent) {
+        s.text =
+          "(function(){try{\n" +
+          old.textContent +
+          "\n}catch(err){console.error('ipb-nav script error:',err);}})();";
+      }
       s.setAttribute("data-ipb-nav-script", "1");
       // Dynamically inserted <script src> defaults to async; without this,
       // customers-list.js (More menu) can finish AFTER the page's inline
@@ -285,30 +323,48 @@
   }
 
   function navigateTo(href, push) {
+    // Re-clicking the already-active sidebar item must be a no-op — otherwise
+    // we tear down a healthy DataTable mid-draw and leave a skeleton forever.
+    if (push && isCurrentHref(href)) return;
+
     if (window.IpbNetPulse && typeof window.IpbNetPulse.start === "function") {
       window.IpbNetPulse.start();
     }
+
+    // Abort any previous in-flight nav fetch so only the latest click wins.
+    if (navAbort) {
+      try { navAbort.abort(); } catch (e) {}
+    }
+    navAbort = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var myToken = ++navToken;
+    var signal = navAbort ? navAbort.signal : undefined;
 
     // Do not teardown here — wait until applyPartial so we only abort once,
     // right before swapping content (prevents double-abort races).
     fetch(href, {
       headers: { "X-IPB-Nav": "1" },
       credentials: "same-origin",
+      signal: signal,
     })
       .then(function (resp) {
+        if (myToken !== navToken) return null;
         if (!resp.ok) throw new Error("ipb-nav: non-OK response");
         return resp.text();
       })
       .then(function (html) {
+        if (html == null || myToken !== navToken) return null;
         var doc = new DOMParser().parseFromString(html, "text/html");
         return ensureAssetsLoaded(doc).then(function () {
+          if (myToken !== navToken) return;
           if (!applyPartial(html, href, push)) throw new Error("ipb-nav: unexpected response shape");
           if (window.IpbNetPulse && typeof window.IpbNetPulse.done === "function") {
             window.IpbNetPulse.done();
           }
         });
       })
-      .catch(function () {
+      .catch(function (err) {
+        // Aborted because a newer navigateTo superseded us — not a failure.
+        if (err && (err.name === "AbortError" || myToken !== navToken)) return;
         if (window.IpbNetPulse && typeof window.IpbNetPulse.done === "function") {
           window.IpbNetPulse.done();
         }

@@ -35,7 +35,7 @@ class PremiumNetworkController extends BaseController
 
         $userId = session()->get('user_id');
         $olts = $this->oltModel->where('user_id', $userId)->findAll();
-        
+
         // If sAdmin or admin, get all or fallback
         if (empty($olts)) {
             $olts = $this->oltModel->findAll();
@@ -46,7 +46,7 @@ class PremiumNetworkController extends BaseController
 
         $data = [
             'title' => 'Premium Network Diagram',
-            'olts'  => $olts,
+            'olts' => $olts,
             'areas' => $areas,
         ];
 
@@ -66,9 +66,9 @@ class PremiumNetworkController extends BaseController
         }
 
         $output = $this->runPython($olt, 'status');
-        
+
         // Log the raw OLT output for debugging
-        log_message('info', "OLT Raw Output for OLT ID {$oltId}: " . substr($output, 0, 5000));
+        // log_message('info', "OLT Raw Output for OLT ID {$oltId}: " . substr($output, 0, 5000));
 
         // Extract JSON portion from output in case of warning/debug messages
         if (preg_match('/\{.*\}/s', $output, $matches)) {
@@ -79,7 +79,7 @@ class PremiumNetworkController extends BaseController
         if (!$isJson) {
             log_message('error', 'PremiumNetworkController sync failed: OLT output is not valid JSON. Raw output: ' . substr($output, 0, 500));
             return $this->response->setJSON([
-                'status'  => 'error', 
+                'status' => 'error',
                 'message' => 'Failed to connect to OLT or retrieve data. Please check connection settings.'
             ]);
         }
@@ -88,7 +88,7 @@ class PremiumNetworkController extends BaseController
 
         if (!isset($resultData['onu_id']) || !is_array($resultData['onu_id'])) {
             return $this->response->setJSON([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'OLT response format is invalid: missing onu_id list.'
             ]);
         }
@@ -96,7 +96,7 @@ class PremiumNetworkController extends BaseController
         // Prevent purging cache if OLT returned connection error
         if (isset($resultData['onu_id'][0]) && $resultData['onu_id'][0] === 'ERROR') {
             return $this->response->setJSON([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to connect to OLT: ' . ($resultData['des'][0] ?? 'Connection Error') . '. Showing cached data.'
             ]);
         }
@@ -143,11 +143,11 @@ class PremiumNetworkController extends BaseController
             $distance = isset($resultData['distance'][$i]) ? $resultData['distance'][$i] : (isset($resultData['distances'][$i]) ? $resultData['distances'][$i] : 0);
             $reason = isset($resultData['reason'][$i]) ? $resultData['reason'][$i] : '';
             $desc = isset($resultData['des'][$i]) ? $resultData['des'][$i] : (isset($resultData['name'][$i]) ? $resultData['name'][$i] : (isset($resultData['description'][$i]) ? $resultData['description'][$i] : ''));
-            $voltage  = isset($resultData['voltage'][$i])  ? $resultData['voltage'][$i]  : (isset($resultData['volts'][$i])       ? $resultData['volts'][$i]       : null);
-            $temp     = isset($resultData['temp'][$i])     ? $resultData['temp'][$i]     : (isset($resultData['temperature'][$i]) ? $resultData['temperature'][$i] : null);
-            $bias     = isset($resultData['bias'][$i])     ? $resultData['bias'][$i]     : null;
-            $txPower  = isset($resultData['tx_power'][$i]) ? $resultData['tx_power'][$i] : null;
-            $vendor   = isset($resultData['vendor'][$i])   ? $resultData['vendor'][$i]   : null;
+            $voltage = isset($resultData['voltage'][$i]) ? $resultData['voltage'][$i] : (isset($resultData['volts'][$i]) ? $resultData['volts'][$i] : null);
+            $temp = isset($resultData['temp'][$i]) ? $resultData['temp'][$i] : (isset($resultData['temperature'][$i]) ? $resultData['temperature'][$i] : null);
+            $bias = isset($resultData['bias'][$i]) ? $resultData['bias'][$i] : null;
+            $txPower = isset($resultData['tx_power'][$i]) ? $resultData['tx_power'][$i] : null;
+            $vendor = isset($resultData['vendor'][$i]) ? $resultData['vendor'][$i] : null;
 
             // Try to match customer details using MAC address
             $customerName = '';
@@ -184,25 +184,25 @@ class PremiumNetworkController extends BaseController
             $splitterName = $existingCache['splitter_name'] ?? null;
 
             $insertData = [
-                'olt_id'        => $oltId,
-                'pon_port'      => $ponPort,
-                'onu_index'     => $onuIndex,
-                'mac_address'   => $mac,
-                'status'        => $status,
-                'rx_power'      => $rx,
-                'distance'      => $distance,
-                'description'   => $description,
+                'olt_id' => $oltId,
+                'pon_port' => $ponPort,
+                'onu_index' => $onuIndex,
+                'mac_address' => $mac,
+                'status' => $status,
+                'rx_power' => $rx,
+                'distance' => $distance,
+                'description' => $description,
                 'splitter_name' => $splitterName,
                 'customer_name' => $customerName ?: null,
-                'company_name'  => $companyName ?: null,
-                'address'       => $customerAddress ?: null,
-                'mobile'        => $customerMobile ?: null,
-                'pppoe_id'      => $pppoeId ?: null,
-                'voltage'       => $voltage  ?: null,
-                'temp'          => $temp     ?: null,
-                'bias'          => $bias     ?: null,
-                'tx_power'      => $txPower  ?: null,
-                'vendor'        => $vendor   ?: null,
+                'company_name' => $companyName ?: null,
+                'address' => $customerAddress ?: null,
+                'mobile' => $customerMobile ?: null,
+                'pppoe_id' => $pppoeId ?: null,
+                'voltage' => $voltage ?: null,
+                'temp' => $temp ?: null,
+                'bias' => $bias ?: null,
+                'tx_power' => $txPower ?: null,
+                'vendor' => $vendor ?: null,
             ];
 
             $this->syncModel->insert($insertData);
@@ -215,7 +215,7 @@ class PremiumNetworkController extends BaseController
         }
 
         return $this->response->setJSON([
-            'status'  => 'success',
+            'status' => 'success',
             'message' => "Successfully synchronized {$count} ONUs locally."
         ]);
     }
@@ -299,47 +299,47 @@ class PremiumNetworkController extends BaseController
             $port = $onu['pon_port'] ?? 'Unknown';
             if (!isset($ponPortsData[$port])) {
                 $ponPortsData[$port] = [
-                    'name'     => $port,
+                    'name' => $port,
                     'capacity' => 64, // GPON standard default capacity
-                    'total'    => 0,
-                    'online'   => 0,
-                    'offline'  => 0,
-                    'splitters'=> []
+                    'total' => 0,
+                    'online' => 0,
+                    'offline' => 0,
+                    'splitters' => []
                 ];
             }
 
             $splitter = $onu['splitter_name'] ?? 'Direct Connections';
             if (!isset($ponPortsData[$port]['splitters'][$splitter])) {
                 $ponPortsData[$port]['splitters'][$splitter] = [
-                    'name'     => $splitter,
+                    'name' => $splitter,
                     'distance' => $onu['distance'] ?? 0,
-                    'total'    => 0,
-                    'online'   => 0,
-                    'offline'  => 0,
-                    'users'    => []
+                    'total' => 0,
+                    'online' => 0,
+                    'offline' => 0,
+                    'users' => []
                 ];
             }
 
             // Append user
             $userNode = [
-                'id'            => $onu['id'],
-                'onu_index'     => $onu['onu_index'] ?? '',
-                'mac'           => $onu['mac_address'] ?? '',
-                'label'         => !empty($onu['description']) ? $onu['description'] : ($onu['mac_address'] ?? ''),
-                'status'        => $onu['status'] ?? 'Offline',
-                'rx_power'      => $onu['rx_power'] ?? '',
-                'distance'      => $onu['distance'] ?? '',
-                'reason'        => $onu['reason'] ?? '',
+                'id' => $onu['id'],
+                'onu_index' => $onu['onu_index'] ?? '',
+                'mac' => $onu['mac_address'] ?? '',
+                'label' => !empty($onu['description']) ? $onu['description'] : ($onu['mac_address'] ?? ''),
+                'status' => $onu['status'] ?? 'Offline',
+                'rx_power' => $onu['rx_power'] ?? '',
+                'distance' => $onu['distance'] ?? '',
+                'reason' => $onu['reason'] ?? '',
                 'customer_name' => $onu['customer_name'] ?? '',
-                'company_name'  => $onu['company_name'] ?? '',
-                'address'       => $onu['address'] ?? '',
-                'mobile'        => $onu['mobile'] ?? '',
-                'pppoe_id'      => $onu['pppoe_id'] ?? '',
-                'voltage'       => $onu['voltage']   ?? '',
-                'temp'          => $onu['temp']      ?? '',
-                'bias'          => $onu['bias']      ?? '',
-                'tx_power'      => $onu['tx_power']  ?? '',
-                'vendor'        => $onu['vendor']    ?? '',
+                'company_name' => $onu['company_name'] ?? '',
+                'address' => $onu['address'] ?? '',
+                'mobile' => $onu['mobile'] ?? '',
+                'pppoe_id' => $onu['pppoe_id'] ?? '',
+                'voltage' => $onu['voltage'] ?? '',
+                'temp' => $onu['temp'] ?? '',
+                'bias' => $onu['bias'] ?? '',
+                'tx_power' => $onu['tx_power'] ?? '',
+                'vendor' => $onu['vendor'] ?? '',
             ];
 
             $ponPortsData[$port]['splitters'][$splitter]['users'][] = $userNode;
@@ -362,16 +362,16 @@ class PremiumNetworkController extends BaseController
 
         return $this->response->setJSON([
             'status' => 'success',
-            'stats'  => [
+            'stats' => [
                 'total_onus' => $totalOnus,
-                'online'     => $onlineCount,
-                'offline'    => $offlineCount,
+                'online' => $onlineCount,
+                'offline' => $offlineCount,
             ],
             'olt' => [
-                'name'      => $olt['olt_name'],
-                'brand'     => $olt['brand'],
-                'ip'        => $olt['ip'],
-                'port'      => $olt['port'],
+                'name' => $olt['olt_name'],
+                'brand' => $olt['brand'],
+                'ip' => $olt['ip'],
+                'port' => $olt['port'],
                 'total_pon' => count($ponPortsData)
             ],
             'tree' => array_values($ponPortsData)
@@ -386,7 +386,7 @@ class PremiumNetworkController extends BaseController
             ->distinct()
             ->findAll();
 
-        $portsList = array_map(function($p) {
+        $portsList = array_map(function ($p) {
             return $p['pon_port'];
         }, $ports);
 
@@ -394,7 +394,7 @@ class PremiumNetworkController extends BaseController
 
         return $this->response->setJSON([
             'status' => 'success',
-            'ports'  => $portsList
+            'ports' => $portsList
         ]);
     }
 
@@ -420,10 +420,11 @@ class PremiumNetworkController extends BaseController
 
     private function lookupCustomerByMac($mac)
     {
-        if (empty($mac) || $mac === 'Unknown') return null;
+        if (empty($mac) || $mac === 'Unknown')
+            return null;
         $upperMac = strtoupper(trim($mac));
         $noColons = str_replace(':', '', $upperMac);
-        
+
         $bindingModel = new UserBindingModel();
         $binding = $bindingModel->whereIn('mac_address', [$upperMac, $noColons])->first();
         if ($binding) {
@@ -439,7 +440,8 @@ class PremiumNetworkController extends BaseController
     {
         // Simple auto group: e.g. Splitter-01 (1x8) for index 1-8, Splitter-02 (1x8) for index 9-16, etc.
         $index = intval(preg_replace('/[^0-9]/', '', $onu['onu_index']));
-        if ($index <= 0) $index = 1;
+        if ($index <= 0)
+            $index = 1;
         $group = ceil($index / 8);
         return "Splitter-" . str_pad($group, 2, '0', STR_PAD_LEFT) . " (1x8)";
     }
@@ -448,18 +450,40 @@ class PremiumNetworkController extends BaseController
     {
         $scriptName = '';
         switch (strtolower($olt['brand'])) {
-            case 'avies':       $scriptName = 'avies_olt.py'; break;
-            case 'bdcom':       $scriptName = 'bdcom_olt.py'; break;
-            case 'corelink':    $scriptName = 'corelink_olt.py'; break;
-            case 'atop':        $scriptName = 'atop_olt.py'; break;
-            case 'dbc':         $scriptName = 'dbc_olt.py'; break;
-            case 'c_data':      $scriptName = 'cdata_olt.py'; break;
-            case 'ecom':        $scriptName = 'ecom_olt.py'; break;
+            case 'avies':
+                $scriptName = 'avies_olt.py';
+                break;
+            case 'bdcom':
+                $scriptName = 'bdcom_olt.py';
+                break;
+            case 'corelink':
+                $scriptName = 'corelink_olt.py';
+                break;
+            case 'atop':
+                $scriptName = 'atop_olt.py';
+                break;
+            case 'dbc':
+                $scriptName = 'dbc_olt.py';
+                break;
+            case 'c_data':
+                $scriptName = 'cdata_olt.py';
+                break;
+            case 'ecom':
+                $scriptName = 'ecom_olt.py';
+                break;
             case 'v_sol':
-            case 'vsol':        $scriptName = 'vsol_olt.py'; break;
-            case 'hsgq':        $scriptName = 'hsgq_olt.py'; break;
-            case 'tbs_pothon':   $scriptName = 'tbs_pothon_olt.py'; break;
-            case 'fucascom':    $scriptName = 'fucascom_olt.py'; break;
+            case 'vsol':
+                $scriptName = 'vsol_olt.py';
+                break;
+            case 'hsgq':
+                $scriptName = 'hsgq_olt.py';
+                break;
+            case 'tbs_pothon':
+                $scriptName = 'tbs_pothon_olt.py';
+                break;
+            case 'fucascom':
+                $scriptName = 'fucascom_olt.py';
+                break;
             default:
                 throw new \Exception("Unsupported OLT brand: " . $olt['brand']);
         }

@@ -1,10 +1,14 @@
-/* Hover-to-prefetch for sidebar navigation. This is a traditional
-   full-page-reload app (every sidebar click is a real browser navigation,
-   not an SPA route swap) — that's an architecture choice, not a bug, and
-   changing it is a much bigger project. This is the safe, additive win:
-   start loading the destination page as soon as the user's cursor rests on
-   a link, so by click time the response is often already in the browser's
-   HTTP cache and the "reload" feels instant instead of a fresh round trip. */
+/* Hover-to-prefetch for sidebar navigation.
+ *
+ * When partial nav (ipb-nav.js + #ipb-main) is active, full-document
+ * <link rel=prefetch> is harmful: it hits the PHP worker with a full layout
+ * response the SPA path never uses, and on `php spark serve` (single-threaded)
+ * that contention leaves DataTables / dashboard AJAX stuck on skeleton / zeros.
+ * In that mode this module is a no-op.
+ *
+ * Without partial nav (full page reloads), hover still warms the destination
+ * so click-time navigation can use the browser HTTP cache.
+ */
 (function () {
   "use strict";
 
@@ -15,6 +19,9 @@
 
   ready(function () {
     if (!document.body.classList.contains("ipb")) return;
+
+    // Partial-nav shell is present — do not prefetch full documents.
+    if (document.getElementById("ipb-main")) return;
 
     // Respect data-saver / slow connections — don't burn their bandwidth
     // pre-loading pages they may never visit.

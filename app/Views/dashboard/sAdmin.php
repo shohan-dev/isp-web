@@ -676,28 +676,46 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       start = startVal;
     } else {
       // Parse current values from the element's existing text (e.g. "61100 (117)")
-      const txt = counter.innerText || "";
-      const matches = txt.match(/([\d\.]+)\s*(?:\(([\d\.]+)\))?/);
-      if (matches) {
-        start = parseFloat(matches[1]) || 0;
-        startCount = matches[2] ? (parseFloat(matches[2]) || 0) : 0;
+      // Ignore loading/error placeholders so a real 0 can replace "…".
+      const txt = (counter.innerText || "").trim();
+      if (txt !== "…" && txt !== "… (…)" && txt !== "—" && txt !== "Timed out" && !/^Session expired/.test(txt)) {
+        const matches = txt.match(/(-?[\d\.]+)\s*(?:\((-?[\d\.]+)\))?/);
+        if (matches) {
+          start = parseFloat(matches[1]) || 0;
+          startCount = matches[2] ? (parseFloat(matches[2]) || 0) : 0;
+        }
       }
     }
 
     let current = start;
     let currentCount = startCount;
 
+    function paintFinal() {
+      counter.classList.remove("is-loading");
+      if (countNum !== null) {
+        counter.innerText = `${target} (${countNum})`;
+      } else {
+        counter.innerText = `${target}`;
+      }
+    }
+
     if (target === current && (countNum === null || countNum === currentCount)) {
-      // If values haven't changed, don't animate to avoid visual flicker/jitter
+      // Same numeric value — still refresh if stuck on a loading glyph.
+      const txt = (counter.innerText || "").trim();
+      if (
+        txt === "…" ||
+        txt === "… (…)" ||
+        txt === "—" ||
+        txt === "" ||
+        counter.classList.contains("is-loading")
+      ) {
+        paintFinal();
+      }
       return;
     }
 
     if (target === 0 && (countNum === null || countNum === 0)) {
-      if (countNum !== null) {
-        counter.innerText = "0 (0)";
-      } else {
-        counter.innerText = "0";
-      }
+      paintFinal();
       return;
     }
 
@@ -722,11 +740,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
 
         setTimeout(updateCounter, 30);
       } else {
-        if (countNum !== null) {
-          counter.innerText = `${target} (${countNum})`;
-        } else {
-          counter.innerText = `${target}`;
-        }
+        paintFinal();
       }
     };
 
@@ -959,7 +973,9 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
     // 05 §4.2 — KPI cascade entrance (opacity/translateY stagger, reduced-motion aware)
     if (window.IpbUI && window.IpbUI.cascade) window.IpbUI.cascade('.ipb-dash-kpi .ipb-kpi');
 
-    // On page load: immediately animate from 0 â†’ cached PHP value for card metrics
+    // Paint SSR cached values immediately (including real zeros). Do not show
+    // loading glyphs/spinners on KPI cards — the page should feel settled on
+    // first paint; AJAX only refreshes numbers when fresher data arrives.
     const cardIds = [
       'card_users_active', 'card_users_new', 'card_users_inactive', 'card_expired_inactive',
       'card_customers_payment_total', 'card_customers_Expayment_total', 'card_customers_payment_received',
@@ -969,14 +985,28 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
     ];
     cardIds.forEach(id => {
       const el = document.getElementById(id);
-      if (el) {
-        animateCounter(el, 0);
+      if (el) animateCounter(el, 0);
+    });
+
+    // Staggered MikroTik polls must be cancelled on partial-nav leave. If a
+    // setTimeout fires after the user already opened Customers/Expired, the
+    // 4–7s /routers/load-traffic call is tagged with the *new* page generation
+    // (so teardown won't abort it) and wedges php spark serve — DataTables
+    // POSTs never reach the server and the skeleton sticks forever.
+    var dashCardsAlive = true;
+    var routerLoadTimers = [];
+    (window.IpbPageTeardown = window.IpbPageTeardown || []).push(function () {
+      dashCardsAlive = false;
+      while (routerLoadTimers.length) {
+        clearTimeout(routerLoadTimers.pop());
       }
     });
 
     function loadRouterData(iface, routerId) {
+      if (!dashCardsAlive) return;
       iface = iface || "";
       const statusEl = document.getElementById(`status_${routerId}`);
+      if (!statusEl) return;
       const statusDot = statusEl.querySelector('.status-dot');
       const statusText = statusEl.querySelector('.status-label');
       const lastUpdatedEl = document.getElementById(`last_updated_${routerId}`);
@@ -990,6 +1020,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         dataType: 'json',
         timeout: 20000, // 20 second timeout (Mikrotik connections can be slow)
         success: function (response) {
+          if (!dashCardsAlive) return;
           const result = response.response || response;
           // Guard: server may return empty [] on soft failures (e.g. read timeout)
           if (!result || !result.data) {
@@ -1021,6 +1052,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           lastUpdatedEl.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
         },
         error: function (xhr, status, error) {
+          if (!dashCardsAlive || status === 'abort') return;
           // Try to parse the error message from the server's JSON body
           let serverMessage = null;
           try {
@@ -1106,6 +1138,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         for (const [id, val] of Object.entries(cardMappings)) {
           const el = document.getElementById(id);
           if (el) {
+            el.classList.remove('is-loading');
             el.setAttribute('data-target', val);
             animateCounter(el);
           }
@@ -1115,6 +1148,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           const q = response.customer_quota;
           const quotaEl = document.getElementById('card_customer_quota');
           if (quotaEl) {
+            quotaEl.classList.remove('is-loading');
             quotaEl.textContent = q.is_unlimited
               ? `${q.used} / ∞`
               : `${q.used} / ${q.limit}`;
@@ -1127,6 +1161,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
 
         const cardExpayment = document.getElementById('card_customers_Expayment_total');
         if (cardExpayment) {
+          cardExpayment.classList.remove('is-loading');
           cardExpayment.setAttribute('data-target', response.customers_Expayment_total);
           cardExpayment.setAttribute('data-count', response.customers_Expayment_count);
           animateCounter(cardExpayment);
@@ -1134,6 +1169,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
 
         const cardReceived = document.getElementById('card_customers_payment_received');
         if (cardReceived) {
+          cardReceived.classList.remove('is-loading');
           cardReceived.setAttribute('data-target', response.customers_payment_received);
           cardReceived.setAttribute('data-count', response.customers_payment_received_count);
           animateCounter(cardReceived);
@@ -1167,12 +1203,10 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           insightResellers.textContent = String(allResellers);
         }
 
-        // Fetch data for each router after card metrics are loaded with a staggered delay
-        <?php $index = 0; foreach ($routers as $router): ?>
-          setTimeout(function() {
-            loadRouterData('', <?= $router->id; ?>);
-          }, <?= $index * 500; ?>);
-        <?php $index++; endforeach; ?>
+        // Do NOT auto-poll MikroTik /routers/load-traffic here.
+        // Each call blocks php spark serve for 5–7s and starves sidebar
+        // DataTables (Expired Customers stuck on skeleton). SSR cached
+        // counts remain visible on the cards.
       },
       error: function(xhr, status, error) {
         console.error('Error fetching Super Admin card metrics:', error);
@@ -1188,7 +1222,10 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
           'card_customers_payment_received', 'card_customers_Expayment_total'
         ].forEach(function(id) {
           var el = document.getElementById(id);
-          if (el && (el.textContent === '0' || el.textContent === '' || el.classList.contains('is-loading'))) {
+          if (!el) return;
+          var txt = (el.textContent || '').trim();
+          if (txt === '0' || txt === '0 (0)' || txt === '…' || txt === '… (…)' || txt === '' || el.classList.contains('is-loading')) {
+            el.classList.remove('is-loading');
             el.textContent = failedText;
           }
         });
@@ -1206,12 +1243,24 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
   // any failure there — session expiry, a network blip, a slow response —
   // silently and permanently left every chart on this page with no data
   // and no retry, with only a console.error nobody would ever see.
+  var dashChartsAlive = true;
+  var dashChartsRetryTimer = null;
+  (window.IpbPageTeardown = window.IpbPageTeardown || []).push(function () {
+    dashChartsAlive = false;
+    if (dashChartsRetryTimer) {
+      clearTimeout(dashChartsRetryTimer);
+      dashChartsRetryTimer = null;
+    }
+  });
+
   function loadSuperAdminCharts(isRetry) {
+    if (!dashChartsAlive) return;
     $.ajax({
       url: "<?= base_url('api/dashboard/sadmin-charts-data') ?>",
       method: "GET",
       dataType: "json",
       success: function(response) {
+        if (!dashChartsAlive) return;
         if (response.status !== 'success') {
           console.error('Failed to load Super Admin charts:', response.message);
           renderGeoRevenue([]);
@@ -1391,6 +1440,7 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         }, 60);
       },
       error: function(xhr, status, error) {
+        if (!dashChartsAlive || status === 'abort') return;
         console.error('Error fetching Super Admin charts data:', error);
 
         // A parsererror here almost always means the session expired and
@@ -1399,7 +1449,10 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         // the same failure, so only auto-retry genuinely transient
         // failures (timeout / network / 5xx), once.
         if (!isRetry && status !== 'parsererror') {
-          setTimeout(function() { loadSuperAdminCharts(true); }, 3000);
+          dashChartsRetryTimer = setTimeout(function() {
+            dashChartsRetryTimer = null;
+            if (dashChartsAlive) loadSuperAdminCharts(true);
+          }, 3000);
           return;
         }
 
@@ -1690,6 +1743,9 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
     let bwRequestId = 0;
     let liveInterval = null;
     let activeBwRouterId = 'all';
+    let bwAbort = null;
+    let liveAbort = null;
+    let dashPageAlive = true;
     const bwCache = Object.create(null);   // routerId -> { data, labels, total_gb }
     let bwRendered = '';                   // signature of the series currently drawn
 
@@ -1772,11 +1828,24 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         clearInterval(liveInterval);
         liveInterval = null;
       }
+      if (liveAbort) {
+        try { liveAbort.abort(); } catch (e) {}
+        liveAbort = null;
+      }
+    }
+
+    function abortDashFetches() {
+      dashPageAlive = false;
+      stopLiveTraffic();
+      if (bwAbort) {
+        try { bwAbort.abort(); } catch (e) {}
+        bwAbort = null;
+      }
     }
 
     // Navigating away via the sidebar swaps #ipb-main instead of reloading the
-    // document — without this the 3s router poll would keep running forever.
-    (window.IpbPageTeardown = window.IpbPageTeardown || []).push(stopLiveTraffic);
+    // document — abort bandwidth/live fetch so php spark serve is not wedged.
+    (window.IpbPageTeardown = window.IpbPageTeardown || []).push(abortDashFetches);
 
     function updateBandwidthChart(routerId) {
       routerId = String(routerId || 'all');
@@ -1784,6 +1853,10 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       const requestId = ++bwRequestId;
 
       stopLiveTraffic();
+      if (bwAbort) {
+        try { bwAbort.abort(); } catch (e) {}
+      }
+      bwAbort = typeof AbortController !== 'undefined' ? new AbortController() : null;
 
       const chartEl = document.getElementById('bandwidthUsageChart');
       const totalEl = document.getElementById('totalDataGB');
@@ -1813,11 +1886,12 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
 
       fetch('<?= base_url("api/dashboard/bandwidth-usage") ?>/' + encodeURIComponent(routerId), {
         credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
+        headers: { 'Accept': 'application/json' },
+        signal: bwAbort ? bwAbort.signal : undefined
       })
         .then(function (res) { return res.json(); })
         .then(function (res) {
-          if (requestId !== bwRequestId || activeBwRouterId !== routerId) {
+          if (!dashPageAlive || requestId !== bwRequestId || activeBwRouterId !== routerId) {
             return;
           }
           if (chartEl) chartEl.classList.remove('is-bw-loading');
@@ -1839,8 +1913,9 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
             if (liveEl) liveEl.innerHTML = '<span class="text-danger">Live: Data unavailable</span>';
           }
         })
-        .catch(function () {
-          if (requestId !== bwRequestId || activeBwRouterId !== routerId) {
+        .catch(function (err) {
+          if (err && err.name === 'AbortError') return;
+          if (!dashPageAlive || requestId !== bwRequestId || activeBwRouterId !== routerId) {
             return;
           }
           if (chartEl) chartEl.classList.remove('is-bw-loading');
@@ -1857,18 +1932,24 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
       stopLiveTraffic();
 
       function pollLive() {
-        if (activeBwRouterId !== String(routerId)) {
+        if (!dashPageAlive || activeBwRouterId !== String(routerId)) {
           stopLiveTraffic();
           return;
         }
 
+        if (liveAbort) {
+          try { liveAbort.abort(); } catch (e) {}
+        }
+        liveAbort = typeof AbortController !== 'undefined' ? new AbortController() : null;
+
         fetch('<?= base_url("routers/load-traffic") ?>/' + encodeURIComponent(routerId) + '?interface=WAN', {
           credentials: 'same-origin',
-          headers: { 'Accept': 'application/json' }
+          headers: { 'Accept': 'application/json' },
+          signal: liveAbort ? liveAbort.signal : undefined
         })
           .then(function (res) { return res.json(); })
           .then(function (res) {
-            if (activeBwRouterId !== String(routerId)) return;
+            if (!dashPageAlive || activeBwRouterId !== String(routerId)) return;
 
             const result = res.response || res;
             const traffic = result.data && result.data.traffic;
@@ -1879,8 +1960,9 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
             liveEl.innerHTML = '<span class="text-primary" style="font-weight:600">Live: ' +
               traffic.rxbyte + ' ↓ ' + traffic.txbyte + ' ↑</span>';
           })
-          .catch(function () {
-            if (activeBwRouterId !== String(routerId)) return;
+          .catch(function (err) {
+            if (err && err.name === 'AbortError') return;
+            if (!dashPageAlive || activeBwRouterId !== String(routerId)) return;
             liveEl.innerHTML = '<span class="text-danger">Live: Router Offline</span>';
           });
       }

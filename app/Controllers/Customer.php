@@ -1070,17 +1070,11 @@ class Customer extends BaseController
             $totalBuilder->where('users.admin_id', $userId);
         }
         if ($status === 'due') {
-            $totalBuilder->where('users.status', 'active');
-            // Exclude free users via subquery
-            $totalBuilder->where('((SELECT COUNT(*) FROM connection_details WHERE user_id = users.id AND (billing_status = "free" OR billing_status = "Free")) = 0)');
-            // Exclude free users by 2050 year check
-            $totalBuilder->where('(users.will_expire IS NULL OR YEAR(users.will_expire) != 2050)');
-            // Include only due users (subscription inactive, or expired, or empty expiry date)
             $totalBuilder->groupStart()
                 ->where('users.subscription_status !=', 'active')
-                ->orWhere('users.will_expire <', date('Y-m-d H:i:s'))
-                ->orWhere('users.will_expire IS NULL')
-            ->groupEnd();
+                ->orWhere('users.will_expire <', $now)
+                ->orWhere("(SELECT COUNT(*) FROM payments WHERE user_id = users.id AND month = {$escCur} AND status = 'successful') = 0", null, false)
+                ->groupEnd();
         } elseif ($status === 'active') {
             $totalBuilder->where('users.subscription_status', 'active')->where('users.will_expire >=', date('Y-m-d H:i:s'))->where('users.conn_status', 'conn');
         } elseif ($status === 'expired') {
@@ -1088,7 +1082,7 @@ class Customer extends BaseController
         } elseif ($status === 'inactive') {
             $totalBuilder->where('users.status', 'inactive');
         }
-        $trueTotal = (clone $totalBuilder)->countAllResults('', false);
+        $trueTotal = (clone $totalBuilder)->countAllResults(false);
 
         // Latest payment status per month via JOINs (avoids per-row correlated subselects).
         $payCurSql = "(SELECT p.user_id, p.status FROM payments p INNER JOIN (SELECT user_id, MAX(id) AS mid FROM payments WHERE month = {$escCur} GROUP BY user_id) t ON t.mid = p.id)";
@@ -1113,17 +1107,11 @@ class Customer extends BaseController
             ->where('users.role', 'user');
 
         if ($status === 'due') {
-            $data->where('users.status', 'active');
-            // Exclude free users via subquery
-            $data->where('((SELECT COUNT(*) FROM connection_details WHERE user_id = users.id AND (billing_status = "free" OR billing_status = "Free")) = 0)');
-            // Exclude free users by 2050 year check
-            $data->where('(users.will_expire IS NULL OR YEAR(users.will_expire) != 2050)');
-            // Include only due users (subscription inactive, or expired, or empty expiry date)
             $data->groupStart()
                 ->where('users.subscription_status !=', 'active')
-                ->orWhere('users.will_expire <', date('Y-m-d H:i:s'))
-                ->orWhere('users.will_expire IS NULL')
-            ->groupEnd();
+                ->orWhere('users.will_expire <', $now)
+                ->orWhere('(pay_cur.status IS NULL OR pay_cur.status != \'successful\')', null, false)
+                ->groupEnd();
         }
 
         if ($userole === 'employee') {
@@ -1911,15 +1899,30 @@ class Customer extends BaseController
 
     public function expired_fetch()
     {
-        $started = microtime(true);
+        // Log before any work so hung requests leave a trail.
         log_message('info', 'expired_fetch start');
+        $started = microtime(true);
 
         try {
-            $userId = session()->get('user_id');
-            $currrentDate = date('Y-m-d H:i:s');
-            $userole = session()->get('user_role');
+            $draw = (int) $this->request->getPost('draw');
+            $start = max(0, (int) $this->request->getPost('start'));
+            $length = (int) $this->request->getPost('length');
+            if ($length <= 0 || $length > 1000) {
+                $length = 25;
+            }
 
-            // Release the file-session lock early (read-only grid).
+            $userId = (int) session()->get('user_id');
+            $userole = (string) session()->get('user_role');
+            $currrentDate = date('Y-m-d H:i:s');
+
+            // Capture permission/role BEFORE closing the session. Calling
+            // userHasPermission/getSession after session_write_close() can
+            // re-lock the file session and deadlock against the next sidebar
+            // navigation on php spark serve.
+            $canDelete = userHasPermission('customer', 'delete');
+            $canUpdate = userHasPermission('customer', 'update');
+            $canRecharge = in_array($userole, ['admin', 'resellerAdmin', 'employee', 'sAdmin'], true);
+
             if (session_status() === PHP_SESSION_ACTIVE) {
                 session_write_close();
             }
@@ -1930,13 +1933,13 @@ class Customer extends BaseController
 
             $details = $this->user_model->where(['id' => $userId])->first();
             if (!$details) {
-                return $this->response->setStatusCode(401)->setJSON([
-                    'draw' => (int) $this->request->getPost('draw'),
+                return $this->response->setJSON([
+                    'draw' => $draw,
                     'recordsTotal' => 0,
                     'recordsFiltered' => 0,
                     'data' => [],
                     'error' => 'Session expired',
-                ]);
+                ])->setStatusCode(401);
             }
 
             $emp_admin_id = $details->admin_id;
@@ -1945,68 +1948,156 @@ class Customer extends BaseController
             $package_filter = $this->request->getPost('package_filter');
             $connection_filter = $this->request->getPost('connection_filter');
             $acc_status_filter = $this->request->getPost('acc_status_filter');
+            $search = trim((string) ($this->request->getPost('search')['value'] ?? ''));
+
             $db = \Config\Database::connect();
 
-            // Minimal joins only — package/payment enrichment was making this
-            // endpoint hang under load and leave the skeleton forever.
-            $data = $db->table('users')
-                ->select('users.id, users.name, users.mobile, users.address, users.area_id, users.router_id, users.package_id')
-                ->select('users.created_by, users.will_expire, users.last_renewed, users.subscription_status')
-                ->select('users.activity, users.status, users.conn_status, users.created_at')
-                ->select('user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
-                ->select('areas.area_name AS area_name, routers.name AS router_name, users.status AS acc_status')
-                ->select('COALESCE(packages.package_name, reseller_packages.package_name, "--") AS joined_package_name', false)
-                ->select('COALESCE(packages.price, reseller_packages.selling_price, reseller_packages.price, "--") AS joined_package_price', false)
-                ->join('user_router_data', 'user_router_data.user_id = users.id', 'left')
-                ->join('areas', 'areas.id = users.area_id', 'left')
-                ->join('routers', 'routers.id = users.router_id', 'left')
-                ->join('packages', 'packages.id = users.package_id', 'left')
-                ->join('reseller_packages', 'reseller_packages.id = users.package_id', 'left')
-                ->where('users.role', 'user')
-                ->where('users.will_expire <', $currrentDate)
-                ->groupStart()
-                    ->where('users.conn_status !=', 'disconn')
-                    ->orWhere('users.conn_status', null)
-                ->groupEnd();
+            $applyScope = static function ($builder) use (
+                $userole,
+                $userId,
+                $emp_admin_id,
+                $area_id,
+                $currrentDate,
+                $area_filter,
+                $package_filter,
+                $connection_filter,
+                $acc_status_filter,
+                $search
+            ) {
+                $builder->where('users.role', 'user')
+                    ->where('users.will_expire <', $currrentDate)
+                    ->groupStart()
+                        ->where('users.conn_status !=', 'disconn')
+                        ->orWhere('users.conn_status', null)
+                    ->groupEnd();
 
-            if ($userole === 'employee') {
-                if (!is_array($area_id)) {
-                    $area_id = explode(',', (string) $area_id);
+                if ($userole === 'employee') {
+                    if (!is_array($area_id)) {
+                        $area_id = explode(',', (string) $area_id);
+                    }
+                    $area_id = array_values(array_filter(array_map('trim', $area_id), static fn ($v) => $v !== ''));
+                    $builder->where('users.admin_id', $emp_admin_id);
+                    if (!empty($area_id)) {
+                        $builder->whereIn('users.area_id', $area_id);
+                    }
+                } else {
+                    $builder->where('users.admin_id', $userId);
                 }
-                $area_id = array_values(array_filter(array_map('trim', $area_id), static fn ($v) => $v !== ''));
-                $data->where('users.admin_id', $emp_admin_id);
-                if (!empty($area_id)) {
-                    $data->whereIn('users.area_id', $area_id);
+
+                if ($area_filter) {
+                    $builder->where('users.area_id', $area_filter);
                 }
-            } else {
-                $data->where('users.admin_id', $userId);
+                if ($package_filter) {
+                    $builder->where('users.package_id', $package_filter);
+                }
+                if ($connection_filter === 'active') {
+                    $builder->where('users.activity', 'active');
+                } elseif ($connection_filter === 'inactive') {
+                    $builder->groupStart()
+                        ->where('users.activity !=', 'active')
+                        ->orWhere('users.activity', null)
+                        ->orWhere('users.activity', '')
+                    ->groupEnd();
+                }
+                if ($acc_status_filter === 'conn') {
+                    $builder->where('users.conn_status', 'conn');
+                }
+
+                if ($search !== '') {
+                    $builder->groupStart()
+                        ->like('users.id', $search)
+                        ->orLike('users.name', $search)
+                        ->orLike('users.mobile', $search)
+                        ->orLike('users.address', $search)
+                        ->orLike('areas.area_name', $search)
+                        ->orLike('routers.name', $search)
+                        ->orLike('user_router_data.pppoe_secret', $search)
+                    ->groupEnd();
+                }
+
+                return $builder;
+            };
+
+            // Cheap total without package joins (avoids ngekoding DataTables
+            // PHPSQLParser + Symfony exit path that left this endpoint hanging).
+            $countBuilder = $applyScope(
+                $db->table('users')
+                    ->select('COUNT(DISTINCT users.id) AS cnt', false)
+                    ->join('user_router_data', 'user_router_data.user_id = users.id', 'left')
+                    ->join('areas', 'areas.id = users.area_id', 'left')
+                    ->join('routers', 'routers.id = users.router_id', 'left')
+            );
+            $countRow = $countBuilder->get()->getRowArray();
+            $recordsFiltered = (int) ($countRow['cnt'] ?? 0);
+
+            if (connection_aborted()) {
+                return $this->response->setStatusCode(499)->setBody('');
             }
 
-            if ($area_filter) {
-                $data->where('users.area_id', $area_filter);
-            }
-            if ($package_filter) {
-                $data->where('users.package_id', $package_filter);
-            }
-            // UI sends active|inactive; DB stores activity=active for online.
-            if ($connection_filter === 'active') {
-                $data->where('users.activity', 'active');
-            } elseif ($connection_filter === 'inactive') {
-                $data->groupStart()
-                    ->where('users.activity !=', 'active')
-                    ->orWhere('users.activity', null)
-                    ->orWhere('users.activity', '')
-                ->groupEnd();
-            }
-            if ($acc_status_filter === 'conn') {
-                $data->where('users.conn_status', 'conn');
+            $orderCol = 'users.id';
+            $orderDir = 'DESC';
+            $orderReq = $this->request->getPost('order');
+            $columnsReq = $this->request->getPost('columns');
+            if (is_array($orderReq) && isset($orderReq[0]['column']) && is_array($columnsReq)) {
+                $colIdx = (int) $orderReq[0]['column'];
+                $colName = (string) ($columnsReq[$colIdx]['name'] ?? $columnsReq[$colIdx]['data'] ?? '');
+                $dir = strtoupper((string) ($orderReq[0]['dir'] ?? 'desc')) === 'ASC' ? 'ASC' : 'DESC';
+                $orderMap = [
+                    'users.id' => 'users.id',
+                    'id' => 'users.id',
+                    'users.name' => 'users.name',
+                    'name' => 'users.name',
+                    'areas.area_name' => 'areas.area_name',
+                    'area_name' => 'areas.area_name',
+                    'users.mobile' => 'users.mobile',
+                    'mobile' => 'users.mobile',
+                    'users.address' => 'users.address',
+                    'address' => 'users.address',
+                    'routers.name' => 'routers.name',
+                    'router_name' => 'routers.name',
+                    'user_router_data.pppoe_secret' => 'user_router_data.pppoe_secret',
+                    'pppoe_secret' => 'user_router_data.pppoe_secret',
+                    'users.will_expire' => 'users.will_expire',
+                    'payment_expiry_sort' => 'users.will_expire',
+                    'users.activity' => 'users.activity',
+                    'conn_status' => 'users.activity',
+                    'users.status' => 'users.status',
+                    'acc_status' => 'users.conn_status',
+                ];
+                if (isset($orderMap[$colName])) {
+                    $orderCol = $orderMap[$colName];
+                    $orderDir = $dir;
+                }
             }
 
-            $datatables = new DataTables($data);
-            $datatables->addSequenceNumber('serial');
+            $rows = $applyScope(
+                $db->table('users')
+                    ->select('users.id, users.name, users.mobile, users.address, users.area_id, users.router_id, users.package_id')
+                    ->select('users.will_expire, users.activity, users.status, users.conn_status')
+                    ->select('user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
+                    ->select('areas.area_name AS area_name, routers.name AS router_name')
+                    ->select('COALESCE(packages.package_name, reseller_packages.package_name, "--") AS joined_package_name', false)
+                    ->select('COALESCE(packages.price, reseller_packages.selling_price, reseller_packages.price, "--") AS joined_package_price', false)
+                    ->join('user_router_data', 'user_router_data.user_id = users.id', 'left')
+                    ->join('areas', 'areas.id = users.area_id', 'left')
+                    ->join('routers', 'routers.id = users.router_id', 'left')
+                    ->join('packages', 'packages.id = users.package_id', 'left')
+                    ->join('reseller_packages', 'reseller_packages.id = users.package_id', 'left')
+            )
+                ->groupBy('users.id')
+                ->orderBy($orderCol, $orderDir)
+                ->limit($length, $start)
+                ->get()
+                ->getResult();
 
-            $datatables->addColumn('mobile', function ($row) {
-                $phone = trim($row->mobile ?? '');
+            $data = [];
+            foreach ($rows as $row) {
+                $item = [];
+                if ($canDelete) {
+                    $item['select'] = '<input type="checkbox" class="form-check-input input-check-selected" value="' . (int) $row->id . '">';
+                }
+
+                $phone = trim((string) ($row->mobile ?? ''));
                 $callLink = $phone ? 'tel:' . preg_replace('/\D/', '', $phone) : '#';
                 $cleanPhone = preg_replace('/\D/', '', $phone);
                 if (strpos($phone, '+88') === 0) {
@@ -2020,7 +2111,16 @@ class Customer extends BaseController
                 }
                 $whatsappLink = $formattedPhone ? 'https://wa.me/' . $formattedPhone : '#';
 
-                return '<div style="display:flex; justify-content:space-between; align-items:center; min-width:180px; background:var(--success-100, #dcfce7); color:var(--success-600, #15803d); border-radius:6px; padding:4px;">
+                $item['id'] = (int) $row->id;
+                $item['name'] = '<a style="background-color:var(--info-100, #dbeafe); color:var(--info-600, #1d4ed8); padding:4px 8px; border-radius:6px; font-weight:500; text-decoration:none;" href="'
+                    . route_to('route.customer.details', $row->id) . '">'
+                    . esc($row->name ?? '-') . '</a>';
+                $item['package'] = '<div style="line-height:1.2;">
+                <strong style="font-size:16px;">' . htmlspecialchars((string) ($row->joined_package_name ?? '--')) . '</strong><br>
+                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars((string) ($row->joined_package_price ?? '--')) . '</span>
+            </div>';
+                $item['area_name'] = $row->area_name ?? '--';
+                $item['mobile'] = '<div style="display:flex; justify-content:space-between; align-items:center; min-width:180px; background:var(--success-100, #dcfce7); color:var(--success-600, #15803d); border-radius:6px; padding:4px;">
                 <span style="background:var(--success-100, #dcfce7); color:var(--success-600, #15803d); padding:2px 8px; border-radius:50px; display:inline-flex; align-items:center;">'
                     . ($phone ?: '-') .
                     '</span>
@@ -2033,99 +2133,48 @@ class Customer extends BaseController
                     </a>
                 </div>
             </div>';
-            });
+                $item['address'] = $row->address ?? '-';
+                $item['router_name'] = $row->router_name ?? '--';
+                $item['pppoe_secret'] = $row->pppoe_secret ?? '---';
+                $item['router_password'] = $row->router_password ?? '---';
 
-            if (userHasPermission('customer', 'delete')) {
-                $datatables->addColumn('select', function ($row) {
-                    return '<input type="checkbox" class="form-check-input input-check-selected" value="' . $row->id . '">';
-                });
-            }
+                $payUrl = route_to('route.customer.payment.user', $row->id);
+                if (!empty($row->will_expire) && date('Y', strtotime($row->will_expire)) === '2050') {
+                    $item['payment_expiry_sort'] = '<a href="' . $payUrl . '" style="text-decoration:none;">
+                            <span style="background:var(--info-100, #e0f2fe); color:var(--info-700, #0369a1); padding:2px 8px; border-radius:50px; font-weight:500; cursor:pointer;">Free</span></a>';
+                } else {
+                    $daysAgo = 0;
+                    if (!empty($row->will_expire)) {
+                        $daysAgo = (int) abs(\Carbon\Carbon::today()->diffInDays(\Carbon\Carbon::parse($row->will_expire), false));
+                    }
+                    $item['payment_expiry_sort'] = '<a href="' . $payUrl . '" style="text-decoration:none;">
+                        <span style="background:#fee2e2; color:#ef4a31ff; padding:2px 8px; border-radius:50px; font-weight:500; cursor:pointer;">expired (' . $daysAgo . ' days ago)</span></a>';
+                }
 
-            $datatables->addColumn('name', function ($row) {
-                return '<a style="background-color:var(--info-100, #dbeafe); color:var(--info-600, #1d4ed8); padding:4px 8px; border-radius:6px; font-weight:500; text-decoration:none;" href="'
-                    . route_to('route.customer.details', $row->id) . '">'
-                    . esc($row->name ?? '-') . '</a>';
-            });
-
-            $datatables->addColumn('package', function ($row) {
-                $name = $row->joined_package_name ?? '--';
-                $price = $row->joined_package_price ?? '--';
-                return '<div style="line-height:1.2;">
-                <strong style="font-size:16px;">' . htmlspecialchars((string) $name) . '</strong><br>
-                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars((string) $price) . '</span>
-            </div>';
-            });
-
-            $datatables->addColumn('area_name', function ($row) {
-                return $row->area_name ?? '--';
-            });
-            $datatables->addColumn('router_name', function ($row) {
-                return $row->router_name ?? '--';
-            });
-            $datatables->addColumn('pppoe_secret', function ($row) {
-                return $row->pppoe_secret ?? '---';
-            });
-            $datatables->addColumn('router_password', function ($row) {
-                return $row->router_password ?? '---';
-            });
-
-            $datatables->addColumn('conn_status', function ($row) {
-                return ($row->activity === 'active')
+                $item['conn_status'] = ($row->activity === 'active')
                     ? '<span class="badge label-success">Online</span>'
                     : '<span class="badge label-danger">Offline</span>';
-            });
 
-            $datatables->addColumn('payment_expiry_sort', function ($row) {
-                $url = route_to('route.customer.payment.user', $row->id);
-                if (!empty($row->will_expire) && date('Y', strtotime($row->will_expire)) === '2050') {
-                    return '<a href="' . $url . '" style="text-decoration:none;">
-                            <span style="background:var(--info-100, #e0f2fe); color:var(--info-700, #0369a1); padding:2px 8px; border-radius:50px; font-weight:500; cursor:pointer;">Free</span></a>';
-                }
-                $daysAgo = 0;
-                if (!empty($row->will_expire)) {
-                    $daysAgo = (int) abs(\Carbon\Carbon::today()->diffInDays(\Carbon\Carbon::parse($row->will_expire), false));
-                }
-                return '<a href="' . $url . '" style="text-decoration:none;">
-                        <span style="background:#fee2e2; color:#ef4a31ff; padding:2px 8px; border-radius:50px; font-weight:500; cursor:pointer;">expired (' . $daysAgo . ' days ago)</span></a>';
-            });
-
-            $datatables->addColumn('acc_status', function ($row) {
                 $checked = ($row->conn_status ?? '') === 'conn' ? 'checked' : '';
-                return '<div style="display: flex; justify-content: center; align-items: center;">
+                $item['acc_status'] = '<div style="display: flex; justify-content: center; align-items: center;">
                     <label class="toggle-switch">
-                        <input type="checkbox" class="conn-switch" data-id="' . $row->id . '" ' . $checked . '>
+                        <input type="checkbox" class="conn-switch" data-id="' . (int) $row->id . '" ' . $checked . '>
                         <span class="slider"></span>
                     </label>
                 </div>';
-            });
 
-            $datatables->addColumn('action', function ($row) {
-                return $this->renderCustomerListActions($row);
-            });
-
-            $datatables->addColumnAliases([
-                'users.id' => 'id',
-                'users.name' => 'name',
-                'users.package_id' => 'package',
-                'areas.area_name' => 'area_name',
-                'users.mobile' => 'mobile',
-                'users.address' => 'address',
-                'routers.name' => 'router_name',
-                'user_router_data.pppoe_secret' => 'pppoe_secret',
-                'user_router_data.router_password' => 'router_password',
-                'users.will_expire' => 'payment_expiry_sort',
-                'users.activity' => 'conn_status',
-                'users.status' => 'acc_status',
-            ]);
-            $datatables->asObject();
-
-            if (connection_aborted()) {
-                return $this->response->setStatusCode(499)->setBody('');
+                $item['action'] = $this->renderCustomerListActionsFast((int) $row->id, $canUpdate, $canRecharge);
+                $data[] = $item;
             }
 
-            $out = $datatables->generate();
-            log_message('info', 'expired_fetch done ms=' . round((microtime(true) - $started) * 1000, 1));
-            return $out;
+            log_message('info', 'expired_fetch done ms=' . round((microtime(true) - $started) * 1000, 1) . ' rows=' . count($data));
+
+            return $this->response->setJSON([
+                'draw' => $draw,
+                'recordsTotal' => $recordsFiltered,
+                'recordsFiltered' => $recordsFiltered,
+                'data' => $data,
+            ]);
         } catch (\Throwable $e) {
             log_message('error', 'expired_fetch failed: ' . $e->getMessage());
             return $this->response->setStatusCode(500)->setJSON([
@@ -2136,6 +2185,33 @@ class Customer extends BaseController
                 'error' => 'Failed to load expired customers',
             ]);
         }
+    }
+
+    /**
+     * Row actions for list grids without touching session after write_close.
+     */
+    private function renderCustomerListActionsFast(int $id, bool $canUpdate, bool $canRecharge): string
+    {
+        $html = '<div class="ipb-row-actions">';
+        $html .= '<a href="' . route_to('route.customer.details', $id) . '" class="ipb-row-btn tone-info" title="View details" data-toggle="tooltip" data-placement="top" data-instant-nav>'
+            . '<i class="fas fa-eye" aria-hidden="true"></i><span class="sr-only">View</span></a>';
+
+        $subUrl = base_url('subscription/' . $id);
+        $html .= '<button type="button" class="ipb-row-btn tone-violet ipb-copy-sub-link" title="Copy subscription link" data-toggle="tooltip" data-placement="top" data-link="' . esc($subUrl, 'attr') . '">'
+            . '<i class="fas fa-link" aria-hidden="true"></i><span class="sr-only">Copy link</span></button>';
+
+        if ($canUpdate) {
+            $html .= '<a href="' . route_to('route.customer.edit', $id) . '" class="ipb-row-btn tone-brand" title="Update customer" data-toggle="tooltip" data-placement="top" data-instant-nav>'
+                . '<i class="fas fa-user-edit" aria-hidden="true"></i><span class="sr-only">Update</span></a>';
+        }
+
+        if ($canRecharge) {
+            $html .= '<a href="' . route_to('route.customer.subscription', $id) . '" class="ipb-row-btn tone-success" title="Recharge" data-toggle="tooltip" data-placement="top" data-instant-nav>'
+                . '<i class="fas fa-bolt" aria-hidden="true"></i><span class="sr-only">Recharge</span></a>';
+        }
+
+        $html .= '</div>';
+        return $html;
     }
 
     public function new_fetch()
@@ -5486,7 +5562,7 @@ class Customer extends BaseController
                         $router_model = model('App\Models\UserRouterDataModel');
                         $data = $router_model->where('user_id', $user->id)->first();
                         $pppoe_secret = $data ? (is_array($data) ? ($data['pppoe_secret'] ?? null) : ($data->pppoe_secret ?? null)) : null;
-                        $result = enablePPPoEUser_by_pppoe_secret($router_client, $pppoe_secret, $pppoe_id);
+                        $result = enablePPPoEUser_by_pppoe_secret($router_client, $pppoe_secret);
                     }
                 } else {
                     $result = enablePPPoEUserFsock($user_details->router_id, $pppoe_id);
@@ -5822,7 +5898,7 @@ class Customer extends BaseController
                     // Layer 2 – RouterOS library: enable by PPPoE secret name
                     if (!$enabled && $pppoe_secret) {
                         log_message('warning', "[L2-RouterOS-Secret] Trying enable by secret for User ID {$user->id}");
-                        $enabled = enablePPPoEUser_by_pppoe_secret($router_client, $pppoe_secret, $pppoe_id);
+                        $enabled = enablePPPoEUser_by_pppoe_secret($router_client, $pppoe_secret);
                         if ($enabled) {
                             log_message('info', "[L2-RouterOS-Secret] Enabled PPPoE for User ID {$user->id}");
                         }

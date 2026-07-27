@@ -41,8 +41,11 @@ class DataTables extends DataTablesCodeIgniter4
             return null;
         }
 
-        if (isset($this->columnAliases[$column])) {
-            $column = $this->columnAliases[$column];
+        if (!empty($this->columnAliases)) {
+            $dbCol = array_search($column, $this->columnAliases, true);
+            if ($dbCol !== false) {
+                $column = (string) $dbCol;
+            }
         }
 
         // Reject unknown fields (stops ORDER BY on junk / renamed UI keys)
@@ -251,5 +254,49 @@ class DataTables extends DataTablesCodeIgniter4
         }
 
         $this->queryBuilder->{ $this->config->get('limit')}($length, max(0, (int) $start));
+    }
+
+    /**
+     * Return a CodeIgniter JSON response instead of Symfony send()+exit.
+     * The vendor exit path skips CI shutdown and, under php spark serve,
+     * can leave the browser with an empty body while the worker looks free —
+     * DataTables then keeps the skeleton forever.
+     */
+    public function generate()
+    {
+        $this->setReturnedFieldNames();
+        $this->filter();
+        $this->order();
+        $this->limit();
+
+        $result = $this->queryBuilder->{$this->config->get('get')}();
+        $output = [];
+        $sequenceNumber = (int) $this->request->get('start') + 1;
+
+        foreach ($result->{$this->config->get('getResult')}() as $res) {
+            $row = [];
+            if ($this->sequenceNumber) {
+                $row[$this->sequenceNumberKey] = $sequenceNumber++;
+            }
+
+            foreach ($this->returnedFieldNames as $field) {
+                $row[$field] = isset($this->formatters[$field])
+                    ? $this->formatters[$field]($res->$field, $res)
+                    : $res->$field;
+            }
+
+            foreach ($this->extraColumns as $key => $callback) {
+                $row[$key] = $callback($res);
+            }
+
+            $output[] = $this->asObject ? (object) $row : array_values($row);
+        }
+
+        return \Config\Services::response()->setJSON([
+            'draw' => $this->request->get('draw'),
+            'recordsTotal' => $this->recordsTotal,
+            'recordsFiltered' => $this->recordsFiltered,
+            'data' => $output,
+        ]);
     }
 }

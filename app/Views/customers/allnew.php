@@ -168,7 +168,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
 <?= $this->endSection('content'); ?>
 <?= $this->section('css'); ?>
-<link rel="stylesheet" href="<?= base_url('assets/css/saas/customers-list.css?v=21'); ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/saas/customers-list.css?v=23'); ?>">
 <style>
   /* PREMIUM CARD DESIGN */
   .box.box-warning {
@@ -373,7 +373,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 </style>
 <?= $this->endSection('css'); ?>
 <?= $this->section('script'); ?>
-<script src="<?= base_url('assets/js/saas/customers-list.js?v=3'); ?>"></script>
+<script src="<?= base_url('assets/js/saas/customers-list.js?v=8'); ?>"></script>
 
 
 <script>
@@ -502,14 +502,14 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
 
 <script>
-  let activeRequests = [];
+  (function bootNewCustomers() {
+  var activeRequests = [];
 
-  $(document).ready(function () {
-    var colVisible = function (key) {
+  var colVisible = function (key) {
       return window.IpbCustomersList ? IpbCustomersList.colVisible(key) : true;
     };
 
-    const table = $('.datatable').DataTable({
+    var table = $('.datatable').DataTable({
       processing: false,
       serverSide: true,
       scrollX: false,
@@ -1131,7 +1131,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         table.ajax.reload();
       });
 
-  });
+  })();
 </script>
 
 <?= $this->endSection('script'); ?>

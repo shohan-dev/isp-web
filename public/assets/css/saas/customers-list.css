@@ -268,12 +268,15 @@
   font-weight: 600;
 }
 
-/* Soft row actions — keep icon color on hover (override global white) */
+/* Soft row actions — 2 buttons per row (2x2 grid layout) */
 body.ipb .ipb-customers-page .ipb-row-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: inline-flex !important;
+  flex-wrap: wrap !important;
+  width: 70px !important;
+  max-width: 70px !important;
+  gap: 4px 6px !important;
+  justify-content: center !important;
+  align-items: center !important;
 }
 body.ipb .ipb-customers-page .ipb-row-btn,
 body.ipb .ipb-customers-page a.ipb-row-btn,
@@ -354,23 +357,20 @@ body.ipb .ipb-customers-page .ipb-row-btn:focus i {
 }
 
 .ipb-customers-page .ipb-customers-table-wrap {
-  overflow-x: auto;
+  overflow-x: auto !important;
   -webkit-overflow-scrolling: touch;
+  width: 100%;
+  position: relative;
 }
-.ipb-customers-page .ipb-customers-table-wrap .dataTables_wrapper .dataTables_length,
-.ipb-customers-page .ipb-customers-table-wrap .dataTables_wrapper .dataTables_filter {
-  margin-bottom: 12px;
+.ipb-customers-page .ipb-customers-table-wrap table.dataTable {
+  min-width: 980px !important;
+  width: 100% !important;
 }
-.ipb-customers-page .ipb-customers-table-wrap .dataTables_wrapper .dataTables_filter input {
-  border-radius: 10px;
-  border: 1.5px solid var(--border, #e6eaf0);
-  min-height: 36px;
-  padding: 6px 12px;
-}
-.ipb-customers-page .ipb-customers-table-wrap table.dataTable thead th {
-  white-space: nowrap;
-}
+.ipb-customers-page .ipb-customers-table-wrap table.dataTable thead th,
 .ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody td {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
   vertical-align: middle !important;
 }
 /* Address is free text (the only unbounded column). Once the touch tiers put
@@ -383,6 +383,44 @@ body.ipb .ipb-customers-page .ipb-row-btn:focus i {
 }
 .ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody tr:hover td {
   background: var(--surface-hover, #f8fafc) !important;
+}
+
+/* Keep Update / View / Recharge pinned while the wide table scrolls.
+   Desktop never got responsive.css sticky (phone-only), and phone used to
+   force position:static — so Action sat off-screen behind Address/PPPoE. */
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td.ipb-c-action,
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child,
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td:last-child {
+  position: sticky !important;
+  right: 0 !important;
+  z-index: var(--z-sticky-cell, 3);
+  background: var(--surface, #fff) !important;
+  box-shadow: -6px 0 10px -8px rgba(15, 23, 42, 0.28);
+  min-width: 86px;
+}
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child {
+  z-index: var(--z-sticky-head, 4);
+  background: var(--surface-2, #f8fafc) !important;
+}
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable.table-striped > tbody > tr:nth-of-type(odd) > td.ipb-c-action,
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable.table-striped > tbody > tr:nth-of-type(odd) > td:last-child {
+  background: var(--surface-2, #f8fafc) !important;
+}
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr:hover > td.ipb-c-action,
+body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr:hover > td:last-child {
+  background: var(--surface-hover, #f8fafc) !important;
+}
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td.ipb-c-action,
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child,
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td:last-child,
+body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
+body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td.ipb-c-action,
+body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child,
+body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td:last-child {
+  box-shadow: -6px 0 10px -8px rgba(0, 0, 0, 0.6);
 }
 
 .ipb-customers-page #action-buttons-group {
@@ -575,26 +613,14 @@ body.ipb .ipb-customers-page .ipb-row-btn:focus i {
     overflow-wrap: normal !important;
   }
 
-  /* Icons stay on the row's single line instead of stacking into a column. */
+  /* 2 buttons per row layout maintained */
   body.ipb .ipb-customers-page .ipb-customers-table-wrap .ipb-row-actions {
-    flex-wrap: nowrap !important;
+    width: 70px !important;
+    max-width: 70px !important;
   }
 
-  /* Action column: no freeze. responsive.css pins the last cell of every phone
-     table to the right edge (position: sticky + opaque background + shadow),
-     so the icon strip floated over whatever column you were swiping past and
-     covered it. On a table that now scrolls properly, Action is just the last
-     column like any other — swipe to it. */
-  body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child,
-  body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td:last-child,
-  body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
-  body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td.ipb-c-action {
-    position: static !important;
-    right: auto !important;
-    z-index: auto !important;
-    background: transparent !important;
-    box-shadow: none !important;
-  }
+  /* Action stays sticky (base rule above). Do not force position:static here —
+     that hid Update behind horizontal scroll on every phone. */
 }
 
 body.ipb[data-theme="dark"] .ipb-customers-page .box.box-warning,

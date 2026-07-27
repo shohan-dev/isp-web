@@ -306,6 +306,7 @@ if (request()->getHeaderLine('X-IPB-Nav') === '1') {
   <?= saas_js('list-filters.js') ?>
   <?= saas_js('customize.js') ?>
   <?= saas_js('skeleton-swap.js') ?>
+  <?= saas_js('ipb-dt-load.js') ?>
 
   <script type="application/ld+json"><?= json_encode([
       '@context' => 'https://schema.org',

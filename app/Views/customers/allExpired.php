@@ -168,7 +168,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
 <?= $this->endSection('content'); ?>
 <?= $this->section('css'); ?>
-<link rel="stylesheet" href="<?= base_url('assets/css/saas/customers-list.css?v=21'); ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/saas/customers-list.css?v=23'); ?>">
 <style>
   /* PREMIUM CARD DESIGN */
   .box.box-warning {
@@ -373,7 +373,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 </style>
 <?= $this->endSection('css'); ?>
 <?= $this->section('script'); ?>
-<script src="<?= base_url('assets/js/saas/customers-list.js?v=3'); ?>"></script>
+<script src="<?= base_url('assets/js/saas/customers-list.js?v=8'); ?>"></script>
 
 
 <script>
@@ -502,9 +502,9 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
 
 <script>
-  let activeRequests = [];
+  (function bootExpiredCustomers() {
+    var activeRequests = [];
 
-  $(document).ready(function () {
     var colVisible = function (key) {
       return window.IpbCustomersList ? IpbCustomersList.colVisible(key) : true;
     };
@@ -514,7 +514,17 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       try { $('.datatable').DataTable().clear().destroy(true); } catch (e) {}
     }
 
-    const table = $('.datatable').DataTable({
+    var dtLoad = window.IpbDtLoad
+      ? IpbDtLoad.bind({
+          tableSelector: '.datatable',
+          retryId: 'ipb-dt-retry',
+          failTitle: 'Could not load expired customers. Please retry.',
+          timeoutTitle: 'Request timed out. Check your connection and retry.',
+          watchdogMs: 8000
+        })
+      : null;
+
+    var table = $('.datatable').DataTable({
       // Skeleton tbody is the load cue (same as all.php). processing:true would
       // stack the branded "Loading..." box on top of the skeleton.
       processing: false,
@@ -540,7 +550,10 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
           req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
         },
         error: function (xhr, error) {
-          // Navigating away aborts the XHR — keep skeleton briefly; don't toast.
+          if (dtLoad) {
+            dtLoad.onError(xhr, error);
+            return;
+          }
           if (error === 'abort') return;
           var cols = $('.datatable thead th').length || 14;
           var msg = error === 'timeout'
@@ -590,6 +603,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       pageLength: 25,
       drawCallback: function () {
         const api = this.api();
+        if (dtLoad) dtLoad.onDraw(api);
         // No live MikroTik poll — see customers/all.php drawCallback comment.
         // Blocking PPPoE status calls starved php spark serve and left the next
         // sidebar page empty / stuck on Loading.
@@ -600,6 +614,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       }
 
     });
+    if (dtLoad) dtLoad.watch(table);
 
     $(document).on('click', '#ipb-dt-retry', function () {
       table.ajax.reload();
@@ -1093,7 +1108,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         table.ajax.reload();
       });
 
-  });
+  })();
 </script>
 
 <?= $this->endSection('script'); ?>

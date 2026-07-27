@@ -325,7 +325,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 </style>
 <?= $this->endSection('css'); ?>
 <?= $this->section('script'); ?>
-<script src="<?= base_url('assets/js/saas/customers-list.js?v=6'); ?>"></script>
+<script src="<?= base_url('assets/js/saas/customers-list.js?v=8'); ?>"></script>
 
 <script>
   // Delegated + namespaced so SPA re-entry can rebind cleanly, and so a
@@ -882,11 +882,9 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
 
 <script>
-  let activeRequests = [];
-  const status = "<?= esc($status) ?>";
-
-  $(document).ready(function () {
-    const status = "<?= esc($status) ?>";
+  (function bootAllCustomers() {
+    var activeRequests = [];
+    var status = "<?= esc($status) ?>";
 
     var colVisible = function (key) {
       return window.IpbCustomersList ? IpbCustomersList.colVisible(key) : true;
@@ -906,15 +904,24 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       try { $('.datatable').DataTable().clear().destroy(true); } catch (e) {}
     }
 
+    var dtLoad = window.IpbDtLoad
+      ? IpbDtLoad.bind({
+          tableSelector: '.datatable',
+          retryId: 'ipb-dt-retry',
+          failTitle: 'Could not load customers. Please retry.',
+          timeoutTitle: 'Request timed out. Check your connection and retry.',
+          watchdogMs: 8000
+        })
+      : null;
+
     // Everything below this block (.new-customer-btn, #select_all, .delete-btn,
     // and every other handler through line ~1220) lives in this SAME
-    // synchronous $(document).ready() function, bound AFTER the DataTable
-    // call below. An uncaught exception constructing the DataTable used to
-    // abort the whole function — silently killing every button binding that
-    // follows, with no visible sign beyond a console error. try/catch this
-    // constructor so a table-init failure can't take the rest of the toolbar
-    // down with it.
-    let table = null;
+    // boot function, bound AFTER the DataTable call below. An uncaught
+    // exception constructing the DataTable used to abort the whole function —
+    // silently killing every button binding that follows, with no visible
+    // sign beyond a console error. try/catch this constructor so a table-init
+    // failure can't take the rest of the toolbar down with it.
+    var table = null;
     try {
       table = $('.datatable').DataTable({
       serverSide: true,
@@ -950,10 +957,11 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
           req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
         },
         error: function (xhr, error) {
-          // Navigating away aborts the XHR — keep skeleton briefly; don't toast.
+          if (dtLoad) {
+            dtLoad.onError(xhr, error);
+            return;
+          }
           if (error === 'abort') return;
-          // Without this, a failed/timed-out fetch leaves the skeleton tbody forever
-          // (processing:false + no draw) — "stuck on Loading / no data".
           var cols = $('.datatable thead th').length || 14;
           var msg = error === 'timeout'
             ? 'Request timed out. Check your connection and retry.'
@@ -1007,6 +1015,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       pageLength: 25,
       drawCallback: function () {
         const api = this.api();
+        if (dtLoad) dtLoad.onDraw(api);
 
         // Live MikroTik PPPoE polling used to run here (1 POST per router, up to
         // ~15s each). On `php spark serve` (single-threaded) those requests
@@ -1026,6 +1035,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       }
 
       });
+      if (dtLoad && table) dtLoad.watch(table);
     } catch (e) {
       console.error('DataTable initialization failed:', e);
       if (window.tata) tata.error('Failed to load customer table', 'Please refresh the page. If this keeps happening, contact support.');
@@ -1310,11 +1320,9 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
 
     // Transfer / Delete / select-all handlers live in bindCustomerBulkActions()
-    // above (outside this ready) so DataTable init cannot swallow them.
+    // above (outside this boot) so DataTable init cannot swallow them.
 
-
-
-  });
+  })();
 </script>
 
 <?= $this->endSection('script'); ?>
