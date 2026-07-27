@@ -230,7 +230,7 @@ class EmployeePortalController extends BaseController
 
         $datatables->except(['employee_id', 'updated_at']);
         $datatables->asObject();
-        $datatables->generate();
+        return $datatables->generate();
     }
 
     /**

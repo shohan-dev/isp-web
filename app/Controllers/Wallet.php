@@ -238,6 +238,6 @@ class Wallet extends BaseController
 
         $datatables->except(['id', 'wallet_id', 'user_id', 'reference', 'created_by']);
         $datatables->asObject();
-        $datatables->generate();
+        return $datatables->generate();
     }
 }

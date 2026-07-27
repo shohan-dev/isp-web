@@ -579,13 +579,22 @@ class Subscription extends BaseController
 
             $Registration = new Registration();
             $rdetails = $Registration->where(['userid' => $id])->first();
-            // $admin_id = $details->admin_id;
-            $admin_id = null;
+
+            // A top-level ISP admin has no parent admin_id, so scope their own
+            // SaaS subscription invoice to themselves. Resellers/customers keep
+            // their parent admin's id. payments.admin_id is NOT NULL — never
+            // insert null (was crashing self-renew with "Column 'admin_id'
+            // cannot be null" whenever a top-level admin renewed their own plan).
+            $admin_id = $id;
 
             if (is_object($details)) {
-                $admin_id = $details->admin_id ?? '--';
+                if (!empty($details->admin_id) && $details->admin_id !== '--') {
+                    $admin_id = $details->admin_id;
+                }
             } elseif (is_array($details)) {
-                $admin_id = $details['admin_id'] ?? '--';
+                if (!empty($details['admin_id']) && $details['admin_id'] !== '--') {
+                    $admin_id = $details['admin_id'];
+                }
             }
 
 

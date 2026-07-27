@@ -107,7 +107,7 @@ class Sms extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 

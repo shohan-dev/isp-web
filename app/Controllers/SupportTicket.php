@@ -239,7 +239,7 @@ class SupportTicket extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 

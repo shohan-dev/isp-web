@@ -176,7 +176,7 @@ class Payment extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
     /**
@@ -192,9 +192,13 @@ class Payment extends BaseController
 
             $amount = floatval($details->amount ?? 0);
             $isPublic = !getSession('user_id');
-            $userIdContext = $details->admin_id;
 
-            // Strictly restrict Super Admin's (ID 2) gateways to ONLY sAdmin self-recharge
+            // Same resolution the actual gateway controllers (Bkash/Nagad/SSLCommerz/…)
+            // use to decide whose credentials process the charge — keeping the two in
+            // sync means the buttons shown here always match what will really be
+            // charged. Routes platform-bound invoices (a tenant admin's own subscription
+            // renewal / wallet top-up) to the platform operator's gateway settings.
+            $userIdContext = paymentGatewayContext($details);
             if (empty($userIdContext)) {
                 if (getSession('user_role') === 'admin') {
                     $userIdContext = 2; // Allow sAdmin to pay Super Admin
@@ -231,9 +235,13 @@ class Payment extends BaseController
         if (!empty($details)) {
 
             $amount = floatval($details->amount ?? 0);
-            $userIdContext = $details->admin_id;
 
-            // Strictly restrict Super Admin's (ID 2) gateways to ONLY sAdmin self-recharge
+            // Same resolution the actual gateway controllers (Bkash/Nagad/SSLCommerz/…)
+            // use to decide whose credentials process the charge — keeping the two in
+            // sync means the buttons shown here always match what will really be
+            // charged. Routes platform-bound invoices (a tenant admin's own subscription
+            // renewal / wallet top-up) to the platform operator's gateway settings.
+            $userIdContext = paymentGatewayContext($details);
             if (empty($userIdContext)) {
                 if (getSession('user_role') === 'admin') {
                     $userIdContext = 2; // Allow sAdmin to pay Super Admin
@@ -241,7 +249,7 @@ class Payment extends BaseController
                     show_404(); // No regular user should have an empty admin_id invoice
                 }
             }
-            
+
             $data = [
                 'title' => 'Payment Gateway',
                 'details' => $details,

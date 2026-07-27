@@ -138,7 +138,7 @@ class Reports extends BaseController
             return date('d/m/Y', strtotime($row->created_at));
         });
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
     public function exportBtrcPdf()

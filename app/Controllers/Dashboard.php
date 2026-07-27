@@ -1586,4 +1586,82 @@ class Dashboard extends BaseController
 
         return $result;
     }
+
+    private function getDueMetrics($userId, $userRole, $currentMonth)
+    {
+        // Get all active users (matching getPackagePrice selection)
+        $activeUsers = $this->user_model->select('id, package_id, subscription_status, will_expire')
+            ->where(['role' => 'user', 'admin_id' => $userId, 'status' => 'active'])
+            ->findAll();
+
+        // Get free users
+        $freeUserIds = [];
+        try {
+            $freeUsers = model('App\Models\ConnectionData')
+                ->whereIn('billing_status', ['free', 'Free'])
+                ->findColumn('user_id');
+            if (!empty($freeUsers)) {
+                $freeUserIds = $freeUsers;
+            }
+        } catch (\Exception $e) {}
+
+        // Package Price map based on role
+        $pkgPriceMap = [];
+        if ($userRole === 'sAdmin') {
+            $rawPkgs = model('App\Models\Package')->findAll();
+            foreach ($rawPkgs as $pkg) {
+                $pkgId = is_array($pkg) ? ($pkg['id'] ?? null) : ($pkg->id ?? null);
+                $price = is_array($pkg) ? ($pkg['price'] ?? 0) : ($pkg->price ?? 0);
+                if ($pkgId !== null) {
+                    $pkgPriceMap[$pkgId] = (float) $price;
+                }
+            }
+        } else {
+            $packagePriceObj = model('App\Models\allResellerPackage')->where('user_id', $userId)->first();
+            if ($packagePriceObj) {
+                $packageDetails = is_array($packagePriceObj['package_details'])
+                    ? $packagePriceObj['package_details']
+                    : json_decode($packagePriceObj['package_details'] ?? '[]', true);
+                if (is_array($packageDetails)) {
+                    foreach ($packageDetails as $detail) {
+                        if (isset($detail['id'])) {
+                            $detailprice = (isset($detail['selling_price']) && is_numeric($detail['selling_price']) && $detail['selling_price'] > 0)
+                                ? $detail['selling_price']
+                                : (is_numeric($detail['price'] ?? null) ? $detail['price'] : 0);
+                            $pkgPriceMap[$detail['id']] = (float) $detailprice;
+                        }
+                    }
+                }
+            }
+        }
+
+        $dueCount = 0;
+        $dueTotal = 0;
+        $currentTime = date('Y-m-d H:i:s');
+
+        foreach ($activeUsers as $user) {
+            // 1. Exclude free users by connection details billing_status
+            if (in_array($user->id, $freeUserIds)) {
+                continue;
+            }
+            // 2. Exclude free users by 2050 expiry date
+            if (!empty($user->will_expire) && date('Y', strtotime($user->will_expire)) === '2050') {
+                continue;
+            }
+
+            // 3. Check if due (either subscription_status is not active, or expired)
+            $isDue = ($user->subscription_status !== 'active') || empty($user->will_expire) || (strtotime($user->will_expire) < strtotime($currentTime));
+            if ($isDue) {
+                $dueCount++;
+                if (!empty($user->package_id) && isset($pkgPriceMap[$user->package_id])) {
+                    $dueTotal += $pkgPriceMap[$user->package_id];
+                }
+            }
+        }
+
+        return [
+            'count' => $dueCount,
+            'total' => $dueTotal
+        ];
+    }
 }

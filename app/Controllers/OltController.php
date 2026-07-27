@@ -453,6 +453,14 @@ class OltController extends BaseController
             case 'vsol':
                 return $this->runPython('vsol_olt.py', $action);
 
+            case 'dn_optic':
+            case 'dn-optic':
+            case 'dnoptic':
+                return $this->runPython('dn_optic_olt.py', $action);
+
+            case 'airmedia':
+                return $this->runPython('airmedia_olt.py', $action);
+
             case 'hsgq':
                 return $this->runPython('hsgq_olt.py', $action);
 

@@ -117,7 +117,7 @@ class Admin extends BaseController
         // ]);
 
         $datatables->asObject();
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 
@@ -635,7 +635,7 @@ class Admin extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 

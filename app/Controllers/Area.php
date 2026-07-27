@@ -205,7 +205,7 @@ class Area extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 
@@ -259,7 +259,7 @@ class Area extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 

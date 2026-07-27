@@ -214,7 +214,7 @@ class Routers extends BaseController
 
         $datatables->except(['id']);
         $datatables->asObject();
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 

@@ -475,6 +475,14 @@ class PremiumNetworkController extends BaseController
             case 'vsol':
                 $scriptName = 'vsol_olt.py';
                 break;
+            case 'dn_optic':
+            case 'dn-optic':
+            case 'dnoptic':
+                $scriptName = 'dn_optic_olt.py';
+                break;
+            case 'airmedia':
+                $scriptName = 'airmedia_olt.py';
+                break;
             case 'hsgq':
                 $scriptName = 'hsgq_olt.py';
                 break;

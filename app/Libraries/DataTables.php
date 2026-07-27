@@ -264,39 +264,61 @@ class DataTables extends DataTablesCodeIgniter4
      */
     public function generate()
     {
-        $this->setReturnedFieldNames();
-        $this->filter();
-        $this->order();
-        $this->limit();
+        try {
+            $this->setReturnedFieldNames();
+            $this->filter();
+            $this->order();
+            $this->limit();
 
-        $result = $this->queryBuilder->{$this->config->get('get')}();
-        $output = [];
-        $sequenceNumber = (int) $this->request->get('start') + 1;
+            $result = $this->queryBuilder->{$this->config->get('get')}();
+            $output = [];
+            $sequenceNumber = (int) $this->request->get('start') + 1;
 
-        foreach ($result->{$this->config->get('getResult')}() as $res) {
-            $row = [];
-            if ($this->sequenceNumber) {
-                $row[$this->sequenceNumberKey] = $sequenceNumber++;
+            foreach ($result->{$this->config->get('getResult')}() as $res) {
+                $row = [];
+                if ($this->sequenceNumber) {
+                    $row[$this->sequenceNumberKey] = $sequenceNumber++;
+                }
+
+                foreach ($this->returnedFieldNames as $field) {
+                    $row[$field] = isset($this->formatters[$field])
+                        ? $this->formatters[$field]($res->$field ?? null, $res)
+                        : ($res->$field ?? null);
+                }
+
+                foreach ($this->extraColumns as $key => $callback) {
+                    $row[$key] = $callback($res);
+                }
+
+                $output[] = $this->asObject ? (object) $row : array_values($row);
             }
 
-            foreach ($this->returnedFieldNames as $field) {
-                $row[$field] = isset($this->formatters[$field])
-                    ? $this->formatters[$field]($res->$field, $res)
-                    : $res->$field;
-            }
-
-            foreach ($this->extraColumns as $key => $callback) {
-                $row[$key] = $callback($res);
-            }
-
-            $output[] = $this->asObject ? (object) $row : array_values($row);
+            $payload = [
+                'draw' => (int) $this->request->get('draw'),
+                'recordsTotal' => (int) ($this->recordsTotal ?? 0),
+                'recordsFiltered' => (int) ($this->recordsFiltered ?? 0),
+                'data' => $output,
+            ];
+        } catch (\Throwable $e) {
+            log_message('error', 'DataTables::generate failed: {msg}', ['msg' => $e->getMessage()]);
+            $payload = [
+                'draw' => (int) ($this->request->get('draw') ?? 0),
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => [],
+                'error' => 'Failed to load table data',
+            ];
         }
 
-        return \Config\Services::response()->setJSON([
-            'draw' => $this->request->get('draw'),
-            'recordsTotal' => $this->recordsTotal,
-            'recordsFiltered' => $this->recordsFiltered,
-            'data' => $output,
-        ]);
+        // Development display_errors can leak notices into the body and break
+        // DataTables ("Invalid JSON response"). Drop accidental buffered output.
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        // Callers must `return $datatables->generate()`.
+        return \Config\Services::response()
+            ->setHeader('Content-Type', 'application/json; charset=UTF-8')
+            ->setJSON($payload);
     }
 }

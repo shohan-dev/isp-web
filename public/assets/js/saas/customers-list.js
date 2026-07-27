@@ -5,7 +5,7 @@
   "use strict";
 
   // Keep the default set narrow so Action (Update) stays in the first viewport.
-  // Address / Router / PPPoE / Password remain available via Columns.
+  // Address / Router remain available via Columns.
   var DEFAULT_VISIBLE = {
     select: true,
     id: true,
@@ -15,16 +15,17 @@
     mobile: true,
     address: false,
     router_name: false,
-    pppoe_secret: false,
-    router_password: false,
+    pppoe_secret: true,
+    router_password: true,
     payment: true,
     conn_status: true,
     acc_status: false,
     action: true,
   };
 
-  // v3 — reset saved prefs so old wide layouts stop pushing Action off-screen.
-  var STORAGE_KEY = "ipb_customer_columns_v3";
+  // v4 — PPPoE Secret / Password now show by default; bump key so old
+  // saved prefs (which had them hidden) don't mask the new default.
+  var STORAGE_KEY = "ipb_customer_columns_v4";
 
   function loadPrefs() {
     try {

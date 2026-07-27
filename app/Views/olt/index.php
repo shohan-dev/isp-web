@@ -51,11 +51,13 @@
                 <label for="brand">Brand / Vendor</label>
                 <select name="brand" id="brand" class="form-control select2" required>
                   <option value="ATOP">ATOP</option>
+                  <option value="Airmedia">Airmedia</option>
                   <option value="Avies">Avies</option>
                   <option value="BDCOM">BDCOM</option>
                   <option value="C_data">C data</option>
                   <option value="Corelink">Corelink</option>
                   <option value="DBC">DBC</option>
+                  <option value="Dn_optic">Dn-Optic</option>
                   <option value="Ecom">Ecom</option>
                   <option value="Fucascom">Fucascom</option>
                   <option value="Hsgq">Hsgq</option>

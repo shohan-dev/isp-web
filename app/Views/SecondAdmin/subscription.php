@@ -1,7 +1,7 @@
 <?= $this->extend('layout/main-layout'); ?>
 
 <?= $this->section('css'); ?>
-<link rel="stylesheet" href="<?= base_url('assets/css/saas/subscription-page.css?v=3'); ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/saas/subscription-page.css?v=4'); ?>">
 <?= $this->endSection(); ?>
 
 <?= $this->section('content'); ?>
@@ -26,7 +26,12 @@ $expire = strtotime($details->will_expire);
 $total = max($expire - $renew, 1);
 $used = min(round((($current - $renew) / $total) * 100, 1), 100);
 $remain = max(100 - $used, 0);
+// Round (don't truncate) and floor at 1% whenever any time is actually left —
+// otherwise a plan with e.g. 0.8% left reads as "0% remaining", which looks
+// identical to "already expired" even though the KPI above still shows days left.
+$remainDisplay = $remain > 0 ? max(1, (int) round($remain)) : 0;
 $daysLeft = max(round(($expire - $current) / 86400), 0);
+$daysLeftLabel = (int) $daysLeft === 1 ? 'day' : 'days';
 
 $isExpired = $daysLeft <= 0;
 $isExpiringSoon = !$isExpired && $daysLeft <= 7;
@@ -75,7 +80,7 @@ $kpiTone = $isExpired ? 'is-danger' : ($isExpiringSoon ? 'is-warn' : '');
         <span class="ipb-sub-kpi__ic" aria-hidden="true"><i class="fa fa-hourglass-half"></i></span>
         <div class="ipb-sub-kpi__body">
           <span class="ipb-sub-kpi__label">Days remaining</span>
-          <span class="ipb-sub-kpi__value ipb-sub-kpi__value--accent"><?= (int) $daysLeft; ?> <small>days</small></span>
+          <span class="ipb-sub-kpi__value ipb-sub-kpi__value--accent"><?= (int) $daysLeft; ?> <small><?= $daysLeftLabel; ?></small></span>
         </div>
       </div>
       <div class="ipb-sub-kpi">
@@ -142,14 +147,25 @@ $kpiTone = $isExpired ? 'is-danger' : ($isExpiringSoon ? 'is-warn' : '');
             <?php else: ?>
               <div class="ipb-sub-breakdown__row">
                 <span class="ipb-sub-breakdown__label"><i class="fa fa-calendar"></i> Duration</span>
-                <span class="ipb-sub-breakdown__amount"><?= esc($duration); ?> days</span>
+                <span class="ipb-sub-breakdown__amount">
+                  <?= esc($duration); ?> days
+                  <?php if (is_numeric($duration) && (int) $duration >= 365): ?>
+                    <small class="ipb-sub-breakdown__hint">(~<?= number_format((int) $duration / 365, 1); ?> yrs)</small>
+                  <?php endif; ?>
+                </span>
               </div>
               <div class="ipb-sub-breakdown__row">
                 <span class="ipb-sub-breakdown__label"><i class="fa fa-tag"></i> Discount</span>
-                <span class="ipb-sub-breakdown__amount">৳<?= number_format($discount); ?></span>
+                <span class="ipb-sub-breakdown__amount">
+                  <?php if ($discount > 0): ?>
+                    <span class="ipb-sub-breakdown__amount--good">−৳<?= number_format($discount); ?></span>
+                  <?php else: ?>
+                    <span class="ipb-sub-breakdown__hint">No discount applied</span>
+                  <?php endif; ?>
+                </span>
               </div>
               <div class="ipb-sub-breakdown__row">
-                <span class="ipb-sub-breakdown__label"><i class="fa fa-receipt"></i> Price</span>
+                <span class="ipb-sub-breakdown__label"><i class="fa fa-receipt"></i> Renewal price</span>
                 <span class="ipb-sub-breakdown__amount">৳<?= number_format($finalPrice); ?></span>
               </div>
             <?php endif; ?>
@@ -158,7 +174,7 @@ $kpiTone = $isExpired ? 'is-danger' : ($isExpiringSoon ? 'is-warn' : '');
           <p class="ipb-sub-plan__note">
             <?= $isPayg
                 ? 'Charged monthly from your platform wallet based on your total customers.'
-                : 'Pricing is subject to change. Contact support for custom plans.'; ?>
+                : "This is what you'll pay next time you renew. Contact support if you need a custom plan."; ?>
           </p>
         </article>
 
@@ -206,21 +222,21 @@ $kpiTone = $isExpired ? 'is-danger' : ($isExpiringSoon ? 'is-warn' : '');
             <?php if (!$isPayg): ?>
               <div class="ipb-sub-progress">
                 <div class="ipb-sub-progress__label">
-                  <span><?= (int) $remain; ?>% remaining</span>
+                  <span><?= $remainDisplay; ?>% remaining</span>
                   <span>Billing period</span>
                 </div>
                 <div class="ipb-sub-progress__bar">
-                  <div class="ipb-sub-progress__fill" style="width:<?= (int) $remain; ?>%"></div>
+                  <div class="ipb-sub-progress__fill" style="width:<?= $remainDisplay; ?>%"></div>
                 </div>
               </div>
             <?php else: ?>
               <div class="ipb-sub-progress" style="margin-top:4px">
                 <div class="ipb-sub-progress__label">
-                  <span><?= (int) $daysLeft; ?> days left</span>
+                  <span><?= (int) $daysLeft; ?> <?= $daysLeftLabel; ?> left</span>
                   <span>Until next cycle</span>
                 </div>
                 <div class="ipb-sub-progress__bar">
-                  <div class="ipb-sub-progress__fill" style="width:<?= min(100, max(8, (int) $remain)); ?>%"></div>
+                  <div class="ipb-sub-progress__fill" style="width:<?= min(100, max(8, $remainDisplay)); ?>%"></div>
                 </div>
               </div>
             <?php endif; ?>
@@ -300,9 +316,17 @@ $kpiTone = $isExpired ? 'is-danger' : ($isExpiringSoon ? 'is-warn' : '');
           });
         },
         error: function ({ responseText }) {
-          const result = JSON.parse(responseText);
+          let message = 'Renewal failed. Please try again.';
+          try {
+            const result = JSON.parse(responseText);
+            if (typeof result.response === 'string' && result.response.trim() !== '') {
+              message = result.response;
+            } else if (typeof result.message === 'string' && result.message.trim() !== '') {
+              message = result.message;
+            }
+          } catch (err) {}
           $(self).html('<i class="fa fa-repeat"></i> Renew now').removeAttr('disabled');
-          tata.error("Couldn't renew subscription", result.response);
+          tata.error("Couldn't renew subscription", message);
         }
       });
     });

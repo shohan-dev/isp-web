@@ -1,219 +1,302 @@
 <?= $this->extend('layout/main-layout'); ?>
 <?= $this->section('css'); ?>
-<style>
-  .profile-card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); text-align: center; margin-bottom: 24px; }
-  .profile-card img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #4f46e5; margin-bottom: 15px; }
-  .profile-card h3 { margin: 0 0 5px; font-weight: 700; color: #1e293b; }
-  .profile-card p { margin: 0 0 15px; color: #64748b; font-size: 14px; }
-  .info-list { list-style: none; padding: 0; margin: 0; text-align: left; }
-  .info-list li { padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13.5px; display: flex; justify-content: space-between; color: #334155; }
-  .info-list li span:first-child { font-weight: 600; color: #64748b; }
-  
-  .details-tab-container { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); min-height: 400px; }
-  .nav-tabs-custom { border: none; box-shadow: none; margin-bottom: 0; }
-  .nav-tabs-custom > .nav-tabs { border-bottom: 2px solid #f1f5f9; }
-  .nav-tabs-custom > .nav-tabs > li > a { border: none; font-weight: 600; color: #64748b; padding: 12px 18px; border-radius: 0; }
-  .nav-tabs-custom > .nav-tabs > li.active > a { border-bottom: 3px solid #4f46e5; color: #4f46e5; background: transparent; }
-  
-  .table-custom { width: 100%; border-collapse: separate; border-spacing: 0; }
-  .table-custom th { background: #f8fafc; color: #475569; padding: 12px 16px; font-size: 13px; font-weight: 600; border-bottom: 2px solid #e2e8f0; text-align: left; }
-  .table-custom td { padding: 12px 16px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-  .table-custom tr:hover td { background: #f8fafc; }
-  
-  .badge-status { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
-  .badge-approved { background: #dcfce7; color: #16a34a; }
-  .badge-pending { background: #fef9c3; color: #ca8a04; }
-  .badge-rejected { background: #fee2e2; color: #dc2626; }
-</style>
+<?= saas_css('employee-activity.css') ?>
 <?= $this->endSection('css'); ?>
 
 <?= $this->section('content'); ?>
+<?php
+$isActive = (($employee->status ?? '') === 'active');
+$attendanceCount = is_countable($attendance ?? null) ? count($attendance) : 0;
+$locationCount = is_countable($locations ?? null) ? count($locations) : 0;
+$advanceCount = is_countable($advance_salaries ?? null) ? count($advance_salaries) : 0;
+$trackingOn = !empty($employee->location_required);
+$lastLoc = !empty($employee->last_location_update)
+  ? date('d M Y, h:i A', strtotime($employee->last_location_update))
+  : 'Never';
+$avatarUrl = base_url('assets/img/avatar.png');
+?>
 <div class="content-wrapper">
-  <section class="content-header">
-    <h1>
-      Employee Activity Details
-      <small><?= esc($employee->name); ?></small>
-    </h1>
-    <ol class="breadcrumb">
-      <li><a href="<?= route_to('route.dashboard'); ?>"><i class="fa fa-dashboard"></i> Home</a></li>
-      <li><a href="<?= route_to('route.employee'); ?>">Employees</a></li>
-      <li class="active">View Activity</li>
-    </ol>
-  </section>
+  <section class="content ipb-emp-activity">
 
-  <section class="content">
-    <div class="row">
-      <!-- Profile Card & Details -->
-      <div class="col-md-4">
-        <div class="profile-card">
-          <img src="<?= base_url('public/assets/img/avatar.png'); ?>" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'" alt="Employee Profile">
-          <h3><?= esc($employee->name); ?></h3>
-          <p><?= esc(ucwords($employee->designation ?? 'Employee')); ?></p>
-          
-          <ul class="info-list">
-            <li>
-              <span>Mobile</span>
-              <span><?= esc($employee->mobile); ?></span>
-            </li>
-            <li>
-              <span>Email</span>
-              <span><?= esc($employee->email); ?></span>
-            </li>
-            <li>
-              <span>Location Tracking</span>
-              <span><?= $employee->location_required ? 'Enabled' : 'Disabled'; ?></span>
-            </li>
-            <li>
-              <span>Tracking Interval</span>
-              <span><?= esc($employee->location_interval); ?> Mins</span>
-            </li>
-            <li>
-              <span>Last Location Update</span>
-              <span class="text-nowrap"><?= $employee->last_location_update ? date('d-m-Y, h:i A', strtotime($employee->last_location_update)) : 'Never'; ?></span>
-            </li>
-            <li>
-              <span>Status</span>
-              <span>
-                <span class="badge <?= $employee->status === 'active' ? 'label-success' : 'label-danger' ?>">
-                  <?= esc(ucfirst($employee->status)); ?>
-                </span>
-              </span>
-            </li>
-          </ul>
+    <?= $this->include('components/page-header', [
+      'title' => 'Employee Activity',
+      'breadcrumb' => [
+        ['label' => 'Dashboard', 'url' => route_to('route.dashboard')],
+        ['label' => 'Employees', 'url' => route_to('route.employee')],
+        ['label' => $employee->name],
+      ],
+    ]); ?>
+
+    <!-- Hero -->
+    <header class="ea-hero">
+      <div class="ea-hero-main">
+        <div class="ea-avatar">
+          <img
+            src="<?= esc($avatarUrl); ?>"
+            alt="<?= esc($employee->name); ?>"
+            onerror="this.onerror=null;this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+          <span class="ea-avatar-dot <?= $isActive ? 'is-online' : ''; ?>" aria-hidden="true"></span>
+        </div>
+        <div class="ea-hero-text">
+          <h1>
+            <?= esc($employee->name); ?>
+            <span class="ea-pill <?= $isActive ? 'is-active' : 'is-inactive'; ?>">
+              <?= esc(ucfirst($employee->status ?? 'unknown')); ?>
+            </span>
+          </h1>
+          <p class="ea-role"><?= esc(ucwords($employee->designation ?? 'Employee')); ?></p>
         </div>
       </div>
+      <div class="ea-hero-actions">
+        <a href="<?= route_to('route.employee'); ?>" class="btn btn-default">
+          <i class="fa fa-arrow-left" aria-hidden="true"></i> Back to list
+        </a>
+        <?php if (userHasPermission('employee', 'update')): ?>
+          <a href="<?= route_to('route.employee.edit', $employee->id); ?>" class="btn btn-primary">
+            <i class="far fa-pen-to-square" aria-hidden="true"></i> Edit employee
+          </a>
+        <?php endif; ?>
+      </div>
+    </header>
 
-      <!-- Activity Logs, Attendance, and Advance Salary Requests -->
-      <div class="col-md-8">
-        <div class="details-tab-container">
-          <div class="nav-tabs-custom">
-            <ul class="nav nav-tabs">
-              <li class="active"><a href="#attendance" data-toggle="tab"><i class="fa fa-calendar-check margin-r-5"></i> Attendance Logs</a></li>
-              <li><a href="#locations" data-toggle="tab"><i class="fa fa-map-location-dot margin-r-5"></i> Location History</a></li>
-              <li><a href="#advance_salary" data-toggle="tab"><i class="fa fa-hand-holding-dollar margin-r-5"></i> Advance Salaries</a></li>
-            </ul>
-            <div class="tab-content" style="padding-top: 20px;">
-              
-              <!-- Attendance Tab -->
-              <div class="tab-pane active" id="attendance">
-                <div style="overflow-x:auto;">
-                  <table class="table-custom">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Check In</th>
-                        <th>Check Out</th>
-                        <th>Work Duration</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <?php if (!empty($attendance)): ?>
-                        <?php foreach ($attendance as $att): ?>
-                          <?php
-                            $duration = '—';
-                            if (!empty($att->check_in) && !empty($att->check_out)) {
-                              $diff = strtotime($att->check_out) - strtotime($att->check_in);
-                              $h = floor($diff / 3600);
-                              $m = floor(($diff % 3600) / 60);
-                              $duration = "{$h}h {$m}m";
-                            }
-                          ?>
-                          <tr>
-                            <td><?= date('D, d M Y', strtotime($att->date)); ?></td>
-                            <td><?= !empty($att->check_in) ? date('h:i A', strtotime($att->check_in)) : '—'; ?></td>
-                            <td><?= !empty($att->check_out) ? date('h:i A', strtotime($att->check_out)) : '—'; ?></td>
-                            <td><?= $duration; ?></td>
-                            <td><span class="badge-status badge-approved">Present</span></td>
-                          </tr>
-                        <?php endforeach; ?>
-                      <?php else: ?>
+    <!-- Snapshot facts -->
+    <div class="ea-facts" role="group" aria-label="Activity summary">
+      <div class="ea-fact">
+        <span>Attendance logs</span>
+        <strong><?= (int) $attendanceCount; ?></strong>
+        <em>Check-in records</em>
+      </div>
+      <div class="ea-fact">
+        <span>Location pings</span>
+        <strong><?= (int) $locationCount; ?></strong>
+        <em>Last 100 shown</em>
+      </div>
+      <div class="ea-fact">
+        <span>Advance requests</span>
+        <strong><?= (int) $advanceCount; ?></strong>
+        <em>Salary advances</em>
+      </div>
+      <div class="ea-fact">
+        <span>Location tracking</span>
+        <strong><?= $trackingOn ? 'On' : 'Off'; ?></strong>
+        <em><?= $trackingOn ? ((int) ($employee->location_interval ?? 0) . ' min interval') : 'Not required'; ?></em>
+      </div>
+    </div>
+
+    <div class="ea-layout">
+      <!-- Profile meta -->
+      <aside class="ea-panel" aria-label="Employee details">
+        <div class="ea-panel-head">Profile details</div>
+        <ul class="ea-meta-list">
+          <li>
+            <span class="ea-k">Mobile</span>
+            <span class="ea-v"><?= esc($employee->mobile ?? '—'); ?></span>
+          </li>
+          <li>
+            <span class="ea-k">Email</span>
+            <span class="ea-v"><?= esc($employee->email ?? '—'); ?></span>
+          </li>
+          <li>
+            <span class="ea-k">Tracking</span>
+            <span class="ea-v"><?= $trackingOn ? 'Enabled' : 'Disabled'; ?></span>
+          </li>
+          <li>
+            <span class="ea-k">Interval</span>
+            <span class="ea-v"><?= $trackingOn ? esc(($employee->location_interval ?? 0) . ' mins') : '—'; ?></span>
+          </li>
+          <li>
+            <span class="ea-k">Last location</span>
+            <span class="ea-v"><?= esc($lastLoc); ?></span>
+          </li>
+          <li>
+            <span class="ea-k">Status</span>
+            <span class="ea-v">
+              <span class="ipb-pay-badge <?= $isActive ? 'is-success' : 'is-danger'; ?>">
+                <?= esc(ucfirst($employee->status ?? 'unknown')); ?>
+              </span>
+            </span>
+          </li>
+        </ul>
+      </aside>
+
+      <!-- Activity tabs -->
+      <div class="ea-panel">
+        <div class="nav-tabs-custom" style="margin:0;box-shadow:none;border:0;">
+          <ul class="nav nav-tabs ea-tabs" role="tablist">
+            <li class="active" role="presentation">
+              <a href="#attendance" data-toggle="tab" role="tab" aria-controls="attendance">
+                <i class="fa fa-calendar-check" aria-hidden="true"></i>
+                Attendance
+                <span class="ea-tab-count"><?= (int) $attendanceCount; ?></span>
+              </a>
+            </li>
+            <li role="presentation">
+              <a href="#locations" data-toggle="tab" role="tab" aria-controls="locations">
+                <i class="fa fa-map-location-dot" aria-hidden="true"></i>
+                Locations
+                <span class="ea-tab-count"><?= (int) $locationCount; ?></span>
+              </a>
+            </li>
+            <li role="presentation">
+              <a href="#advance_salary" data-toggle="tab" role="tab" aria-controls="advance_salary">
+                <i class="fa fa-hand-holding-dollar" aria-hidden="true"></i>
+                Advances
+                <span class="ea-tab-count"><?= (int) $advanceCount; ?></span>
+              </a>
+            </li>
+          </ul>
+
+          <div class="tab-content ea-tab-body">
+            <!-- Attendance -->
+            <div class="tab-pane active" id="attendance" role="tabpanel">
+              <div class="ea-table-wrap">
+                <table class="ea-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Date</th>
+                      <th scope="col">Check in</th>
+                      <th scope="col">Check out</th>
+                      <th scope="col">Duration</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php if (!empty($attendance)): ?>
+                      <?php foreach ($attendance as $att): ?>
+                        <?php
+                          $duration = '—';
+                          if (!empty($att->check_in) && !empty($att->check_out)) {
+                            $diff = max(0, strtotime($att->check_out) - strtotime($att->check_in));
+                            $totalMins = (int) round($diff / 60);
+                            $h = intdiv($totalMins, 60);
+                            $m = $totalMins % 60;
+                            $duration = $h . 'h ' . $m . 'm';
+                          }
+                        ?>
                         <tr>
-                          <td colspan="5" style="text-align:center;color:#999;padding:30px;">No attendance logs found.</td>
+                          <td><?= date('D, d M Y', strtotime($att->date)); ?></td>
+                          <td class="ea-mono"><?= !empty($att->check_in) ? date('h:i A', strtotime($att->check_in)) : '<span class="ea-muted">—</span>'; ?></td>
+                          <td class="ea-mono"><?= !empty($att->check_out) ? date('h:i A', strtotime($att->check_out)) : '<span class="ea-muted">—</span>'; ?></td>
+                          <td class="ea-mono"><?= esc($duration); ?></td>
+                          <td><span class="ipb-pay-badge is-success">Present</span></td>
                         </tr>
-                      <?php endif; ?>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <!-- Location History Tab -->
-              <div class="tab-pane" id="locations">
-                <div style="overflow-x:auto;">
-                  <table class="table-custom">
-                    <thead>
+                      <?php endforeach; ?>
+                    <?php else: ?>
                       <tr>
-                        <th>Time Shared</th>
-                        <th>Coordinates</th>
-                        <th>Address</th>
-                        <th>Map Link</th>
+                        <td colspan="5">
+                          <div class="ea-empty">
+                            <i class="fa fa-calendar-xmark" aria-hidden="true"></i>
+                            <strong>No attendance logs</strong>
+                            <span>Check-ins for this employee will show up here.</span>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      <?php if (!empty($locations)): ?>
-                        <?php foreach ($locations as $loc): ?>
-                          <tr>
-                            <td><?= date('d-m-Y, h:i A', strtotime($loc->created_at)); ?></td>
-                            <td><?= esc($loc->latitude); ?>, <?= esc($loc->longitude); ?></td>
-                            <td><?= !empty($loc->address) ? esc($loc->address) : '—'; ?></td>
-                            <td>
-                              <a href="https://www.google.com/maps?q=<?= $loc->latitude; ?>,<?= $loc->longitude; ?>" target="_blank" class="btn btn-default btn-xs">
-                                <i class="fa fa-map-marker-alt" style="color:#ef4444;"></i> Open Map
-                              </a>
-                            </td>
-                          </tr>
-                        <?php endforeach; ?>
-                      <?php else: ?>
-                        <tr>
-                          <td colspan="4" style="text-align:center;color:#999;padding:30px;">No location logs found.</td>
-                        </tr>
-                      <?php endif; ?>
-                    </tbody>
-                  </table>
-                </div>
+                    <?php endif; ?>
+                  </tbody>
+                </table>
               </div>
+            </div>
 
-              <!-- Advance Salary Tab -->
-              <div class="tab-pane" id="advance_salary">
-                <div style="overflow-x:auto;">
-                  <table class="table-custom">
-                    <thead>
+            <!-- Locations -->
+            <div class="tab-pane" id="locations" role="tabpanel">
+              <div class="ea-table-wrap">
+                <table class="ea-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Time shared</th>
+                      <th scope="col">Coordinates</th>
+                      <th scope="col">Address</th>
+                      <th scope="col">Map</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php if (!empty($locations)): ?>
+                      <?php foreach ($locations as $loc): ?>
+                        <tr>
+                          <td class="ea-mono"><?= date('d M Y, h:i A', strtotime($loc->created_at)); ?></td>
+                          <td class="ea-mono"><?= esc($loc->latitude); ?>, <?= esc($loc->longitude); ?></td>
+                          <td><?= !empty($loc->address) ? esc($loc->address) : '<span class="ea-muted">—</span>'; ?></td>
+                          <td>
+                            <a
+                              href="https://www.google.com/maps?q=<?= rawurlencode($loc->latitude . ',' . $loc->longitude); ?>"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="btn btn-default btn-xs">
+                              <i class="fa fa-map-marker-alt" aria-hidden="true"></i> Open map
+                            </a>
+                          </td>
+                        </tr>
+                      <?php endforeach; ?>
+                    <?php else: ?>
                       <tr>
-                        <th>Date Requested</th>
-                        <th>Amount</th>
-                        <th>Reason</th>
-                        <th>Status</th>
+                        <td colspan="4">
+                          <div class="ea-empty">
+                            <i class="fa fa-location-dot" aria-hidden="true"></i>
+                            <strong>No location history</strong>
+                            <span>GPS pings will appear when tracking is active.</span>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      <?php if (!empty($advance_salaries)): ?>
-                        <?php foreach ($advance_salaries as $adv): ?>
-                          <tr>
-                            <td><?= date('d-m-Y, h:i A', strtotime($adv->created_at)); ?></td>
-                            <td><strong>৳ <?= number_format($adv->amount, 2); ?></strong></td>
-                            <td><?= esc($adv->reason ?? '—'); ?></td>
-                            <td>
-                              <span class="badge-status badge-<?= $adv->status; ?>">
-                                <?= ucfirst($adv->status); ?>
-                              </span>
-                            </td>
-                          </tr>
-                        <?php endforeach; ?>
-                      <?php else: ?>
-                        <tr>
-                          <td colspan="4" style="text-align:center;color:#999;padding:30px;">No advance salary requests found.</td>
-                        </tr>
-                      <?php endif; ?>
-                    </tbody>
-                  </table>
-                </div>
+                    <?php endif; ?>
+                  </tbody>
+                </table>
               </div>
+            </div>
 
+            <!-- Advance salary -->
+            <div class="tab-pane" id="advance_salary" role="tabpanel">
+              <div class="ea-table-wrap">
+                <table class="ea-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Requested</th>
+                      <th scope="col">Amount</th>
+                      <th scope="col">Reason</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <?php if (!empty($advance_salaries)): ?>
+                      <?php foreach ($advance_salaries as $adv): ?>
+                        <?php
+                          $st = strtolower((string) ($adv->status ?? 'pending'));
+                          $badge = match ($st) {
+                            'approved' => 'is-success',
+                            'rejected' => 'is-danger',
+                            default => 'is-warning',
+                          };
+                        ?>
+                        <tr>
+                          <td class="ea-mono"><?= date('d M Y, h:i A', strtotime($adv->created_at)); ?></td>
+                          <td><strong>৳ <?= number_format((float) $adv->amount, 2); ?></strong></td>
+                          <td><?= esc($adv->reason ?? '—'); ?></td>
+                          <td>
+                            <span class="ipb-pay-badge <?= $badge; ?>">
+                              <?= esc(ucfirst($st)); ?>
+                            </span>
+                          </td>
+                        </tr>
+                      <?php endforeach; ?>
+                    <?php else: ?>
+                      <tr>
+                        <td colspan="4">
+                          <div class="ea-empty">
+                            <i class="fa fa-hand-holding-dollar" aria-hidden="true"></i>
+                            <strong>No advance requests</strong>
+                            <span>Salary advance history for this employee is empty.</span>
+                          </div>
+                        </td>
+                      </tr>
+                    <?php endif; ?>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
   </section>
 </div>
 <?= $this->endSection('content'); ?>

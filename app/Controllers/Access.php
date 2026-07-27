@@ -105,7 +105,7 @@ class Access extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
     /**
@@ -273,7 +273,7 @@ class Access extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
     /**

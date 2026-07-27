@@ -54,9 +54,8 @@ class EmployeePayment extends BaseController
         // log_message('info', 'Successfully called userId : ' . print_r($userId, true));
         $details = $this->user_model->where(['id' => $userId])->first();
 
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
+        // Do not close the session before userHasPermission() below — that
+        // helper still reads permission cache from session.
 
         if ($userRole === 'employee') {
             $admin_id = $details->admin_id;
@@ -131,6 +130,10 @@ class EmployeePayment extends BaseController
             });
         }
 
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $datatables->except([
             'id',
             'user_id',
@@ -152,7 +155,7 @@ class EmployeePayment extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 

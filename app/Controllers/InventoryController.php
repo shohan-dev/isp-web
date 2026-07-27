@@ -1711,6 +1711,6 @@ class InventoryController extends Controller
 
         // $datatables->except(['id', 'admin_id', 'created_at', 'updated_at','payment_status']);
         $datatables->asObject();
-        $datatables->generate();
+        return $datatables->generate();
     }
 }

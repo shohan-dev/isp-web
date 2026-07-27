@@ -346,7 +346,7 @@ class CustomerPayment extends BaseController
         $datatables->asObject();
 
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
     /**
@@ -526,7 +526,7 @@ class CustomerPayment extends BaseController
         $datatables->asObject();
 
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 

@@ -136,6 +136,9 @@ class ResellerFunding extends BaseController
         $userId = session()->get('user_id');
         $userole = session()->get('user_role');
 
+        $canUpdatePayment = userHasPermission('customer_payment', 'update');
+        $canInvoicePayment = userHasPermission('customer_payment', 'invoice');
+
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
@@ -226,10 +229,10 @@ class ResellerFunding extends BaseController
             return $row->comments ?? '--';
         });
 
-        if (userHasPermission('customer_payment', 'invoice') || userHasPermission('customer_payment', 'update')) {
-            $datatables->addColumn('action', function ($row) {
+        if ($canInvoicePayment || $canUpdatePayment) {
+            $datatables->addColumn('action', function ($row) use ($canUpdatePayment) {
                 $html = '';
-                if (userHasPermission('customer_payment', 'update')) {
+                if ($canUpdatePayment) {
                     $html .= '<div class="ipb-row-actions"><a href="' . route_to('route.Reseller.Funding.index', $row->id) . '" class="ipb-row-btn tone-brand" title="Update"><i class="far fa-pen-to-square"></i> Update</a></div>';
                 }
                 return $html;
@@ -238,7 +241,7 @@ class ResellerFunding extends BaseController
 
         $datatables->except(['id', 'user_id', 'user_type']);
         $datatables->asObject();
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 
@@ -248,6 +251,12 @@ class ResellerFunding extends BaseController
     {
         $userId = session()->get('user_id');
         $userole = session()->get('user_role');
+
+        $canDeletePayment = userHasPermission('customer_payment', 'delete');
+        $canUpdatePayment = userHasPermission('customer_payment', 'update');
+        $canInvoicePayment = userHasPermission('customer_payment', 'invoice');
+        $canSelfRecharge = userHasPermission('Resellers', 'self_recharge');
+        $canUpdateReseller = userHasPermission('Resellers', 'update');
 
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
@@ -313,7 +322,7 @@ class ResellerFunding extends BaseController
 
         $datatables->addSequenceNumber('serial');
 
-        if (userHasPermission('customer_payment', 'delete')) {
+        if ($canDeletePayment) {
             $datatables->addColumn('select', function ($row) {
                 return '<input type="checkbox" class="form-check-input input-check-selected" value="' . $row->id . '">';
             });
@@ -358,10 +367,10 @@ class ResellerFunding extends BaseController
         });
         if ($userole != 'resellerAdmin') {
 
-            if (userHasPermission('customer_payment', 'invoice') || userHasPermission('customer_payment', 'update')) {
-                $datatables->addColumn('action', function ($row) {
+            if ($canInvoicePayment || $canUpdatePayment) {
+                $datatables->addColumn('action', function ($row) use ($canUpdatePayment) {
                     $html = '';
-                    if (userHasPermission('customer_payment', 'update')) {
+                    if ($canUpdatePayment) {
                         $html .= '<div class="ipb-row-actions"><a href="' . route_to('route.Reseller.Funding.index', $row->id) . '" class="ipb-row-btn tone-brand" title="Update"><i class="far fa-pen-to-square"></i> Update</a></div>';
                     }
 
@@ -369,10 +378,10 @@ class ResellerFunding extends BaseController
                 });
             }
         } else {
-            if (userHasPermission('Resellers', 'self_recharge') && userHasPermission('Resellers', 'update')) {
-                $datatables->addColumn('action', function ($row) {
+            if ($canSelfRecharge && $canUpdateReseller) {
+                $datatables->addColumn('action', function ($row) use ($canSelfRecharge) {
                     $html = '';
-                    if (userHasPermission('Resellers', 'self_recharge')) {
+                    if ($canSelfRecharge) {
                         $html .= '<div class="ipb-row-actions"><a href="' . route_to('route.Reseller.Funding.index', $row->id) . '" class="ipb-row-btn tone-brand" title="Update"><i class="far fa-pen-to-square"></i> Update</a></div>';
                     }
 
@@ -383,8 +392,7 @@ class ResellerFunding extends BaseController
 
         $datatables->except(['id', 'user_id', 'user_type']);
         $datatables->asObject();
-        $datatables->generate();
-
+        return $datatables->generate();
         // return view('reseller/payments.php', [
         //     'totalAmount' => $totalAmount
         // ]);

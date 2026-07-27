@@ -1369,7 +1369,7 @@ if (!function_exists('userHasPermission')) {
         /**
          * Admin has all permissions
          */
-        if (strtolower($role) === 'super_admin')
+        if (strtolower((string) ($role ?? '')) === 'super_admin')
             return $__permCache[$__k] = true;
 
         // POP/reseller baseline: keep core operations available even when the

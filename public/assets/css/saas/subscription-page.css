@@ -297,6 +297,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+.ipb-sub-breakdown__amount--good {
+  color: var(--success-600, #15803d);
+}
+
+.ipb-sub-breakdown__hint {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-muted, #8592a6);
+}
+
 .ipb-sub-plan__note {
   position: relative;
   margin: 14px 0 0;

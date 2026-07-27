@@ -35,11 +35,19 @@ if (!function_exists('paymentGatewayContext')) {
      * Which user's gateway settings should process a payments row.
      *
      * Customer-pays-tenant invoices keep their existing behavior (the payer's
-     * settings prefix, which resolves to the tenant's merchant credentials).
-     * Platform-bound payments — a tenant sAdmin paying the platform (renewal
-     * or wallet top-up), recognizable by an empty admin_id — must use the
-     * PLATFORM operator's credentials (user id 2), matching the context that
-     * Payment::makePayment already uses to render the gateway page.
+     * settings prefix, which getSettingPrefixForUser() walks up to the owning
+     * tenant's merchant credentials — do not swap this for admin_id, that
+     * bypasses resellerAdmin-specific prefix resolution it relies on).
+     * Platform-bound payments — a tenant admin paying the platform itself
+     * (subscription renewal or wallet top-up) — must use the PLATFORM
+     * operator's credentials (user id 2), matching the context that
+     * Payment::makePayment uses to render the gateway page.
+     *
+     * A top-level admin has no parent tenant, so these rows are "self-scoped":
+     * admin_id equals user_id (payments.admin_id is NOT NULL, so it can never
+     * actually be empty — callers that create these rows fall back to the
+     * admin's own id rather than null, per convention). Detect that self-scope
+     * directly instead of relying on an empty admin_id that can never occur.
      *
      * @param object|array|null $payment
      * @return int|string
@@ -49,7 +57,9 @@ if (!function_exists('paymentGatewayContext')) {
         $userId = is_object($payment) ? ($payment->user_id ?? null) : ($payment['user_id'] ?? null);
         $adminId = is_object($payment) ? ($payment->admin_id ?? null) : ($payment['admin_id'] ?? null);
 
-        if (empty($adminId) && !empty($userId)) {
+        $selfScoped = empty($adminId) || (string) $adminId === (string) $userId;
+
+        if ($selfScoped && !empty($userId)) {
             $payer = getUserById($userId);
             if ($payer && ($payer->role ?? '') === 'admin') {
                 return PaygBillingService::PLATFORM_USER_ID;

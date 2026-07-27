@@ -1107,9 +1107,16 @@ class Customer extends BaseController
             ->where('users.role', 'user');
 
         if ($status === 'due') {
+            $data->where('users.status', 'active');
+            // Exclude free users via subquery
+            $data->where('((SELECT COUNT(*) FROM connection_details WHERE user_id = users.id AND (billing_status = "free" OR billing_status = "Free")) = 0)');
+            // Exclude free users by 2050 year check
+            $data->where('(users.will_expire IS NULL OR YEAR(users.will_expire) != 2050)');
+            // Include only due users (subscription inactive, expired, empty expiry date, or current month payment not successful)
             $data->groupStart()
                 ->where('users.subscription_status !=', 'active')
                 ->orWhere('users.will_expire <', $now)
+                ->orWhere('users.will_expire IS NULL')
                 ->orWhere('(pay_cur.status IS NULL OR pay_cur.status != \'successful\')', null, false)
                 ->groupEnd();
         }

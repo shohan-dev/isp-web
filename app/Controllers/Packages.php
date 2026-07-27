@@ -169,7 +169,7 @@ class Packages extends BaseController
         $datatables->except(['id', 'price', 'pricing_type']);
 
         $datatables->asObject();
-        $datatables->generate();
+        return $datatables->generate();
     }
 
     /**

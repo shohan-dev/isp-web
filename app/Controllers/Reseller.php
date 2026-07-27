@@ -494,6 +494,12 @@ class Reseller extends BaseController
             $userId = $details->admin_id;
         }
 
+        // Capture permissions while the session is still readable. Closures run
+        // during generate() after session_write_close(); calling userHasPermission
+        // then can emit PHP 8 deprecations into the JSON body (Invalid JSON).
+        $canDeleteReseller = userHasPermission('Resellers', 'delete') || userHasPermission('reseller', 'delete');
+        $canUpdateReseller = userHasPermission('Resellers', 'update') || userHasPermission('reseller', 'update');
+
         // Release the file-session lock early (read-only grid; session is only
         // read above, never written).
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -575,7 +581,7 @@ class Reseller extends BaseController
 
         $datatables->addSequenceNumber('serial');
         //userHasPermission('resellerAdmin', 'delete') ||
-        if (userHasPermission('Resellers', 'delete') || userHasPermission('reseller', 'delete')) {
+        if ($canDeleteReseller) {
 
             $datatables->addColumn('select', function ($row) {
 
@@ -653,12 +659,12 @@ class Reseller extends BaseController
             return '<label class="toggle-fund-enabled" data-id="'.$row->id.'" data-enabled="'.($isEnabled ? '1' : '0').'" style="cursor:pointer;display:inline-block;padding:2px 12px;border-radius:20px;font-size:11px;font-weight:700;color:'.$color.';background:'.$bg.';border:2px solid '.$border.';min-width:46px;text-align:center;user-select:none;">'.$onOff.'</label>';
         });
 
-        $datatables->addColumn('action', function ($row) {
+        $datatables->addColumn('action', function ($row) use ($canUpdateReseller) {
 
             $html = '<div class="ipb-row-actions">';
             $html .= '<a href="' . route_to('route.Reseller.details', $row->id) . '" class="ipb-row-btn tone-info" title="View details" data-toggle="tooltip"><i class="far fa-eye" aria-hidden="true"></i><span class="sr-only">Details</span></a>';
 
-            if (userHasPermission('Resellers', 'update') || userHasPermission('reseller', 'update')) {
+            if ($canUpdateReseller) {
                 $html .= '<a href="' . route_to('route.Reseller.edit', $row->id) . '" class="ipb-row-btn tone-brand" title="Update reseller" data-toggle="tooltip"><i class="far fa-pen-to-square" aria-hidden="true"></i><span class="sr-only">Update</span></a>';
                 $html .= '<a href="' . route_to('resellers.packages', $row->id) . '" class="ipb-row-btn tone-violet" title="Packages" data-toggle="tooltip"><i class="fa fa-box" aria-hidden="true"></i><span class="sr-only">Packages</span></a>';
                 $html .= '<a href="' . route_to('resellers.payment_details', $row->id) . '" class="ipb-row-btn tone-slate" title="Payments" data-toggle="tooltip"><i class="fa fa-money-bill" aria-hidden="true"></i><span class="sr-only">Payments</span></a>';
@@ -703,7 +709,7 @@ class Reseller extends BaseController
 
         $datatables->asObject();
 
-        $datatables->generate();
+        return $datatables->generate();
     }
 
 
@@ -1087,6 +1093,10 @@ class Reseller extends BaseController
         // Ensure ordering after applying filters
         $data->orderBy('payments.id', 'desc');
 
+        $canDeletePayment = userHasPermission('customer_payment', 'delete');
+        $canUpdatePayment = userHasPermission('customer_payment', 'update');
+        $canInvoicePayment = userHasPermission('customer_payment', 'invoice');
+
         // Release the file-session lock early (read-only grid; session is only
         // read above, never written).
         if (session_status() === PHP_SESSION_ACTIVE) {
@@ -1098,7 +1108,7 @@ class Reseller extends BaseController
 
         $datatables->addSequenceNumber('serial');
 
-        if (userHasPermission('customer_payment', 'delete')) {
+        if ($canDeletePayment) {
             $datatables->addColumn('select', function ($row) {
                 return '<input type="checkbox" class="form-check-input input-check-selected" value="' . $row->id . '">';
             });
@@ -1140,13 +1150,13 @@ class Reseller extends BaseController
             }
         });
 
-        if (userHasPermission('customer_payment', 'invoice') || userHasPermission('customer_payment', 'update')) {
-            $datatables->addColumn('action', function ($row) {
+        if ($canInvoicePayment || $canUpdatePayment) {
+            $datatables->addColumn('action', function ($row) use ($canUpdatePayment, $canInvoicePayment) {
                 $html = '<div class="ipb-row-actions">';
-                if (userHasPermission('customer_payment', 'update')) {
+                if ($canUpdatePayment) {
                     $html .= '<a href="' . route_to('route.customer.payment.edit', $row->id) . '" class="ipb-row-btn tone-brand" title="Update"><i class="far fa-pen-to-square"></i> Update</a>';
                 }
-                if (userHasPermission('customer_payment', 'invoice') && ($row->status === 'successful')) {
+                if ($canInvoicePayment && ($row->status === 'successful')) {
                     $html .= '<a href="' . route_to('route.customer.payment.invoice', $row->id) . '" class="ipb-row-btn tone-info" title="Invoice"><i class="fa fa-download"></i> Invoice</a>';
                 }
                 $html .= '</div>';
@@ -1156,8 +1166,7 @@ class Reseller extends BaseController
 
         $datatables->except(['id', 'user_id', 'user_type', 'paid_to_name', 'paid_to_role']);
         $datatables->asObject();
-        $datatables->generate();
-
+        return $datatables->generate();
         // return view('reseller/payments.php', [
         //     'totalAmount' => $totalAmount
         // ]);
