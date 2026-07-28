@@ -26,7 +26,7 @@ if (isset($payment_details) && is_array($payment_details))
       ],
     ]); ?>
 
-    <?php if ($showTabs): ?>
+    <?php if ($showTabs ?? true): ?>
       <!-- ═══════════════════════════════════════════════════════
          SECTION SELECTOR TABS
     ════════════════════════════════════════════════════════════ -->

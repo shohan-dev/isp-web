@@ -343,6 +343,21 @@ class CustomerPayment extends BaseController
 
         $datatables->except(['id', 'user_id', 'user_type']);
 
+        // addColumnAliases(sql => uiKey) stores as [uiKey => sql] for search/order.
+        $datatables->addColumnAliases([
+            'customer.name' => 'customer',
+            'payments.invoice' => 'invoice',
+            'payments.amount' => 'amount',
+            'payments.pay_amount' => 'pay_amount',
+            'payments.month' => 'month',
+            'payments.created_at' => 'created_at',
+            'payments.paid_at' => 'paid_at',
+            'admin.name' => 'paid_to',
+            'payments.paid_via' => 'paid_via',
+            'payments.method_trx' => 'method_trx',
+            'payments.status' => 'status',
+        ]);
+
         $datatables->asObject();
 
 
@@ -402,27 +417,29 @@ class CustomerPayment extends BaseController
         if (!empty($Id)) {
 
             $data = $this->payment_model->builder()
-
-                ->where('user_type', 'user')
+                ->where('payments.user_type', 'user')
                 ->groupStart()
-                ->where('admin_id', $userId)
-                ->orWhere('paid_to', $userId)
+                ->where('payments.admin_id', $userId)
+                ->orWhere('payments.paid_to', $userId)
                 ->groupEnd()
-                ->groupStart() // Starts a parenthesis (
-                ->where('user_id', $Id)
-                ->orWhere('paidby', $Id)
-                ->groupEnd(); // Ends the parenthesis )
+                ->groupStart()
+                ->where('payments.user_id', $Id)
+                ->orWhere('payments.paidby', $Id)
+                ->groupEnd();
         } else {
 
             $data = $this->payment_model->builder()
-
-                ->where('user_type', 'user')
+                ->where('payments.user_type', 'user')
                 ->groupStart()
-                ->where('admin_id', $userId)
-                ->orWhere('paid_to', $userId)
+                ->where('payments.admin_id', $userId)
+                ->orWhere('payments.paid_to', $userId)
                 ->groupEnd();
         }
-        $data->orderBy('COALESCE(payments.paid_at, payments.created_at)', 'DESC', false);
+
+        $data->select('payments.*, customer.name as customer_name, admin.name as paid_to_name, admin.role as paid_to_role')
+            ->join('users as customer', 'customer.id = payments.user_id', 'left')
+            ->join('users as admin', 'admin.id = payments.paid_to', 'left')
+            ->orderBy('COALESCE(payments.paid_at, payments.created_at)', 'DESC', false);
 
 
         if (!empty($fromDate) && !empty($toDate)) {
@@ -460,7 +477,7 @@ class CustomerPayment extends BaseController
 
         $datatables->addColumn('customer', function ($row) {
 
-            return getUserById($row->user_id)->name ?? '--';
+            return $row->customer_name ?? '--';
         });
         $datatables->format('created_at', function ($value) {
 
@@ -477,13 +494,12 @@ class CustomerPayment extends BaseController
             return !empty($value) ? date('d.m.Y H:i:s', strtotime($value)) : '--';
         });
 
-        $datatables->format('paid_to', function ($value) {
-
-            return !empty($value) ?
-                getUserById($value)->name . ' (' . ucwords(getUserById($value)->role ?? '') . ')' ?? '--' :
-                '--';
+        $datatables->format('paid_to', function ($value, $row) {
+            if (empty($row->paid_to_name)) {
+                return '--';
+            }
+            return $row->paid_to_name . ' (' . ucwords($row->paid_to_role ?? '') . ')';
         });
-
         $datatables->format('method_trx', function ($value) {
 
             return $value ?? '--';
@@ -522,6 +538,20 @@ class CustomerPayment extends BaseController
         }
 
         $datatables->except(['id', 'user_id', 'user_type']);
+
+        $datatables->addColumnAliases([
+            'customer.name' => 'customer',
+            'payments.invoice' => 'invoice',
+            'payments.amount' => 'amount',
+            'payments.pay_amount' => 'pay_amount',
+            'payments.month' => 'month',
+            'payments.created_at' => 'created_at',
+            'payments.paid_at' => 'paid_at',
+            'admin.name' => 'paid_to',
+            'payments.paid_via' => 'paid_via',
+            'payments.method_trx' => 'method_trx',
+            'payments.status' => 'status',
+        ]);
 
         $datatables->asObject();
 
@@ -583,7 +613,7 @@ class CustomerPayment extends BaseController
      */
     public function create()
     {
-        $this->validate([
+        $rules = [
             'customer' => [
                 'rules' => 'required',
                 'errors' => [
@@ -608,29 +638,36 @@ class CustomerPayment extends BaseController
                     'required' => 'Select payment status',
                 ]
             ],
-        ]);
+        ];
 
-        if (getPostInput('status') === 'successful' && (session()->get('user_role') === 'super_admin' || (function_exists('isTenantAdminRole') ? isTenantAdminRole() : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true)))) {
+        $isAdminActor = session()->get('user_role') === 'super_admin'
+            || (function_exists('isTenantAdminRole')
+                ? isTenantAdminRole()
+                : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true));
 
-            $this->validate([
-                'paid_via' => [
-                    'rules' => 'required',
-                    'errors' => [
-                        'required' => 'Select payment method',
-                    ]
-                ],
-                'method_trx' => [
-                    'rules' => 'required',
-                    'errors' => [
-                        'required' => 'Select method transaction id',
-                    ]
-                ],
-            ]);
+        if (getPostInput('status') === 'successful' && $isAdminActor) {
+            $rules['paid_via'] = [
+                'rules' => 'required',
+                'errors' => [
+                    'required' => 'Select payment method',
+                ]
+            ];
+            $rules['method_trx'] = [
+                'rules' => 'required',
+                'errors' => [
+                    'required' => 'Select method transaction id',
+                ]
+            ];
         }
 
-        if ($this->validation->run()) {
+        // Single validate() pass — previous code discarded validate() results and
+        // re-ran a separate $this->validation instance, which could fail empty or
+        // drop earlier field errors before save.
+        if (! $this->validate($rules)) {
+            return requestResponse('validation-error', $this->validator->getErrors(), 400);
+        }
 
-            $id = getPostInput('customer');
+        $id = getPostInput('customer');
 
             $userModel = model('App\Models\User');
             $details = $userModel->where(['id' => $id])->first();
@@ -638,22 +675,27 @@ class CustomerPayment extends BaseController
             $admin_id = null;
 
             if (is_object($details)) {
-                $admin_id = $details->admin_id ?? '--';
+                $admin_id = $details->admin_id ?? null;
             } elseif (is_array($details)) {
-                $admin_id = $details['admin_id'] ?? '--';
+                $admin_id = $details['admin_id'] ?? null;
             }
 
             if (!is_object($details) && !is_array($details)) {
                 return requestResponse('error', 'Customer not found', 404);
             }
 
+            $createdBy = is_object($details)
+                ? (string) ($details->created_by ?? '')
+                : (string) ($details['created_by'] ?? '');
+            $packageId = is_object($details)
+                ? ($details->package_id ?? null)
+                : ($details['package_id'] ?? null);
 
-
-            if ($details->created_by == 'admin') {
+            if (in_array($createdBy, ['admin', 'sAdmin', 'super_admin'], true)) {
                 $package_model = model('App\Models\Package');
-                $package = $package_model->find($details->package_id);
+                $package = $package_model->find($packageId);
             } else {
-                $package = ResellerPackagePrice($details->package_id, true);
+                $package = ResellerPackagePrice($packageId, true);
             }
             log_message('info', 'Fetched package details: ' . json_encode($package));
 
@@ -726,31 +768,64 @@ class CustomerPayment extends BaseController
                 return requestResponse('validation-error', ['will_expire' => 'Select expire date'], 400);
             }
             $month = getPostInput('month');
-            $existing = $this->payment_model->where([
-                'user_id' => $id,
-                'month' => $month
-            ])->first();
+            $anchorDate = $data['paid_at'] ?? date('Y-m-d H:i:s');
+            $period = \App\Models\Payment::periodFromMonth($month, $anchorDate);
+
+            // Prefer year-aware period for dedupe; fall back to month name for legacy rows.
+            $existing = null;
+            try {
+                if ($this->payment_model->db->fieldExists('period', 'payments')) {
+                    $data['period'] = $period;
+                    $existing = $this->payment_model->where([
+                        'user_id' => $id,
+                        'period' => $period,
+                    ])->first();
+                }
+            } catch (\Throwable $e) {
+                // column missing — fall through to month lookup
+            }
+            if (! $existing) {
+                $existing = $this->payment_model->where([
+                    'user_id' => $id,
+                    'month' => $month,
+                ])->orderBy('id', 'DESC')->first();
+            }
 
             log_message('info', 'Fetched existing data: ' . json_encode($data));
+            $result = false;
             try {
-                if ($existing && $existing->status != 'successful') {
-                    // Update the existing record
+                if ($existing) {
+                    // Update pending/failed rows, or amend an existing successful payment
+                    // for this billing period. Previously successful rows fell through to
+                    // INSERT and hit uniq_pay_user_period_status.
                     $result = $this->payment_model->update($existing->id, $data);
                 } else {
                     $data['created_at'] = date('Y-m-d H:i:s');
-                    // Insert new payment
                     $result = $this->payment_model->insert($data, false);
                 }
-            } catch (Exception $e) {
+            } catch (\Throwable $e) {
+                log_message('error', 'CustomerPayment::create save failed: ' . $e->getMessage());
 
-                log_message('error', 'SMS Sending Failed: ' . $e->getMessage());
+                $message = 'Could not save payment. Please try again.';
+                $dbMessage = $e->getMessage();
+                if (stripos($dbMessage, 'Duplicate') !== false || stripos($dbMessage, 'uniq_pay') !== false) {
+                    $message = 'A payment with this status already exists for this billing period.';
+                }
+
+                return requestResponse('error', $message, 500);
             }
 
-            // $result = $this->payment_model->insert($data, false);
+            if (!$result) {
+                $modelErrors = $this->payment_model->errors();
+                $message = ! empty($modelErrors)
+                    ? implode(' ', $modelErrors)
+                    : 'Something went wrong! Please try again';
 
-            if ($result) {
-                $will_expire = getPostInput('will_expire');
-                if (!empty(getPostInput('renew')) && (getPostInput('renew') == 'yes') && (getPostInput('status') === 'successful')) {
+                return requestResponse('error', $message, 500);
+            }
+
+            $will_expire = getPostInput('will_expire');
+            if (!empty(getPostInput('renew')) && (getPostInput('renew') == 'yes') && (getPostInput('status') === 'successful')) {
                     $now = date('Y-m-d H:i:s');
 
                     log_message('info', 'Successfully called details : ' . print_r($will_expire, true));
@@ -959,13 +1034,7 @@ class CustomerPayment extends BaseController
                         }
                     }
                 }
-                return requestResponse('success', "Payment record added successfully", 200);
-            }
-
-            return requestResponse('error', "Something went wrong! Please try again", 500);
-        }
-
-        return requestResponse('validation-error', $this->validation->getErrors(), 400);
+            return requestResponse('success', "Payment record added successfully", 200);
     }
 
 
@@ -1022,7 +1091,7 @@ class CustomerPayment extends BaseController
      */
     public function update($id)
     {
-        $this->validate([
+        $rules = [
             'amount' => [
                 'rules' => 'required',
                 'errors' => [
@@ -1041,31 +1110,34 @@ class CustomerPayment extends BaseController
                     'required' => 'Select payment status',
                 ]
             ],
-        ]);
+        ];
 
-        if (getPostInput('status') === 'successful' && (session()->get('user_role') === 'super_admin' || (function_exists('isTenantAdminRole') ? isTenantAdminRole() : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true)))) {
+        $isAdminActor = session()->get('user_role') === 'super_admin'
+            || (function_exists('isTenantAdminRole')
+                ? isTenantAdminRole()
+                : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true));
 
-            $this->validate([
-                'paid_via' => [
-                    'rules' => 'required',
-                    'errors' => [
-                        'required' => 'Select payment method',
-                    ]
-                ],
-
-            ]);
+        if (getPostInput('status') === 'successful' && $isAdminActor) {
+            $rules['paid_via'] = [
+                'rules' => 'required',
+                'errors' => [
+                    'required' => 'Select payment method',
+                ]
+            ];
         }
 
-        if ($this->validation->run()) {
+        if (! $this->validate($rules)) {
+            return requestResponse('validation-error', $this->validator->getErrors(), 400);
+        }
 
-            $data = [
-                'amount' => getPostInput('amount'),
-                'month' => getPostInput('month'),
-                'paid_via' => getPostInput('paid_via'),
-                'status' => getPostInput('status'),
-            ];
+        $data = [
+            'amount' => getPostInput('amount'),
+            'month' => getPostInput('month'),
+            'paid_via' => getPostInput('paid_via'),
+            'status' => getPostInput('status'),
+        ];
 
-            if (session()->get('user_role') === 'super_admin' || (function_exists('isTenantAdminRole') ? isTenantAdminRole() : in_array(session()->get('user_role'), ['admin', 'sAdmin'], true))) {
+        if ($isAdminActor) {
                 if ($this->request->getPost('user_id') !== null) {
                     $data['user_id'] = getPostInput('user_id');
                 }
@@ -1083,14 +1155,26 @@ class CustomerPayment extends BaseController
                 }
             }
 
+            $existingPayment = $this->payment_model->find($id);
+
             if (!empty(getPostInput('paid_at'))) {
                 $data['paid_at'] = date('Y-m-d H:i:s', strtotime(getPostInput('paid_at')));
             } elseif (getPostInput('status') === 'successful') {
                 // Only set to current time if paid_at is not already set
-                $existing = $this->payment_model->find($id);
-                if (empty($existing->paid_at)) {
+                if (empty($existingPayment->paid_at)) {
                     $data['paid_at'] = date('Y-m-d H:i:s');
                 }
+            }
+
+            try {
+                if ($this->payment_model->db->fieldExists('period', 'payments')) {
+                    $data['period'] = \App\Models\Payment::periodFromMonth(
+                        $data['month'],
+                        $data['paid_at'] ?? ($existingPayment->paid_at ?? $existingPayment->created_at ?? null)
+                    );
+                }
+            } catch (\Throwable $e) {
+                // ignore missing period column
             }
 
             if (
@@ -1236,9 +1320,6 @@ class CustomerPayment extends BaseController
             }
 
             return requestResponse('error', "Something went wrong! Please try again", 500);
-        }
-
-        return requestResponse('validation-error', $this->validation->getErrors(), 400);
     }
 
 

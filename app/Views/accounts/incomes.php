@@ -98,7 +98,7 @@
                                                 <i class="fa fa-file" aria-hidden="true"></i><span class="sr-only">View file</span>
                                             </button>
                                         <?php else : ?>
-                                            <span class="text-muted">—</span>
+                                            <span class="text-muted">â€”</span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?= esc($row['description']) ?></td>
@@ -196,13 +196,6 @@
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
-                                        <?php else: ?>
-                                            <tr>
-                                                <td></td>
-                                                <td>No income categories found</td>
-                                                <td></td>
-                                                <td></td>
-                                            </tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
@@ -248,8 +241,8 @@
                             </div>
 
                             <div class="form-group">
-                                <label>Employee *</label>
-                                <select name="employee" id="employee" class="form-control" required>
+                                <label>Employee</label>
+                                <select name="employee" id="employee" class="form-control">
                                     <option value="">Select Employee</option>
                                     <?php foreach ($employees ?? [] as $employee): ?>
                                         <option value="<?= esc($employee->id) ?>">
@@ -296,41 +289,41 @@
                                 <select name="bank_account" id="bank_account" class="form-control" required>
                                     <option value="">Select Payment Method</option>
                                     <optgroup label="Cash">
-                                        <option value="Cash">💰 Cash</option>
+                                        <option value="Cash">ðŸ’° Cash</option>
                                     </optgroup>
                                     <optgroup label="Mobile Banking">
-                                        <option value="bKash">📱 bKash</option>
-                                        <option value="Rocket">🚀 Rocket</option>
-                                        <option value="Nagad">💳 Nagad</option>
-                                        <option value="Upay">📲 Upay</option>
-                                        <option value="Tap">📱 Tap</option>
+                                        <option value="bKash">ðŸ“± bKash</option>
+                                        <option value="Rocket">ðŸš€ Rocket</option>
+                                        <option value="Nagad">ðŸ’³ Nagad</option>
+                                        <option value="Upay">ðŸ“² Upay</option>
+                                        <option value="Tap">ðŸ“± Tap</option>
                                     </optgroup>
                                     <optgroup label="Banks">
-                                        <option value="Dutch Bangla Bank">🏦 Dutch Bangla Bank</option>
-                                        <option value="Sonali Bank">🏦 Sonali Bank</option>
-                                        <option value="Janata Bank">🏦 Janata Bank</option>
-                                        <option value="Agrani Bank">🏦 Agrani Bank</option>
-                                        <option value="Rupali Bank">🏦 Rupali Bank</option>
-                                        <option value="Islami Bank">🏦 Islami Bank</option>
-                                        <option value="City Bank">🏦 City Bank</option>
-                                        <option value="Eastern Bank">🏦 Eastern Bank</option>
-                                        <option value="Prime Bank">🏦 Prime Bank</option>
-                                        <option value="UCBL">🏦 UCBL</option>
-                                        <option value="Trust Bank">🏦 Trust Bank</option>
-                                        <option value="Standard Chartered">🏦 Standard Chartered</option>
-                                        <option value="HSBC">🏦 HSBC</option>
+                                        <option value="Dutch Bangla Bank">ðŸ¦ Dutch Bangla Bank</option>
+                                        <option value="Sonali Bank">ðŸ¦ Sonali Bank</option>
+                                        <option value="Janata Bank">ðŸ¦ Janata Bank</option>
+                                        <option value="Agrani Bank">ðŸ¦ Agrani Bank</option>
+                                        <option value="Rupali Bank">ðŸ¦ Rupali Bank</option>
+                                        <option value="Islami Bank">ðŸ¦ Islami Bank</option>
+                                        <option value="City Bank">ðŸ¦ City Bank</option>
+                                        <option value="Eastern Bank">ðŸ¦ Eastern Bank</option>
+                                        <option value="Prime Bank">ðŸ¦ Prime Bank</option>
+                                        <option value="UCBL">ðŸ¦ UCBL</option>
+                                        <option value="Trust Bank">ðŸ¦ Trust Bank</option>
+                                        <option value="Standard Chartered">ðŸ¦ Standard Chartered</option>
+                                        <option value="HSBC">ðŸ¦ HSBC</option>
                                     </optgroup>
                                     <optgroup label="Payment Gateways">
-                                        <option value="SSLCommerz">🔒 SSLCommerz</option>
-                                        <option value="ShurjoPay">💳 ShurjoPay</option>
-                                        <option value="Aamarpay">💵 Aamarpay</option>
-                                        <option value="PortWallet">👝 PortWallet</option>
+                                        <option value="SSLCommerz">ðŸ”’ SSLCommerz</option>
+                                        <option value="ShurjoPay">ðŸ’³ ShurjoPay</option>
+                                        <option value="Aamarpay">ðŸ’µ Aamarpay</option>
+                                        <option value="PortWallet">ðŸ‘ PortWallet</option>
                                     </optgroup>
                                     <optgroup label="Other">
-                                        <option value="Cheque">📝 Cheque</option>
-                                        <option value="Credit Card">💳 Credit Card</option>
-                                        <option value="Debit Card">💳 Debit Card</option>
-                                        <option value="Other">🔄 Other</option>
+                                        <option value="Cheque">ðŸ“ Cheque</option>
+                                        <option value="Credit Card">ðŸ’³ Credit Card</option>
+                                        <option value="Debit Card">ðŸ’³ Debit Card</option>
+                                        <option value="Other">ðŸ”„ Other</option>
                                     </optgroup>
                                 </select>
                                 <small class="text-muted">
@@ -384,306 +377,263 @@
 <?= $this->section('script'); ?>
 
 <script>
-    // Check if jQuery is loaded
-    console.log('jQuery loaded:', typeof jQuery !== 'undefined');
-
-    $(document).ready(function() {
-        console.log('Document ready - initializing');
-
-        // Debug: Check if categories data exists
-        // console.log('Categories data:', <?= json_encode($income_categories ?? []) ?>);
-
-        // First, destroy any existing DataTable instances
-        if ($.fn.DataTable.isDataTable('#incomeCategoryTable')) {
-            $('#incomeCategoryTable').DataTable().destroy();
+    /**
+     * Handlers are attached to window so they survive SPA partial-nav:
+     * ipb-nav wraps page scripts in an IIFE, which would otherwise hide
+     * function declarations from inline onclick="..." attributes.
+     */
+    (function ($) {
+        function csrfPayload(extra) {
+            var data = extra || {};
+            data['<?= csrf_token() ?>'] = '<?= csrf_hash() ?>';
+            return data;
         }
 
-        if ($.fn.DataTable.isDataTable('#incomeTable')) {
-            $('#incomeTable').DataTable().destroy();
-        }
+        function initIncomeTables() {
+            if ($.fn.DataTable.isDataTable('#incomeCategoryTable')) {
+                $('#incomeCategoryTable').DataTable().destroy();
+            }
+            if ($.fn.DataTable.isDataTable('#incomeTable')) {
+                $('#incomeTable').DataTable().destroy();
+            }
 
-        // Initialize DataTable for main income table
-        // Initialize DataTable for main income table
-        $('#incomeTable').DataTable({
-            "pageLength": 100,
-            "lengthMenu": [
-                [10, 25, 50, 100, 200],
-                [10, 25, 50, 100, 200]
-            ],
-            "ordering": true,
-            "responsive": false, // Set to false to prevent built-in responsive behavior
-            "scrollX": true, // Enable horizontal scrolling
-            "autoWidth": true,
-            "columnDefs": [{
-                "targets": [0, 13], // Checkbox and Action columns
-                "orderable": false
-            }]
-        });
+            $('#incomeTable').DataTable({
+                pageLength: 100,
+                lengthMenu: [
+                    [10, 25, 50, 100, 200],
+                    [10, 25, 50, 100, 200]
+                ],
+                ordering: true,
+                responsive: false,
+                scrollX: true,
+                autoWidth: true,
+                columnDefs: [{
+                    targets: [0, 13],
+                    orderable: false
+                }]
+            });
 
-        // Initialize DataTable for income category table
-        if ($('#incomeCategoryTable').length) {
-            try {
+            if ($('#incomeCategoryTable').length) {
                 $('#incomeCategoryTable').DataTable({
-                    "pageLength": 10,
-                    "lengthMenu": [
+                    pageLength: 10,
+                    lengthMenu: [
                         [10, 25, 50, -1],
-                        [10, 25, 50, "All"]
+                        [10, 25, 50, 'All']
                     ],
-                    "ordering": true,
-                    "autoWidth": false,
-                    "responsive": true,
-                    "columnDefs": [{
-                        "targets": 3, // Actions column
-                        "orderable": false
+                    ordering: true,
+                    autoWidth: false,
+                    responsive: true,
+                    columnDefs: [{
+                        targets: 3,
+                        orderable: false
                     }],
-                    "language": {
-                        "emptyTable": "No income categories found",
-                        "zeroRecords": "No matching records found"
+                    language: {
+                        emptyTable: 'No income categories found',
+                        zeroRecords: 'No matching records found'
                     }
                 });
-                console.log('Category DataTable initialized successfully');
-            } catch (e) {
-                console.error('Error initializing category DataTable:', e);
             }
         }
 
-        // Force a redraw after a short delay
-        setTimeout(function() {
-            if ($.fn.DataTable.isDataTable('#incomeCategoryTable')) {
-                $('#incomeCategoryTable').DataTable().draw();
+        window.viewFile = function (filename) {
+            if (!filename) {
+                tata.error('No file available', 'There is no document attached to this income.');
+                return;
             }
-        }, 500);
+            window.open('<?= base_url('assets/incomes/') ?>' + filename, '_blank');
+        };
 
-        /* ================= Income Category AJAX ================= */
-        $('#incomeCategoryForm').on('submit', function(e) {
-            e.preventDefault();
-            saveIncomeCategory();
-        });
+        window.showIncomeCategoryModal = function () {
+            window.resetIncomeCategoryForm();
+            $('#incomeCategoryModal').modal('show');
+        };
 
-        // Select All functionality
-        $('#selectAll').on('click', function() {
-            $('.rowCheckbox').prop('checked', this.checked);
-        });
+        window.resetIncomeCategoryForm = function () {
+            $('#income_category_id').val('');
+            $('#income_category_name').val('');
+            $('#saveCategoryBtn').html('<i class="fa fa-save"></i> Save Category');
+        };
 
-        $(document).on('click', '.rowCheckbox', function() {
-            if ($('.rowCheckbox:checked').length != $('.rowCheckbox').length) {
-                $('#selectAll').prop('checked', false);
-            }
-        });
-    });
+        window.saveIncomeCategory = function () {
+            var form = $('#incomeCategoryForm');
+            var submitBtn = $('#saveCategoryBtn');
+            var categoryId = $('#income_category_id').val();
+            var url = categoryId
+                ? '<?= base_url('accounts/income-category/update') ?>'
+                : '<?= base_url('accounts/income-category/save') ?>';
 
-    // ================= File Viewing Function =================
-    function viewFile(filename) {
-        if (!filename) {
-            tata.error('No file available', 'There is no document attached to this income.');
-            return;
-        }
-
-        // Construct the full file URL - using assets/incomes/ as per your save path
-        const fileUrl = '<?= base_url("assets/incomes/") ?>' + filename;
-
-        // Open in new tab/window
-        window.open(fileUrl, '_blank');
-    }
-
-    // ================= Income Category Functions =================
-    function showIncomeCategoryModal() {
-        resetIncomeCategoryForm();
-        $('#incomeCategoryModal').modal('show');
-    }
-
-    function saveIncomeCategory() {
-        const form = $('#incomeCategoryForm');
-        const submitBtn = $('#saveCategoryBtn');
-        const formData = form.serialize();
-        const categoryId = $('#income_category_id').val();
-
-        // Use base_url() for the URLs
-        let url = categoryId ? '<?= base_url("accounts/income-category/update") ?>' : '<?= base_url("accounts/income-category/save") ?>';
-
-        $.ajax({
-            url: url,
-            type: "POST",
-            data: formData,
-            dataType: "json",
-            beforeSend: function() {
-                submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
-            },
-            success: function(response) {
-                console.log('Save response:', response);
-                if (response.status === 'success') {
-                    tata.success('Category saved', response.message);
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    tata.error("Couldn't save category", response.message);
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: form.serialize(),
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                beforeSend: function () {
+                    submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+                },
+                success: function (response) {
+                    if (response && response.status === 'success') {
+                        tata.success('Category saved', response.message);
+                        setTimeout(function () { location.reload(); }, 800);
+                    } else {
+                        tata.error("Couldn't save category", (response && response.message) || 'Save failed');
+                    }
+                },
+                error: function (xhr) {
+                    var msg = 'Could not save. Check console for details.';
+                    try {
+                        var parsed = JSON.parse(xhr.responseText);
+                        if (parsed && parsed.message) msg = parsed.message;
+                    } catch (e) {}
+                    tata.error("Couldn't save category", msg);
+                },
+                complete: function () {
+                    submitBtn.html('<i class="fa fa-save"></i> Save Category').prop('disabled', false);
                 }
-            },
-            error: function(xhr) {
-                console.error(xhr.responseText);
-                tata.error("Couldn't save category", 'Could not save. Check console for details.');
-            },
-            complete: function() {
-                submitBtn.html('<i class="fa fa-save"></i> Save Category').prop('disabled', false);
-            }
-        });
-    }
+            });
+        };
 
-    function editIncomeCategory(id, name) {
-        $('#income_category_id').val(id);
-        $('#income_category_name').val(name);
-        $('#saveCategoryBtn').html('<i class="fa fa-pencil"></i> Update Category');
-        $('#incomeCategoryModal').modal('show');
-    }
+        window.editIncomeCategory = function (id, name) {
+            $('#income_category_id').val(id);
+            $('#income_category_name').val(name);
+            $('#saveCategoryBtn').html('<i class="fa fa-pencil"></i> Update Category');
+            $('#incomeCategoryModal').modal('show');
+        };
 
-    function deleteIncomeCategory(id) {
-        swal({
-            title: "Delete category?",
-            text: "Are you sure you want to delete this income category?",
-            icon: "warning",
-            dangerMode: true,
-            buttons: ["Cancel", "Delete category"],
-        }).then((willDelete) => {
-            if (willDelete) {
+        window.deleteIncomeCategory = function (id) {
+            swal({
+                title: 'Delete category?',
+                text: 'Are you sure you want to delete this income category?',
+                icon: 'warning',
+                dangerMode: true,
+                buttons: ['Cancel', 'Delete category'],
+            }).then(function (willDelete) {
+                if (!willDelete) return;
                 $.ajax({
-                    url: '<?= base_url("accounts/income-category/delete") ?>',
-                    type: "POST",
-                    data: {
-                        id: id,
-                        '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
-                    },
-                    dataType: "json",
-                    success: function(response) {
-                        if (response.status === 'success') {
+                    url: '<?= base_url('accounts/income-category/delete') ?>',
+                    type: 'POST',
+                    data: csrfPayload({ id: id }),
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function (response) {
+                        if (response && response.status === 'success') {
                             tata.success('Category deleted', response.message);
-                            setTimeout(function() {
-                                location.reload();
-                            }, 1000);
+                            setTimeout(function () { location.reload(); }, 800);
                         } else {
-                            tata.error("Couldn't delete category", response.message);
+                            tata.error("Couldn't delete category", (response && response.message) || 'Delete failed');
                         }
                     },
-                    error: function(xhr) {
-                        console.error(xhr.responseText);
+                    error: function () {
                         tata.error("Couldn't delete category", 'Error deleting income category.');
                     }
                 });
+            });
+        };
+
+        window.showIncomeModal = function () {
+            window.resetIncomeForm();
+            $('#incomeModal .modal-title').text('Add New Income');
+            $('#incomeModal').modal('show');
+        };
+
+        window.resetIncomeForm = function () {
+            var form = document.getElementById('incomeForm');
+            if (form) form.reset();
+            $('#income_id').val('');
+            $('#current_document').hide();
+            $('#existing_document_name').val('');
+        };
+
+        window.saveIncome = function () {
+            var formEl = document.getElementById('incomeForm');
+            if (!formEl) return;
+
+            if (typeof formEl.reportValidity === 'function' && !formEl.reportValidity()) {
+                return;
             }
-        });
-    }
 
-    function resetIncomeCategoryForm() {
-        $('#income_category_id').val('');
-        $('#income_category_name').val('');
-        $('#saveCategoryBtn').html('<i class="fa fa-save"></i> Save Category');
-    }
+            var formData = new FormData(formEl);
+            var incomeId = $('#income_id').val();
+            var url = incomeId
+                ? '<?= base_url('accounts/income/update') ?>'
+                : '<?= base_url('accounts/income/save') ?>';
+            var $btn = $('#incomeModal .btn-success');
 
-    // ================= Income Functions =================
-    function showIncomeModal() {
-        resetIncomeForm();
-        $('#incomeModal .modal-title').text('Add New Income');
-        $('#incomeModal').modal('show');
-    }
-
-    function resetIncomeForm() {
-        $('#incomeForm')[0].reset();
-        $('#income_id').val('');
-        $('#current_document').hide();
-        $('#existing_document_name').val('');
-    }
-
-    function saveIncome() {
-        // Get form data
-        let formData = new FormData(document.getElementById('incomeForm'));
-        const incomeId = $('#income_id').val();
-
-
-        // Use base_url() for the URLs
-        let url = incomeId ? '<?= base_url("accounts/income/update") ?>' : '<?= base_url("accounts/income/save") ?>';
-
-        // Log the URL being called
-        console.log('Saving to URL:', url);
-
-        $.ajax({
-            url: url,
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            beforeSend: function() {
-                $('#incomeModal .btn-success').html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
-            },
-            success: function(response) {
-                console.log('Income save response:', response);
-                if (response.status === 'success') {
-                    tata.success(incomeId ? 'Income updated' : 'Income added', response.message);
-                    $('#incomeModal').modal('hide');
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    tata.error(incomeId ? "Couldn't update income" : "Couldn't add income", response.message);
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                beforeSend: function () {
+                    $btn.html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+                },
+                success: function (response) {
+                    if (response && response.status === 'success') {
+                        tata.success(incomeId ? 'Income updated' : 'Income added', response.message);
+                        $('#incomeModal').modal('hide');
+                        setTimeout(function () { location.reload(); }, 800);
+                    } else {
+                        tata.error(
+                            incomeId ? "Couldn't update income" : "Couldn't add income",
+                            (response && response.message) || 'Save failed'
+                        );
+                    }
+                },
+                error: function (xhr) {
+                    var msg = 'Error saving income';
+                    try {
+                        var parsed = JSON.parse(xhr.responseText);
+                        if (parsed && parsed.message) msg = parsed.message;
+                    } catch (e) {}
+                    tata.error(incomeId ? "Couldn't update income" : "Couldn't add income", msg);
+                },
+                complete: function () {
+                    $btn.html('<i class="fa fa-save"></i> Save Income').prop('disabled', false);
                 }
-            },
-            error: function(xhr, status, error) {
-                console.error('Income save error:', error);
-                console.error('Status:', status);
-                console.error('Response:', xhr.responseText);
-                try {
-                    let response = JSON.parse(xhr.responseText);
-                    tata.error(incomeId ? "Couldn't update income" : "Couldn't add income", response.message || error);
-                } catch (e) {
-                    tata.error(incomeId ? "Couldn't update income" : "Couldn't add income", 'Error saving income: ' + error);
-                }
-            },
-            complete: function() {
-                $('#incomeModal .btn-success').html('<i class="fa fa-save"></i> Save Income').prop('disabled', false);
-            }
-        });
-    }
+            });
+        };
 
-    function editIncome(id) {
-        $.ajax({
-            url: '<?= base_url("accounts/income/get") ?>/' + id,
-            type: "GET",
-            dataType: "json",
-            success: function(response) {
-                if (response.status === 'success') {
-                    const data = response.data;
-
-                    // Format date for input field (YYYY-MM-DD)
-                    let formattedDate = '';
+        window.editIncome = function (id) {
+            $.ajax({
+                url: '<?= base_url('accounts/income/get') ?>/' + id,
+                type: 'GET',
+                dataType: 'json',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function (response) {
+                    if (!(response && response.status === 'success')) {
+                        tata.error("Couldn't load income", 'Error loading income data.');
+                        return;
+                    }
+                    var data = response.data;
+                    var formattedDate = '';
                     if (data.date) {
-                        const dateObj = new Date(data.date);
-                        const year = dateObj.getFullYear();
-                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                        const day = String(dateObj.getDate()).padStart(2, '0');
-                        formattedDate = `${year}-${month}-${day}`;
+                        var dateObj = new Date(data.date);
+                        if (!isNaN(dateObj.getTime())) {
+                            var year = dateObj.getFullYear();
+                            var month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                            var day = String(dateObj.getDate()).padStart(2, '0');
+                            formattedDate = year + '-' + month + '-' + day;
+                        } else if (typeof data.date === 'string' && data.date.length >= 10) {
+                            formattedDate = data.date.substring(0, 10);
+                        }
                     }
 
                     $('#income_id').val(data.id);
                     $('#income_name').val(data.name);
-
-                    // Fix: Set dropdown values properly
                     $('#income_category').val(data.income_category).trigger('change');
                     $('#employee').val(data.employee).trigger('change');
                     $('#bank_account').val(data.bank_account).trigger('change');
-
                     $('#invoice_no').val(data.invoice_no);
                     $('#income_date').val(formattedDate);
                     $('#income_amount').val(data.amount);
                     $('#income_description').val(data.description);
 
-                    // Handle document display
                     if (data.document) {
                         $('#current_document').show();
                         $('#existing_document_name').val(data.document);
-
-                        // Update the view button
                         $('#current_document button').attr('onclick', 'viewFile("' + data.document + '")');
                     } else {
                         $('#current_document').hide();
@@ -692,115 +642,104 @@
 
                     $('#incomeModal .modal-title').text('Edit Income');
                     $('#incomeModal').modal('show');
-                } else {
+                },
+                error: function () {
                     tata.error("Couldn't load income", 'Error loading income data.');
                 }
-            },
-            error: function(xhr) {
-                console.error(xhr.responseText);
-                tata.error("Couldn't load income", 'Error loading income data.');
-            }
-        });
-    }
+            });
+        };
 
-    function deleteIncome(id) {
-        swal({
-            title: "Delete income?",
-            text: "Are you sure you want to delete this income?",
-            icon: "warning",
-            dangerMode: true,
-            buttons: ["Cancel", "Delete income"],
-        }).then((willDelete) => {
-            if (willDelete) {
-                window.location.href = '<?= base_url("accounts/income/delete") ?>/' + id;
-            }
-        });
-    }
+        window.deleteIncome = function (id) {
+            swal({
+                title: 'Delete income?',
+                text: 'Are you sure you want to delete this income?',
+                icon: 'warning',
+                dangerMode: true,
+                buttons: ['Cancel', 'Delete income'],
+            }).then(function (willDelete) {
+                if (willDelete) {
+                    window.location.href = '<?= base_url('accounts/income/delete') ?>/' + id;
+                }
+            });
+        };
 
-    // ================= Approval Functions =================
-    function approveIncome(id) {
-        swal({
-            title: "Approve income?",
-            text: "Are you sure you want to approve this income?",
-            icon: "warning",
-            buttons: ["Cancel", "Approve"],
-        }).then((willApprove) => {
-            if (willApprove) {
+        window.approveIncome = function (id) {
+            swal({
+                title: 'Approve income?',
+                text: 'Are you sure you want to approve this income?',
+                icon: 'warning',
+                buttons: ['Cancel', 'Approve'],
+            }).then(function (willApprove) {
+                if (!willApprove) return;
                 $.ajax({
-                    url: '<?= base_url("accounts/income/approve") ?>',
-                    type: "POST",
-                    data: {
-                        id: id,
-                        '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
-                    },
-                    dataType: "json",
-                    beforeSend: function() {
-                        $('body').css('cursor', 'wait');
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
+                    url: '<?= base_url('accounts/income/approve') ?>',
+                    type: 'POST',
+                    data: csrfPayload({ id: id }),
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function (response) {
+                        if (response && response.status === 'success') {
                             tata.success('Income approved', response.message);
-                            setTimeout(function() {
-                                location.reload();
-                            }, 1000);
+                            setTimeout(function () { location.reload(); }, 800);
                         } else {
-                            tata.error("Couldn't approve income", response.message);
+                            tata.error("Couldn't approve income", (response && response.message) || 'Approve failed');
                         }
                     },
-                    error: function(xhr, status, error) {
-                        console.error('Approve error:', error);
-                        console.error('Response:', xhr.responseText);
+                    error: function () {
                         tata.error("Couldn't approve income", 'Error approving income. Please try again.');
-                    },
-                    complete: function() {
-                        $('body').css('cursor', 'default');
                     }
                 });
-            }
-        });
-    }
+            });
+        };
 
-    function rejectIncome(id) {
-        swal({
-            title: "Reject income?",
-            text: "Are you sure you want to reject this income?",
-            icon: "warning",
-            dangerMode: true,
-            buttons: ["Cancel", "Reject"],
-        }).then((willReject) => {
-            if (willReject) {
+        window.rejectIncome = function (id) {
+            swal({
+                title: 'Reject income?',
+                text: 'Are you sure you want to reject this income?',
+                icon: 'warning',
+                dangerMode: true,
+                buttons: ['Cancel', 'Reject'],
+            }).then(function (willReject) {
+                if (!willReject) return;
                 $.ajax({
-                    url: '<?= base_url("accounts/income/reject") ?>',
-                    type: "POST",
-                    data: {
-                        id: id,
-                        '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
-                    },
-                    dataType: "json",
-                    beforeSend: function() {
-                        $('body').css('cursor', 'wait');
-                    },
-                    success: function(response) {
-                        if (response.status === 'success') {
+                    url: '<?= base_url('accounts/income/reject') ?>',
+                    type: 'POST',
+                    data: csrfPayload({ id: id }),
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    success: function (response) {
+                        if (response && response.status === 'success') {
                             tata.success('Income rejected', response.message);
-                            setTimeout(function() {
-                                location.reload();
-                            }, 1000);
+                            setTimeout(function () { location.reload(); }, 800);
                         } else {
-                            tata.error("Couldn't reject income", response.message);
+                            tata.error("Couldn't reject income", (response && response.message) || 'Reject failed');
                         }
                     },
-                    error: function(xhr, status, error) {
-                        console.error('Reject error:', error);
-                        console.error('Response:', xhr.responseText);
+                    error: function () {
                         tata.error("Couldn't reject income", 'Error rejecting income. Please try again.');
-                    },
-                    complete: function() {
-                        $('body').css('cursor', 'default');
                     }
                 });
-            }
+            });
+        };
+
+        $(function () {
+            initIncomeTables();
+
+            $('#incomeCategoryForm').off('submit.incomeCat').on('submit.incomeCat', function (e) {
+                e.preventDefault();
+                window.saveIncomeCategory();
+            });
+
+            $('#selectAll').off('click.incomeSelect').on('click.incomeSelect', function () {
+                $('.rowCheckbox').prop('checked', this.checked);
+            });
+
+            $(document).off('click.incomeRow', '.rowCheckbox').on('click.incomeRow', '.rowCheckbox', function () {
+                if ($('.rowCheckbox:checked').length !== $('.rowCheckbox').length) {
+                    $('#selectAll').prop('checked', false);
+                }
+            });
         });
-    }
+    })(jQuery);
 </script>
 <?= $this->endSection(); ?>

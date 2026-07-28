@@ -214,6 +214,31 @@
 <?= $this->section('script'); ?>
 
 <script>
+  function extractPaymentErrorMessage(result, xhr) {
+    if (!result || typeof result !== 'object') {
+      if (xhr && (xhr.status === 403 || xhr.status === 419)) {
+        return 'Session expired or security check failed. Refresh the page and try again.';
+      }
+      if (xhr && xhr.status === 500) {
+        return 'Server error while saving payment. Please try again.';
+      }
+      return 'Something went wrong. Please try again.';
+    }
+    if (result.status === 'validation-error') {
+      return null;
+    }
+    if (typeof result.response === 'string' && result.response.trim() !== '') {
+      return result.response;
+    }
+    if (typeof result.message === 'string' && result.message.trim() !== '') {
+      return result.message;
+    }
+    if (typeof result.error === 'string' && result.error.trim() !== '') {
+      return result.error;
+    }
+    return 'Something went wrong. Please try again.';
+  }
+
   $("#form").submit(function(e) {
     e.preventDefault();
     const form = this;
@@ -237,18 +262,24 @@
           },
         });
       },
-      error: function({
-        responseText
-      }) {
-        const result = JSON.parse(responseText);
+      error: function(xhr) {
+        let result = null;
+        try {
+          result = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+        } catch (parseError) {
+          result = null;
+        }
+
         $(form).find('button[type="submit"]').html('Add Payment').removeAttr('disabled');
-        if (result.status === 'validation-error') {
+
+        if (result && result.status === 'validation-error') {
           $.each(result.response, function(prefix, val) {
             $(form).find('#' + prefix + '-error').text(val);
           });
-        } else {
-          tata.error("Couldn't add payment", result.response);
+          return;
         }
+
+        tata.error("Couldn't add payment", extractPaymentErrorMessage(result, xhr));
       }
     });
   });

@@ -1147,6 +1147,7 @@ class Customer extends BaseController
             $data->groupStart()
                 ->where('users.activity !=', 'active')
                 ->orWhere('users.activity', null)
+                ->orWhere('users.activity', '')
             ->groupEnd();
         }
         if ($acc_status_filter)
@@ -1293,12 +1294,33 @@ class Customer extends BaseController
 
 
         $datatables->addColumn('package', function ($row) {
-            $name = $row->joined_package_name ?? '--';
-            $price = $row->joined_package_price ?? '--';
+            $name = $row->joined_package_name ?? '';
+            $price = $row->joined_package_price ?? '';
+
+            if (($name === '' || $name === '--' || $price === '' || $price === '--' || ($row->created_by ?? '') === 'resellerAdmin') && function_exists('getUserPackage')) {
+                $resellerPkg = getUserPackage($row->id, $row->package_id);
+                if (!empty($resellerPkg)) {
+                    if (!empty($resellerPkg['package_name']) && $resellerPkg['package_name'] !== '--') {
+                        $name = $resellerPkg['package_name'];
+                    }
+
+                    $sPrice = $resellerPkg['selling_price'] ?? null;
+                    $bPrice = $resellerPkg['price'] ?? null;
+
+                    if ($sPrice !== null && $sPrice !== '' && $sPrice !== '--') {
+                        $price = $sPrice;
+                    } elseif ($bPrice !== null && $bPrice !== '' && $bPrice !== '--') {
+                        $price = $bPrice;
+                    }
+                }
+            }
+
+            $name = ($name !== '' && $name !== null) ? $name : '--';
+            $price = ($price !== '' && $price !== null) ? $price : '--';
 
             return '<div style="line-height:1.2;">
-                <strong style="font-size:16px;">' . htmlspecialchars($name) . '</strong><br>
-                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars($price) . '</span>
+                <strong style="font-size:16px;">' . htmlspecialchars((string) $name) . '</strong><br>
+                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars((string) $price) . '</span>
             </div>';
         });
 
@@ -1495,7 +1517,7 @@ class Customer extends BaseController
             'user_router_data.router_password' => 'router_password',
             'users.will_expire' => 'payment_expiry_sort',
             'users.activity' => 'conn_status',
-            'users.status' => 'acc_status',
+            'users.conn_status' => 'acc_status',
         ]);
 
         $datatables->asObject();
@@ -1590,6 +1612,10 @@ class Customer extends BaseController
 
         $db = \Config\Database::connect();
         if ($userole === 'employee') {
+            if (!is_array($area_id)) {
+                $area_id = explode(',', (string) $area_id);
+            }
+            $area_id = array_values(array_filter(array_map('trim', $area_id)));
 
             $data = $db->table('users')
                 ->select('users.*, users.id AS id, user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
@@ -1604,9 +1630,11 @@ class Customer extends BaseController
                 ->where([
                     'users.role' => 'user',
                     'users.admin_id' => $emp_admin_id,
-                    'users.area_id' => $area_id,
                 ])
                 ->where('users.conn_status', 'disconn');
+            if (!empty($area_id)) {
+                $data->whereIn('users.area_id', $area_id);
+            }
         } else {
             $data = $db->table('users')
                 ->select('users.*, users.id AS id, user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
@@ -1629,8 +1657,16 @@ class Customer extends BaseController
             $data->where('users.area_id', $area_filter);
         if ($package_filter)
             $data->where('users.package_id', $package_filter);
-        if ($connection_filter)
-            $data->where('users.activity', $connection_filter);
+        // Online/Offline — match Customer::fetch (not exact activity = 'inactive')
+        if ($connection_filter === 'active') {
+            $data->where('users.activity', 'active');
+        } elseif ($connection_filter === 'inactive') {
+            $data->groupStart()
+                ->where('users.activity !=', 'active')
+                ->orWhere('users.activity', null)
+                ->orWhere('users.activity', '')
+            ->groupEnd();
+        }
         // Note: acc_status_filter is not applied here because inactive_fetch already
         // enforces conn_status = 'disconn' at the base query level to avoid SQL conflict.
 
@@ -1700,16 +1736,33 @@ class Customer extends BaseController
         }
 
         $datatables->addColumn('package', function ($row) {
-            // Phase-perf: was getUserPackage($row->id) per row (a fresh users +
-            // packages query every call) — now reads the COALESCE(p_admin,
-            // p_reseller) columns joined into the base query above, same as
-            // Customer::fetch(). Zero per-row queries.
-            $name = $row->joined_package_name ?? '--';
-            $price = $row->joined_package_price ?? '--';
+            $name = $row->joined_package_name ?? '';
+            $price = $row->joined_package_price ?? '';
+
+            if (($name === '' || $name === '--' || $price === '' || $price === '--' || ($row->created_by ?? '') === 'resellerAdmin') && function_exists('getUserPackage')) {
+                $resellerPkg = getUserPackage($row->id, $row->package_id);
+                if (!empty($resellerPkg)) {
+                    if (!empty($resellerPkg['package_name']) && $resellerPkg['package_name'] !== '--') {
+                        $name = $resellerPkg['package_name'];
+                    }
+
+                    $sPrice = $resellerPkg['selling_price'] ?? null;
+                    $bPrice = $resellerPkg['price'] ?? null;
+
+                    if ($sPrice !== null && $sPrice !== '' && $sPrice !== '--') {
+                        $price = $sPrice;
+                    } elseif ($bPrice !== null && $bPrice !== '' && $bPrice !== '--') {
+                        $price = $bPrice;
+                    }
+                }
+            }
+
+            $name = ($name !== '' && $name !== null) ? $name : '--';
+            $price = ($price !== '' && $price !== null) ? $price : '--';
 
             return '<div style="line-height:1.2;">
-                <strong style="font-size:16px;">' . htmlspecialchars($name) . '</strong><br>
-                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars($price) . '</span>
+                <strong style="font-size:16px;">' . htmlspecialchars((string) $name) . '</strong><br>
+                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars((string) $price) . '</span>
             </div>';
         });
 
@@ -1896,7 +1949,7 @@ class Customer extends BaseController
             'user_router_data.router_password' => 'router_password',
             'users.will_expire' => 'payment_expiry_sort',
             'users.activity' => 'conn_status',
-            'users.status' => 'acc_status',
+            'users.conn_status' => 'acc_status',
         ]);
 
         $datatables->asObject();
@@ -2006,8 +2059,8 @@ class Customer extends BaseController
                         ->orWhere('users.activity', '')
                     ->groupEnd();
                 }
-                if ($acc_status_filter === 'conn') {
-                    $builder->where('users.conn_status', 'conn');
+                if ($acc_status_filter) {
+                    $builder->where('users.conn_status', $acc_status_filter);
                 }
 
                 if ($search !== '') {
@@ -2122,9 +2175,31 @@ class Customer extends BaseController
                 $item['name'] = '<a style="background-color:var(--info-100, #dbeafe); color:var(--info-600, #1d4ed8); padding:4px 8px; border-radius:6px; font-weight:500; text-decoration:none;" href="'
                     . route_to('route.customer.details', $row->id) . '">'
                     . esc($row->name ?? '-') . '</a>';
+                $pkgName = $row->joined_package_name ?? '';
+                $pkgPrice = $row->joined_package_price ?? '';
+                if (($pkgName === '' || $pkgName === '--' || $pkgPrice === '' || $pkgPrice === '--' || ($row->created_by ?? '') === 'resellerAdmin') && function_exists('getUserPackage')) {
+                    $resellerPkg = getUserPackage($row->id, $row->package_id);
+                    if (!empty($resellerPkg)) {
+                        if (!empty($resellerPkg['package_name']) && $resellerPkg['package_name'] !== '--') {
+                            $pkgName = $resellerPkg['package_name'];
+                        }
+
+                        $sPrice = $resellerPkg['selling_price'] ?? null;
+                        $bPrice = $resellerPkg['price'] ?? null;
+
+                        if ($sPrice !== null && $sPrice !== '' && $sPrice !== '--') {
+                            $pkgPrice = $sPrice;
+                        } elseif ($bPrice !== null && $bPrice !== '' && $bPrice !== '--') {
+                            $pkgPrice = $bPrice;
+                        }
+                    }
+                }
+                $pkgName = ($pkgName !== '' && $pkgName !== null) ? $pkgName : '--';
+                $pkgPrice = ($pkgPrice !== '' && $pkgPrice !== null) ? $pkgPrice : '--';
+
                 $item['package'] = '<div style="line-height:1.2;">
-                <strong style="font-size:16px;">' . htmlspecialchars((string) ($row->joined_package_name ?? '--')) . '</strong><br>
-                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars((string) ($row->joined_package_price ?? '--')) . '</span>
+                <strong style="font-size:16px;">' . htmlspecialchars((string) $pkgName) . '</strong><br>
+                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars((string) $pkgPrice) . '</span>
             </div>';
                 $item['area_name'] = $row->area_name ?? '--';
                 $item['mobile'] = '<div style="display:flex; justify-content:space-between; align-items:center; min-width:180px; background:var(--success-100, #dcfce7); color:var(--success-600, #15803d); border-radius:6px; padding:4px;">
@@ -2247,6 +2322,10 @@ class Customer extends BaseController
         $acc_status_filter = $this->request->getPost('acc_status_filter');
         $db = \Config\Database::connect();
         if ($userole === 'employee') {
+            if (!is_array($area_id)) {
+                $area_id = explode(',', (string) $area_id);
+            }
+            $area_id = array_values(array_filter(array_map('trim', $area_id)));
 
             $data = $db->table('users')
                 ->select('users.*, users.id AS id, user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
@@ -2261,10 +2340,12 @@ class Customer extends BaseController
                 ->where([
                     'users.role' => 'user',
                     'users.admin_id' => $emp_admin_id,
-                    'users.area_id' => $area_id,
                 ])
                 ->where('MONTH(users.created_at)', $currentMonth)
                 ->where('YEAR(users.created_at)', $currentYear);
+            if (!empty($area_id)) {
+                $data->whereIn('users.area_id', $area_id);
+            }
         } else {
             $data = $db->table('users')
                 ->select('users.*, users.id AS id, user_router_data.pppoe_secret AS pppoe_secret, user_router_data.router_password AS router_password')
@@ -2288,8 +2369,15 @@ class Customer extends BaseController
             $data->where('users.area_id', $area_filter);
         if ($package_filter)
             $data->where('users.package_id', $package_filter);
-        if ($connection_filter)
-            $data->where('users.activity', $connection_filter);
+        if ($connection_filter === 'active') {
+            $data->where('users.activity', 'active');
+        } elseif ($connection_filter === 'inactive') {
+            $data->groupStart()
+                ->where('users.activity !=', 'active')
+                ->orWhere('users.activity', null)
+                ->orWhere('users.activity', '')
+            ->groupEnd();
+        }
         if ($acc_status_filter)
             $data->where('users.conn_status', $acc_status_filter);
 
@@ -2360,15 +2448,33 @@ class Customer extends BaseController
         }
 
         $datatables->addColumn('package', function ($row) {
-            // Phase-perf: was getUserPackage($row->id) per row — now reads the
-            // COALESCE(p_admin, p_reseller) columns joined into the base query
-            // above, same as Customer::fetch(). Zero per-row queries.
-            $name = $row->joined_package_name ?? '--';
-            $price = $row->joined_package_price ?? '--';
+            $name = $row->joined_package_name ?? '';
+            $price = $row->joined_package_price ?? '';
+
+            if (($name === '' || $name === '--' || $price === '' || $price === '--' || ($row->created_by ?? '') === 'resellerAdmin') && function_exists('getUserPackage')) {
+                $resellerPkg = getUserPackage($row->id, $row->package_id);
+                if (!empty($resellerPkg)) {
+                    if (!empty($resellerPkg['package_name']) && $resellerPkg['package_name'] !== '--') {
+                        $name = $resellerPkg['package_name'];
+                    }
+
+                    $sPrice = $resellerPkg['selling_price'] ?? null;
+                    $bPrice = $resellerPkg['price'] ?? null;
+
+                    if ($sPrice !== null && $sPrice !== '' && $sPrice !== '--') {
+                        $price = $sPrice;
+                    } elseif ($bPrice !== null && $bPrice !== '' && $bPrice !== '--') {
+                        $price = $bPrice;
+                    }
+                }
+            }
+
+            $name = ($name !== '' && $name !== null) ? $name : '--';
+            $price = ($price !== '' && $price !== null) ? $price : '--';
 
             return '<div style="line-height:1.2;">
-                <strong style="font-size:16px;">' . htmlspecialchars($name) . '</strong><br>
-                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars($price) . '</span>
+                <strong style="font-size:16px;">' . htmlspecialchars((string) $name) . '</strong><br>
+                <span style="color:black; font-size:16px; margin-top:2px; display:block;">৳' . htmlspecialchars((string) $price) . '</span>
             </div>';
         });
         $datatables->format('created_at', function ($value) {
@@ -2570,7 +2676,7 @@ class Customer extends BaseController
             'user_router_data.router_password' => 'router_password',
             'users.will_expire' => 'payment_expiry_sort',
             'users.activity' => 'conn_status',
-            'users.status' => 'acc_status',
+            'users.conn_status' => 'acc_status',
         ]);
 
         $datatables->asObject();

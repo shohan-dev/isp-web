@@ -48,8 +48,58 @@
     return prefs[key] !== false;
   }
 
+  /**
+   * Keep length/filter/paginate outside the horizontal scroller.
+   * DataTables nests the whole wrapper inside .ipb-customers-table-wrap, so
+   * overflowing the wrap also dragged the controls sideways. Isolate the
+   * <table> into .ipb-customers-table-scroll instead.
+   */
+  function refreshTableScrollHint($scroller) {
+    var el = $scroller && $scroller[0];
+    if (!el) return;
+    var wide = el.scrollWidth > el.clientWidth + 8;
+    el.classList.toggle("is-scrollable", wide);
+    var wrap = el.closest(".ipb-customers-table-wrap");
+    if (wrap) wrap.classList.toggle("is-scrollable", wide);
+  }
+
+  function isolateTableScroll(api) {
+    if (!api || !$) return;
+    var table = api.table().node();
+    if (!table) return;
+    var $table = $(table);
+    var $existing = $table.parent(".ipb-customers-table-scroll");
+    if ($existing.length) {
+      refreshTableScrollHint($existing);
+      return;
+    }
+    var $wrap = $table.closest(".ipb-customers-table-wrap");
+    if (!$wrap.length) return;
+
+    var $scroller = $(
+      '<div class="ipb-customers-table-scroll" role="region" aria-label="Customers table" tabindex="0"></div>'
+    );
+    $table.before($scroller);
+    $scroller.append($table);
+
+    $scroller.off("scroll.ipbCustScroll").on("scroll.ipbCustScroll", function () {
+      if (this.scrollLeft > 8) {
+        this.classList.remove("is-scrollable");
+        var wrap = this.closest(".ipb-customers-table-wrap");
+        if (wrap) wrap.classList.remove("is-scrollable");
+      }
+    });
+
+    window.requestAnimationFrame(function () {
+      refreshTableScrollHint($scroller);
+      if (api && api.columns) api.columns.adjust();
+    });
+  }
+
   function initColumnPicker(api) {
     if (!api || !$.fn || !$.fn.dataTable) return loadPrefs();
+
+    isolateTableScroll(api);
 
     var prefs = loadPrefs();
     var $heads = $(api.table().header()).find("th[data-col]");
@@ -102,6 +152,9 @@
       });
       api.columns.adjust().draw(false);
       renderList(current);
+      window.requestAnimationFrame(function () {
+        refreshTableScrollHint($(api.table().node()).parent(".ipb-customers-table-scroll"));
+      });
     }
 
     renderList(prefs);
@@ -219,6 +272,8 @@
     loadPrefs: loadPrefs,
     colVisible: colVisible,
     initColumnPicker: initColumnPicker,
+    isolateTableScroll: isolateTableScroll,
+    refreshTableScrollHint: refreshTableScrollHint,
     bindRowTooltips: bindRowTooltips,
     initCopyLink: initCopyLink,
     initMoreMenu: initMoreMenu,

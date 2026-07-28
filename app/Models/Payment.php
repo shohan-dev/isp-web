@@ -84,8 +84,9 @@ class Payment extends Model
         'status',
     ];
 
-    // Keep the year-aware `period` column populated on every new payment (Phase 4/5).
+    // Keep the year-aware `period` column populated on every new/updated payment (Phase 4/5).
     protected $beforeInsert = ['fillPeriod'];
+    protected $beforeUpdate = ['fillPeriod'];
 
     /**
      * First day of the billing month for a payment, derived from its created_at
@@ -100,10 +101,30 @@ class Payment extends Model
     }
 
     /**
-     * beforeInsert: fill `period` when the caller didn't set it, so new rows get
-     * the year-aware billing month without anyone having to remember to pass it.
-     * No-ops safely if the column hasn't been migrated yet (a DB managed outside
-     * `php spark db:optimize`/`migrate`).
+     * Billing period from the Payment Month dropdown (e.g. "August") + year anchor.
+     * Prefer this over created_at so an August bill paid in July does not collide
+     * with an existing July row on uniq_pay_user_period_status.
+     */
+    public static function periodFromMonth(?string $monthName, ?string $anchorDate = null): string
+    {
+        $anchorTs = ! empty($anchorDate) ? (strtotime($anchorDate) ?: time()) : time();
+        $year = (int) date('Y', $anchorTs);
+        $monthName = trim((string) $monthName);
+
+        if ($monthName !== '') {
+            $monthTs = strtotime('1 ' . $monthName . ' ' . $year);
+            if ($monthTs !== false) {
+                return date('Y-m-01', $monthTs);
+            }
+        }
+
+        return self::periodFor($anchorDate);
+    }
+
+    /**
+     * beforeInsert/beforeUpdate: fill `period` when the caller didn't set it.
+     * Prefers the billing `month` name over created_at so inserts match the
+     * month the operator selected. No-ops if the column isn't migrated yet.
      */
     protected function fillPeriod(array $data)
     {
@@ -120,7 +141,10 @@ class Payment extends Model
             return $data;
         }
 
-        $data['data']['period'] = self::periodFor($row['created_at'] ?? null);
+        $data['data']['period'] = self::periodFromMonth(
+            $row['month'] ?? null,
+            $row['paid_at'] ?? $row['created_at'] ?? null
+        );
 
         return $data;
     }

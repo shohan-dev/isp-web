@@ -191,7 +191,7 @@
     // skeletonOnly: customer lists — skeleton / existing rows only; never the centred spinner.
     var LOAD_DELAY = 150, LOAD_MIN = 400;
     var showTimer = null, hideTimer = null, shownAt = 0;
-    var skeletonOnly = !!(opts && opts.skeletonOnly);
+    var skeletonOnly = !!(options && options.skeletonOnly);
 
     function injectSkeletonIfEmpty() {
       // Only for a first/empty load — if real rows are present we just dim them.

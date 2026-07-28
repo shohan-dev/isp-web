@@ -180,6 +180,25 @@ body.ipb .ipb-acc-page .ipb-row-actions .ipb-row-btn {
   color: var(--text-primary, #0f172a);
 }
 
+/* OTC status chips in the report table */
+.ipb-acc-page .otc-status-link {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.ipb-acc-page .otc-status-link .label {
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ipb-acc-page .otc-status-link:hover .label {
+  filter: brightness(0.96);
+}
+
 /* Accounting modals — close top-right */
 .ipb-acc-page .modal-header,
 #incomeModal .modal-header,
@@ -284,6 +303,76 @@ body.ipb .ipb-acc-page .ipb-row-actions .ipb-row-btn {
   box-shadow: var(--shadow-1);
 }
 
+.ipb-acc-report .ipb-acc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ipb-acc-report .ipb-acc-field label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-acc-report .ipb-acc-field .form-control {
+  min-height: 40px;
+  border-radius: 10px !important;
+}
+
+.ipb-acc-report .ipb-acc-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.ipb-acc-report .ipb-acc-filter-actions .btn {
+  min-height: 40px;
+}
+
+.ipb-acc-report .ipb-acc-report-results {
+  position: relative;
+  transition: opacity 180ms ease;
+}
+
+.ipb-acc-report.is-searching .ipb-acc-report-results {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.ipb-acc-report .ipb-acc-report-results.is-refreshing {
+  opacity: 0.35;
+}
+
+.ipb-acc-report .ipb-acc-report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.ipb-acc-report .ipb-acc-period-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--surface-2, #f8fafc);
+  border: 1px solid var(--border, #e6eaf0);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #51607a);
+}
+
+.ipb-acc-report .ipb-acc-period-chip i {
+  color: var(--primary-500, #f75803);
+}
+
 .ipb-acc-report .ipb-acc-panel {
   background: var(--surface, #fff);
   border: 1px solid var(--border, #e6eaf0);
@@ -294,12 +383,27 @@ body.ipb .ipb-acc-page .ipb-row-actions .ipb-row-btn {
 }
 
 .ipb-acc-report .ipb-acc-panel-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border, #e6eaf0);
   background: var(--surface-2, #f8fafc);
   font-size: 14px;
   font-weight: 800;
   color: var(--text-primary, #0f172a);
+}
+
+.ipb-acc-report .ipb-acc-panel-head i {
+  color: var(--primary-500, #f75803);
+}
+
+.ipb-acc-report .ipb-acc-panel-sub {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
 }
 
 .ipb-acc-report .ipb-acc-panel-body {
@@ -337,9 +441,23 @@ body.ipb .ipb-acc-page .ipb-row-actions .ipb-row-btn {
   word-break: break-word;
 }
 
+.ipb-acc-report .ipb-acc-kpi em {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
 .ipb-acc-report .ipb-acc-kpi.is-success strong { color: var(--success-600, #15803d); }
 .ipb-acc-report .ipb-acc-kpi.is-danger strong { color: var(--error-600, #b91c1c); }
 .ipb-acc-report .ipb-acc-kpi.is-info strong { color: var(--info-600, #1d4ed8); }
+
+.ipb-acc-report .ipb-acc-kpi.is-net {
+  border-color: color-mix(in srgb, var(--primary-500, #f75803) 28%, var(--border, #e6eaf0));
+  background: color-mix(in srgb, var(--primary-500, #f75803) 6%, var(--surface, #fff));
+}
 
 .ipb-acc-report .ipb-acc-report-grid {
   display: grid;
@@ -395,14 +513,18 @@ body.ipb .ipb-acc-page .ipb-row-actions .ipb-row-btn {
 .ipb-acc-report .ipb-acc-line.is-success strong { color: var(--success-600, #15803d); }
 .ipb-acc-report .ipb-acc-line.is-danger strong { color: var(--error-600, #b91c1c); }
 
-.ipb-acc-report .ipb-acc-panel-head i {
-  color: var(--primary-500, #f75803);
-  margin-right: 6px;
-}
-
 @media (max-width: 1024px) {   /* was 991px — folded into the 03 §1.3 ladder */
+  .ipb-acc-report .ipb-acc-filters {
+    grid-template-columns: 1fr;
+  }
+
   .ipb-acc-report .ipb-acc-report-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ipb-acc-report .ipb-acc-panel-sub {
+    margin-left: 0;
+    width: 100%;
   }
 
   /* The ID-scoped selectors above (#incomeModal, #expenseModal, etc.) out-
@@ -441,9 +563,14 @@ body.ipb .ipb-acc-page .ipb-row-actions .ipb-row-btn {
     width: 100%;
   }
 
-  .ipb-acc-page .ipb-acc-filter-actions .btn {
+  .ipb-acc-page .ipb-acc-filter-actions .btn,
+  .ipb-acc-report .ipb-acc-filter-actions .btn {
     flex: 1 1 auto;
     min-height: 44px;
+  }
+
+  .ipb-acc-report .ipb-acc-filter-actions {
+    width: 100%;
   }
 
   /* .ipb-acc-line is a flex row (label + nowrap amount) with no min-width:0
