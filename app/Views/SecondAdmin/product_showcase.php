@@ -146,6 +146,54 @@
     background: var(--error-50, rgba(239, 68, 68, 0.14));
     color: var(--error-600, #dc2626);
   }
+  .ps-int-logo {
+    width: 52px;
+    height: 40px;
+    object-fit: contain;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    padding: 4px;
+  }
+  .ps-int-logo-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--border, #e2e8f0);
+    background: var(--surface-2, #f8f9fc);
+    color: var(--text-secondary, #64748b);
+  }
+  .ps-tier-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .ps-tier-pill.is-core {
+    background: color-mix(in srgb, var(--info-500, #3b82f6) 14%, transparent);
+    color: var(--info-600, #2563eb);
+  }
+  .ps-tier-pill.is-also {
+    background: var(--surface-2, #eef2f7);
+    color: var(--text-secondary, #64748b);
+  }
+  .ps-int-preview {
+    max-width: 120px;
+    max-height: 64px;
+    object-fit: contain;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    padding: 6px;
+    background: #fff;
+    margin-top: 8px;
+  }
 </style>
 <?= $this->endSection('css'); ?>
 
@@ -155,7 +203,7 @@
 
     <?= $this->include('components/page-header', [
       'title' => 'Product Showcase',
-      'subtitle' => 'Website & mobile screenshot galleries shown on the public landing page',
+      'subtitle' => 'Landing page galleries & integration logos (website, mobile, Integrations section)',
       'breadcrumb' => [
         ['label' => 'Dashboard', 'url' => route_to('route.dashboard')],
         ['label' => 'Product Showcase'],
@@ -288,6 +336,102 @@
       </div>
     <?php endforeach; ?>
 
+    <?php $integrations = $integrations ?? []; ?>
+    <div class="box box-primary">
+      <div class="box-header with-border ipb-box-toolbar">
+        <div class="ipb-list-toolbar">
+          <div class="ipb-list-toolbar-filters">
+            <span class="ipb-filter-label"><i class="fa fa-plug" aria-hidden="true"></i> Landing Integrations</span>
+          </div>
+          <div class="ipb-list-toolbar-actions">
+            <button type="button" class="btn btn-primary" id="psAddIntegrationBtn">
+              <i class="fa fa-plus" aria-hidden="true"></i> Add Integration
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="box-body table-responsive">
+        <p class="text-muted" style="margin-top:0">
+          Logos shown on the public landing <strong>Integrations</strong> section.
+          <em>Core Rail</em> = large featured cards · <em>Also connects</em> = smaller logo grid.
+        </p>
+        <table class="table table-bordered table-striped">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Logo</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Sort</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php if (!empty($integrations)): $psIntRow = 0; ?>
+              <?php foreach ($integrations as $integration): $psIntRow++; ?>
+                <?php
+                  $logoPath = ltrim((string) ($integration['logo_path'] ?? ''), '/');
+                  $logoUrl = $logoPath !== '' ? base_url($logoPath) : '';
+                  $hasLogoFile = $logoPath !== '' && is_file(FCPATH . $logoPath);
+                ?>
+                <tr>
+                  <td><?= $psIntRow; ?></td>
+                  <td>
+                    <?php if ($hasLogoFile): ?>
+                      <img class="ps-int-logo" src="<?= esc($logoUrl, 'attr'); ?>" alt="">
+                    <?php elseif (!empty($integration['icon_class'])): ?>
+                      <span class="ps-int-logo-fallback" title="<?= esc($integration['icon_class'], 'attr'); ?>">
+                        <i class="<?= esc($integration['icon_class'], 'attr'); ?>" aria-hidden="true"></i>
+                      </span>
+                    <?php else: ?>
+                      <span class="text-muted">—</span>
+                    <?php endif; ?>
+                  </td>
+                  <td>
+                    <strong><?= esc($integration['name']); ?></strong>
+                    <?php if (!empty($integration['description'])): ?>
+                      <div class="text-muted" style="font-size:12px;max-width:360px"><?= esc(mb_strimwidth((string) $integration['description'], 0, 90, '…')); ?></div>
+                    <?php endif; ?>
+                  </td>
+                  <td>
+                    <span class="ps-tier-pill <?= ($integration['tier'] ?? '') === 'core' ? 'is-core' : 'is-also'; ?>">
+                      <?= ($integration['tier'] ?? '') === 'core' ? 'Core Rail' : 'Also connects'; ?>
+                    </span>
+                  </td>
+                  <td><?= (int) ($integration['sort_order'] ?? 0); ?></td>
+                  <td><span class="ps-status <?= esc($integration['status'] ?? 'inactive'); ?>"><?= esc(ucfirst((string) ($integration['status'] ?? 'inactive'))); ?></span></td>
+                  <td>
+                    <div class="ps-actions">
+                      <button type="button" class="ps-act-btn ps-act-btn--edit ps-edit-integration-btn"
+                        data-id="<?= (int) $integration['id']; ?>"
+                        data-name="<?= esc($integration['name'], 'attr'); ?>"
+                        data-description="<?= esc((string) ($integration['description'] ?? ''), 'attr'); ?>"
+                        data-tier="<?= esc((string) ($integration['tier'] ?? 'also'), 'attr'); ?>"
+                        data-icon-class="<?= esc((string) ($integration['icon_class'] ?? ''), 'attr'); ?>"
+                        data-sort-order="<?= (int) ($integration['sort_order'] ?? 0); ?>"
+                        data-status="<?= esc((string) ($integration['status'] ?? 'active'), 'attr'); ?>"
+                        data-logo-url="<?= $hasLogoFile ? esc($logoUrl, 'attr') : ''; ?>"
+                        title="Edit" aria-label="Edit integration">
+                        <i class="fa fa-pen" aria-hidden="true"></i>
+                      </button>
+                      <button type="button" class="ps-act-btn ps-act-btn--danger ps-delete-integration-btn" data-id="<?= (int) $integration['id']; ?>" title="Delete" aria-label="Delete integration">
+                        <i class="fa fa-trash" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            <?php else: ?>
+              <tr>
+                <td colspan="7">No integrations yet. Click <strong>Add Integration</strong> or run <code>php spark migrate</code> to seed defaults.</td>
+              </tr>
+            <?php endif; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Add Category Modal -->
     <div class="modal fade" id="psAddCategoryModal" tabindex="-1" role="dialog" aria-labelledby="psAddCategoryModalLabel">
       <div class="modal-dialog" role="document">
@@ -366,6 +510,124 @@
       </div>
     </div>
 
+    <!-- Add Integration Modal -->
+    <div class="modal fade" id="psAddIntegrationModal" tabindex="-1" role="dialog" aria-labelledby="psAddIntegrationModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+            <h4 class="modal-title" id="psAddIntegrationModalLabel">Add Integration</h4>
+          </div>
+          <div class="modal-body">
+            <form id="psAddIntegrationForm" enctype="multipart/form-data">
+              <?= csrf_field(); ?>
+              <div class="form-group">
+                <label for="psIntAddName">Name</label>
+                <input type="text" class="form-control" id="psIntAddName" name="name" required>
+                <small class="text-danger" id="psIntAddName-error"></small>
+              </div>
+              <div class="form-group">
+                <label for="psIntAddTier">Type</label>
+                <select class="form-control" id="psIntAddTier" name="tier">
+                  <option value="also">Also connects</option>
+                  <option value="core">Core Rail</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="psIntAddDescription">Description <span class="text-muted">(Core Rail)</span></label>
+                <textarea class="form-control" id="psIntAddDescription" name="description" rows="3" placeholder="Short benefit line shown on Core Rail cards"></textarea>
+              </div>
+              <div class="form-group">
+                <label for="psIntAddLogo">Logo image</label>
+                <input type="file" class="form-control" id="psIntAddLogo" name="logo" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg">
+                <small class="text-muted">PNG, JPG, GIF, WEBP, or SVG. Max 2MB.</small>
+                <small class="text-danger" id="psIntAddLogo-error"></small>
+              </div>
+              <div class="form-group">
+                <label for="psIntAddIcon">Icon class <span class="text-muted">(optional fallback)</span></label>
+                <input type="text" class="form-control" id="psIntAddIcon" name="icon_class" placeholder="fas fa-sms">
+                <small class="text-muted">Used when no logo is uploaded (Font Awesome class).</small>
+              </div>
+              <div class="form-group">
+                <label for="psIntAddSort">Sort Order</label>
+                <input type="number" class="form-control" id="psIntAddSort" name="sort_order" value="0">
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="psSaveAddIntegrationBtn">Save Integration</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Integration Modal -->
+    <div class="modal fade" id="psEditIntegrationModal" tabindex="-1" role="dialog" aria-labelledby="psEditIntegrationModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+            <h4 class="modal-title" id="psEditIntegrationModalLabel">Edit Integration</h4>
+          </div>
+          <div class="modal-body">
+            <form id="psEditIntegrationForm" enctype="multipart/form-data">
+              <?= csrf_field(); ?>
+              <input type="hidden" id="psIntEditId">
+              <div class="form-group">
+                <label for="psIntEditName">Name</label>
+                <input type="text" class="form-control" id="psIntEditName" name="name" required>
+                <small class="text-danger" id="psIntEditName-error"></small>
+              </div>
+              <div class="form-group">
+                <label for="psIntEditTier">Type</label>
+                <select class="form-control" id="psIntEditTier" name="tier">
+                  <option value="also">Also connects</option>
+                  <option value="core">Core Rail</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="psIntEditDescription">Description <span class="text-muted">(Core Rail)</span></label>
+                <textarea class="form-control" id="psIntEditDescription" name="description" rows="3"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Current logo</label>
+                <div id="psIntEditLogoPreviewWrap" style="display:none">
+                  <img id="psIntEditLogoPreview" class="ps-int-preview" alt="">
+                </div>
+                <p id="psIntEditLogoNone" class="text-muted" style="margin:0">No logo on file — using icon fallback if set.</p>
+              </div>
+              <div class="form-group">
+                <label for="psIntEditLogo">Replace logo</label>
+                <input type="file" class="form-control" id="psIntEditLogo" name="logo" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,.svg">
+                <small class="text-muted">Leave empty to keep the current logo.</small>
+                <small class="text-danger" id="psIntEditLogo-error"></small>
+              </div>
+              <div class="form-group">
+                <label for="psIntEditIcon">Icon class <span class="text-muted">(optional fallback)</span></label>
+                <input type="text" class="form-control" id="psIntEditIcon" name="icon_class" placeholder="fas fa-sms">
+              </div>
+              <div class="form-group">
+                <label for="psIntEditSort">Sort Order</label>
+                <input type="number" class="form-control" id="psIntEditSort" name="sort_order" value="0">
+              </div>
+              <div class="form-group">
+                <label for="psIntEditStatus">Status</label>
+                <select class="form-control" id="psIntEditStatus" name="status">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="psSaveEditIntegrationBtn">Update Integration</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </section>
 </div>
 <?= $this->endSection('content'); ?>
@@ -381,6 +643,8 @@
     const deleteCategoryBase = '<?= rtrim(base_url('product-showcase/delete-category'), '/'); ?>/';
     const storeImageBase = '<?= rtrim(base_url('product-showcase/store-image'), '/'); ?>/';
     const deleteImageBase = '<?= rtrim(base_url('product-showcase/delete-image'), '/'); ?>/';
+    const updateIntegrationBase = '<?= rtrim(base_url('product-showcase/update-integration'), '/'); ?>/';
+    const deleteIntegrationBase = '<?= rtrim(base_url('product-showcase/delete-integration'), '/'); ?>/';
 
     function showFeedback(type, message) {
       if (window.tata) {
@@ -628,6 +892,151 @@
           showFeedback('error', (res && res.response) || 'Request failed.');
         },
         complete: function () { $btn.prop('disabled', false); }
+      });
+    });
+
+    // ---- Integrations ----
+    function showIntValidationErrors($form, errors) {
+      if (!errors || typeof errors !== 'object') return;
+      if (errors.name) {
+        $form.find('[id$="Name-error"]').text(errors.name);
+      }
+      if (errors.logo) {
+        $form.find('[id$="Logo-error"]').text(errors.logo);
+      }
+    }
+
+    $('#psAddIntegrationBtn').on('click', function () {
+      $('#psAddIntegrationForm')[0].reset();
+      clearErrors($('#psAddIntegrationForm'));
+      $('#psAddIntegrationModal').modal('show');
+    });
+
+    $('#psSaveAddIntegrationBtn').on('click', function () {
+      var $btn = $(this).prop('disabled', true);
+      var $form = $('#psAddIntegrationForm');
+      clearErrors($form);
+      var fd = new FormData($form[0]);
+
+      $.ajax({
+        url: '<?= route_to('route.productShowcase.storeIntegration'); ?>',
+        type: 'POST',
+        data: fd,
+        processData: false,
+        contentType: false,
+        beforeSend: function (req) { req.setRequestHeader(csrfHeader, csrfHash); },
+        success: function (res) {
+          if (res.status === 'success') {
+            showFeedback('success', (res.response && res.response.msg) || 'Integration created.');
+            $('#psAddIntegrationModal').modal('hide');
+            setTimeout(function () { location.reload(); }, 600);
+            return;
+          }
+          if (res.status === 'validation-error') {
+            showIntValidationErrors($form, res.response);
+            var errMsg = res.response && typeof res.response === 'object' ? Object.values(res.response).join(' ') : 'Please fix the highlighted fields.';
+            showFeedback('error', errMsg);
+          } else {
+            showFeedback('error', res.response || 'Failed to create integration.');
+          }
+        },
+        error: function (xhr) {
+          var res = xhr.responseJSON;
+          if (res && res.status === 'validation-error') {
+            showIntValidationErrors($form, res.response);
+          }
+          showFeedback('error', (res && (typeof res.response === 'string' ? res.response : Object.values(res.response || {}).join(' '))) || 'Request failed.');
+        },
+        complete: function () { $btn.prop('disabled', false); }
+      });
+    });
+
+    $(document).on('click', '.ps-edit-integration-btn', function () {
+      var $btn = $(this);
+      $('#psIntEditId').val($btn.data('id'));
+      $('#psIntEditName').val($btn.data('name'));
+      $('#psIntEditDescription').val($btn.data('description'));
+      $('#psIntEditTier').val($btn.data('tier'));
+      $('#psIntEditIcon').val($btn.data('icon-class'));
+      $('#psIntEditSort').val($btn.data('sort-order'));
+      $('#psIntEditStatus').val($btn.data('status'));
+      $('#psIntEditLogo').val('');
+      clearErrors($('#psEditIntegrationForm'));
+
+      var logoUrl = $btn.attr('data-logo-url') || '';
+      if (logoUrl) {
+        $('#psIntEditLogoPreview').attr('src', logoUrl);
+        $('#psIntEditLogoPreviewWrap').show();
+        $('#psIntEditLogoNone').hide();
+      } else {
+        $('#psIntEditLogoPreview').attr('src', '');
+        $('#psIntEditLogoPreviewWrap').hide();
+        $('#psIntEditLogoNone').show();
+      }
+
+      $('#psEditIntegrationModal').modal('show');
+    });
+
+    $('#psSaveEditIntegrationBtn').on('click', function () {
+      var $btn = $(this).prop('disabled', true);
+      var $form = $('#psEditIntegrationForm');
+      clearErrors($form);
+      var id = $('#psIntEditId').val();
+      var fd = new FormData($form[0]);
+
+      $.ajax({
+        url: updateIntegrationBase + encodeURIComponent(id),
+        type: 'POST',
+        data: fd,
+        processData: false,
+        contentType: false,
+        beforeSend: function (req) { req.setRequestHeader(csrfHeader, csrfHash); },
+        success: function (res) {
+          if (res.status === 'success') {
+            showFeedback('success', (res.response && res.response.msg) || 'Integration updated.');
+            $('#psEditIntegrationModal').modal('hide');
+            setTimeout(function () { location.reload(); }, 600);
+            return;
+          }
+          if (res.status === 'validation-error') {
+            showIntValidationErrors($form, res.response);
+            var errMsg = res.response && typeof res.response === 'object' ? Object.values(res.response).join(' ') : 'Please fix the highlighted fields.';
+            showFeedback('error', errMsg);
+          } else {
+            showFeedback('error', res.response || 'Failed to update integration.');
+          }
+        },
+        error: function (xhr) {
+          var res = xhr.responseJSON;
+          if (res && res.status === 'validation-error') {
+            showIntValidationErrors($form, res.response);
+          }
+          showFeedback('error', (res && (typeof res.response === 'string' ? res.response : Object.values(res.response || {}).join(' '))) || 'Request failed.');
+        },
+        complete: function () { $btn.prop('disabled', false); }
+      });
+    });
+
+    $(document).on('click', '.ps-delete-integration-btn', function () {
+      if (!confirm('Delete this integration from the landing page?')) return;
+      var id = $(this).data('id');
+
+      $.ajax({
+        url: deleteIntegrationBase + encodeURIComponent(id),
+        type: 'POST',
+        beforeSend: function (req) { req.setRequestHeader(csrfHeader, csrfHash); },
+        success: function (res) {
+          if (res.status === 'success') {
+            showFeedback('success', res.response || 'Integration deleted.');
+            setTimeout(function () { location.reload(); }, 600);
+          } else {
+            showFeedback('error', res.response || 'Failed to delete integration.');
+          }
+        },
+        error: function (xhr) {
+          var res = xhr.responseJSON;
+          showFeedback('error', (res && res.response) || 'Request failed.');
+        }
       });
     });
   })();

@@ -1,24 +1,28 @@
 <?php
     $lpiLogoBase = base_url('assets/img/landing/logos');
-    // Real brand logos (SVG where available, PNG where the vendor has no public
-    // SVG) for companies we integrate with; generic FA marks for category-level
-    // items with no single brand. Mixed aspect ratios are handled by object-fit.
-    // Tiered: the 3 rails the product is actually built on get hero treatment;
-    // everything else is a supporting integration, not equal-weight clip art.
-    $lpiCoreRails = [
-        ['name' => 'MikroTik', 'logo' => $lpiLogoBase . '/mikrotik.svg', 'desc' => 'Real-time PPPoE + hotspot sync. Disconnect on expiry, reconnect on payment — nobody SSHes in.'],
-        ['name' => 'bKash',    'logo' => $lpiLogoBase . '/bkash.svg',    'desc' => 'Every Send Money auto-matched to the right subscriber in under a second.'],
-        ['name' => 'Nagad',    'logo' => $lpiLogoBase . '/nagad.svg',    'desc' => 'Same auto-reconciliation, same speed — no manual SMS matching, ever.'],
-    ];
-    $lpiIntegrations = [
-        ['name' => 'SSLCommerz',  'logo' => $lpiLogoBase . '/sslcommerz.png'],
-        ['name' => 'aamarPay',    'logo' => $lpiLogoBase . '/aamarpay.png'],
-        ['name' => 'WhatsApp',    'logo' => $lpiLogoBase . '/whatsapp.svg'],
-        ['name' => 'Telegram',    'logo' => $lpiLogoBase . '/telegram.svg'],
-        ['name' => 'Google Maps', 'logo' => $lpiLogoBase . '/googlemaps.svg'],
-        ['name' => 'SMS Gateway', 'icon' => 'fas fa-sms'],
-        ['name' => 'OLT Devices', 'icon' => 'fas fa-broadcast-tower'],
-    ];
+    // Prefer DB-managed logos from Product Showcase → Integrations. Fall back to
+    // the previous hardcoded list when the table is empty / migrate not run yet,
+    // so the landing page never renders a blank Integrations section.
+    $lpIntegrationsPayload = $lpIntegrations ?? ['core' => [], 'also' => []];
+    $lpiCoreRails = is_array($lpIntegrationsPayload['core'] ?? null) ? $lpIntegrationsPayload['core'] : [];
+    $lpiIntegrations = is_array($lpIntegrationsPayload['also'] ?? null) ? $lpIntegrationsPayload['also'] : [];
+
+    if (empty($lpiCoreRails) && empty($lpiIntegrations)) {
+        $lpiCoreRails = [
+            ['name' => 'MikroTik', 'logo' => $lpiLogoBase . '/mikrotik.svg', 'desc' => 'Real-time PPPoE + hotspot sync. Disconnect on expiry, reconnect on payment — nobody SSHes in.'],
+            ['name' => 'bKash',    'logo' => $lpiLogoBase . '/bkash.svg',    'desc' => 'Every Send Money auto-matched to the right subscriber in under a second.'],
+            ['name' => 'Nagad',    'logo' => $lpiLogoBase . '/nagad.svg',    'desc' => 'Same auto-reconciliation, same speed — no manual SMS matching, ever.'],
+        ];
+        $lpiIntegrations = [
+            ['name' => 'SSLCommerz',  'logo' => $lpiLogoBase . '/sslcommerz.png'],
+            ['name' => 'aamarPay',    'logo' => $lpiLogoBase . '/aamarpay.png'],
+            ['name' => 'WhatsApp',    'logo' => $lpiLogoBase . '/whatsapp.svg'],
+            ['name' => 'Telegram',    'logo' => $lpiLogoBase . '/telegram.svg'],
+            ['name' => 'Google Maps', 'logo' => $lpiLogoBase . '/googlemaps.svg'],
+            ['name' => 'SMS Gateway', 'icon' => 'fas fa-sms'],
+            ['name' => 'OLT Devices', 'icon' => 'fas fa-broadcast-tower'],
+        ];
+    }
 
     // Dedupe plugins defensively — the table has duplicate title rows for at
     // least one demo tenant, so the marketplace teaser never shows a dupe.
@@ -40,32 +44,44 @@
             <p class="lp-section__desc">Native MikroTik control, bKash &amp; Nagad send-money auto-reconciliation, SMS and OLT — the Bangladesh stack, not bolted-on plugins.</p>
         </div>
 
+        <?php if (!empty($lpiCoreRails)): ?>
         <div class="lp-rails lp-stagger-children lp-reveal">
             <?php foreach ($lpiCoreRails as $rail): ?>
                 <div class="lp-rail lp-reveal-child">
                     <span class="lp-rail__tag">Core rail</span>
-                    <div class="lp-rail__icon"><img src="<?= esc($rail['logo'], 'attr') ?>" alt="" loading="lazy" decoding="async"></div>
-                    <h3 class="lp-rail__name"><?= esc($rail['name']) ?></h3>
-                    <p class="lp-rail__desc"><?= esc($rail['desc']) ?></p>
+                    <div class="lp-rail__icon">
+                        <?php if (!empty($rail['logo'])): ?>
+                            <img src="<?= esc($rail['logo'], 'attr') ?>" alt="" loading="lazy" decoding="async">
+                        <?php elseif (!empty($rail['icon'])): ?>
+                            <i class="<?= esc($rail['icon'], 'attr') ?>" aria-hidden="true"></i>
+                        <?php endif; ?>
+                    </div>
+                    <h3 class="lp-rail__name"><?= esc($rail['name'] ?? '') ?></h3>
+                    <?php if (!empty($rail['desc'])): ?>
+                        <p class="lp-rail__desc"><?= esc($rail['desc']) ?></p>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
 
+        <?php if (!empty($lpiIntegrations)): ?>
         <p class="lp-integrations__label">+ also connects to</p>
         <div class="lp-integrations lp-stagger-children lp-reveal">
             <?php foreach ($lpiIntegrations as $lpiItem): ?>
                 <div class="lp-integration lp-reveal-child">
                     <div class="lp-integration__icon">
-                        <?php if (isset($lpiItem['logo'])): ?>
+                        <?php if (!empty($lpiItem['logo'])): ?>
                             <img src="<?= esc($lpiItem['logo'], 'attr') ?>" alt="" loading="lazy" decoding="async">
-                        <?php else: ?>
+                        <?php elseif (!empty($lpiItem['icon'])): ?>
                             <i class="<?= esc($lpiItem['icon'], 'attr') ?>" aria-hidden="true"></i>
                         <?php endif; ?>
                     </div>
-                    <span class="lp-integration__name"><?= esc($lpiItem['name']) ?></span>
+                    <span class="lp-integration__name"><?= esc($lpiItem['name'] ?? '') ?></span>
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
 
 
         <?php if (!empty($lpPluginsList)): ?>

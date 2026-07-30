@@ -134,6 +134,13 @@ class AuthController extends BaseController
             $data['lpProductShowcase'] = ['website' => [], 'mobile' => []];
         }
 
+        try {
+            $data['lpIntegrations'] = (new \App\Models\LandingIntegration())->landingPayload();
+        } catch (\Throwable $e) {
+            log_message('error', 'Landing integrations load failed: ' . $e->getMessage());
+            $data['lpIntegrations'] = ['core' => [], 'also' => []];
+        }
+
         return view('dashboard/home', $data);
     }
 

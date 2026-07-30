@@ -2,24 +2,28 @@
 
 namespace App\Controllers;
 
+use App\Models\LandingIntegration;
 use App\Models\ProductShowcaseCategory;
 use App\Models\ProductShowcaseImage;
 
 /**
  * Super-admin management of the landing page "Product Showcase" website/mobile
- * screenshot galleries. Every mutating action is filtered role:super_admin at
- * the route (Routes.php) AND re-checked in-method here, matching
- * Admin::savePricingSettings() / collectPlanTypeFields().
+ * screenshot galleries AND Integrations logos (Core Rail / Also connects).
+ * Every mutating action is filtered role:super_admin at the route (Routes.php)
+ * AND re-checked in-method here, matching Admin::savePricingSettings() /
+ * collectPlanTypeFields().
  */
 class ProductShowcase extends BaseController
 {
     protected ProductShowcaseCategory $categories;
     protected ProductShowcaseImage $images;
+    protected LandingIntegration $integrations;
 
     public function __construct()
     {
-        $this->categories = new ProductShowcaseCategory();
-        $this->images     = new ProductShowcaseImage();
+        $this->categories   = new ProductShowcaseCategory();
+        $this->images       = new ProductShowcaseImage();
+        $this->integrations = new LandingIntegration();
     }
 
     /**
@@ -46,6 +50,7 @@ class ProductShowcase extends BaseController
         // clear message, not a raw mysqli stack trace to a logged-in admin.
         $website = [];
         $mobile  = [];
+        $integrations = [];
         $loadError = null;
 
         try {
@@ -67,10 +72,21 @@ class ProductShowcase extends BaseController
             $loadError = 'Could not load Product Showcase data. If this is a fresh install, run "php spark migrate" then reload this page.';
         }
 
+        try {
+            $integrations = $this->integrations->listAllOrdered();
+        } catch (\Throwable $e) {
+            log_message('error', 'ProductShowcase::index() failed to load integrations: ' . $e->getMessage());
+            $integrations = [];
+            if ($loadError === null) {
+                $loadError = 'Could not load Integrations data. Run "php spark migrate" then reload this page.';
+            }
+        }
+
         return view('SecondAdmin/product_showcase', [
-            'title'          => 'Product Showcase',
+            'title'             => 'Product Showcase',
             'websiteCategories' => $website,
             'mobileCategories'  => $mobile,
+            'integrations'      => $integrations,
             'loadError'         => $loadError,
         ]);
     }
@@ -293,6 +309,204 @@ class ProductShowcase extends BaseController
         $this->images->reorder($idToSortOrder);
 
         return requestResponse('success', 'Order saved successfully.', 200);
+    }
+
+    public function storeIntegration()
+    {
+        if ($this->isNotSuperAdmin()) {
+            return requestResponse('error', 'Access denied.', 403);
+        }
+
+        $this->validate([
+            'name' => 'required|min_length[2]|max_length[150]',
+            'tier' => 'required|in_list[core,also]',
+            'sort_order' => 'permit_empty|integer',
+            'description' => 'permit_empty|max_length[1000]',
+            'icon_class' => 'permit_empty|max_length[100]',
+        ]);
+
+        if (!$this->validation->run()) {
+            return requestResponse('validation-error', $this->validation->getErrors(), 400);
+        }
+
+        $logoPath = $this->storeIntegrationLogoOptional();
+        if ($logoPath === false) {
+            return requestResponse('validation-error', [
+                'logo' => 'Invalid logo. Allowed: png, jpg, jpeg, gif, webp, svg (max 2MB).',
+            ], 400);
+        }
+
+        $iconClass = trim((string) $this->request->getPost('icon_class')) ?: null;
+        if ($logoPath === null && $iconClass === null) {
+            return requestResponse('validation-error', [
+                'logo' => 'Upload a logo image or provide a Font Awesome icon class.',
+            ], 400);
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $data = [
+            'name'        => trim((string) $this->request->getPost('name')),
+            'description' => trim((string) $this->request->getPost('description')) ?: null,
+            'logo_path'   => $logoPath,
+            'icon_class'  => $iconClass,
+            'tier'        => (string) $this->request->getPost('tier'),
+            'sort_order'  => (int) ($this->request->getPost('sort_order') ?? 0),
+            'status'      => 'active',
+            'created_at'  => $now,
+            'updated_at'  => $now,
+        ];
+
+        $id = $this->integrations->insert($data, true);
+        if (!$id) {
+            if (is_string($logoPath)) {
+                $this->integrations->unlinkLogoIfManaged($logoPath);
+            }
+            return requestResponse('error', 'Failed to create integration.', 500);
+        }
+
+        return requestResponse('success', [
+            'msg' => 'Integration created successfully.',
+            'integration' => $this->integrations->find($id),
+        ], 200);
+    }
+
+    public function updateIntegration($id)
+    {
+        if ($this->isNotSuperAdmin()) {
+            return requestResponse('error', 'Access denied.', 403);
+        }
+
+        $id = (int) $id;
+        $row = $this->integrations->find($id);
+        if (!$row) {
+            return requestResponse('error', 'Integration not found.', 404);
+        }
+
+        $this->validate([
+            'name' => 'required|min_length[2]|max_length[150]',
+            'tier' => 'required|in_list[core,also]',
+            'sort_order' => 'permit_empty|integer',
+            'description' => 'permit_empty|max_length[1000]',
+            'icon_class' => 'permit_empty|max_length[100]',
+            'status' => 'permit_empty|in_list[active,inactive]',
+        ]);
+
+        if (!$this->validation->run()) {
+            return requestResponse('validation-error', $this->validation->getErrors(), 400);
+        }
+
+        $logoPath = $this->storeIntegrationLogoOptional();
+        if ($logoPath === false) {
+            return requestResponse('validation-error', [
+                'logo' => 'Invalid logo. Allowed: png, jpg, jpeg, gif, webp, svg (max 2MB).',
+            ], 400);
+        }
+
+        $iconClass = trim((string) $this->request->getPost('icon_class'));
+        $iconClass = $iconClass !== '' ? $iconClass : null;
+
+        $data = [
+            'name'        => trim((string) $this->request->getPost('name')),
+            'description' => trim((string) $this->request->getPost('description')) ?: null,
+            'icon_class'  => $iconClass,
+            'tier'        => (string) $this->request->getPost('tier'),
+            'sort_order'  => (int) ($this->request->getPost('sort_order') ?? 0),
+            'status'      => in_array($this->request->getPost('status'), ['active', 'inactive'], true)
+                ? $this->request->getPost('status')
+                : $row['status'],
+            'updated_at'  => date('Y-m-d H:i:s'),
+        ];
+
+        if (is_string($logoPath)) {
+            $this->integrations->unlinkLogoIfManaged((string) ($row['logo_path'] ?? ''));
+            $data['logo_path'] = $logoPath;
+        }
+
+        $effectiveLogo = $data['logo_path'] ?? ($row['logo_path'] ?? null);
+        if (empty($effectiveLogo) && empty($data['icon_class'])) {
+            return requestResponse('validation-error', [
+                'logo' => 'Upload a logo image or provide a Font Awesome icon class.',
+            ], 400);
+        }
+
+        if (!$this->integrations->update($id, $data)) {
+            return requestResponse('error', 'Failed to update integration.', 500);
+        }
+
+        return requestResponse('success', [
+            'msg' => 'Integration updated successfully.',
+            'integration' => $this->integrations->find($id),
+        ], 200);
+    }
+
+    public function deleteIntegration($id)
+    {
+        if ($this->isNotSuperAdmin()) {
+            return requestResponse('error', 'Access denied.', 403);
+        }
+
+        $id = (int) $id;
+        if (!$this->integrations->find($id)) {
+            return requestResponse('error', 'Integration not found.', 404);
+        }
+
+        if (!$this->integrations->deleteAndUnlink($id)) {
+            return requestResponse('error', 'Failed to delete integration.', 500);
+        }
+
+        return requestResponse('success', 'Integration deleted successfully.', 200);
+    }
+
+    /**
+     * @return string|null|false relative path on upload, null when no file, false on invalid file
+     */
+    private function storeIntegrationLogoOptional()
+    {
+        $file = $this->request->getFile('logo');
+        if (!$file || $file->getError() === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+
+        if (!$file->isValid() || $file->hasMoved()) {
+            return false;
+        }
+
+        if ($file->getSize() > 2 * 1024 * 1024) {
+            return false;
+        }
+
+        $ext = strtolower((string) $file->getClientExtension());
+        $allowed = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+        if (!in_array($ext, $allowed, true)) {
+            return false;
+        }
+
+        // SVG is not a bitmap — skip getimagesize / is_image checks for it.
+        if ($ext !== 'svg') {
+            $mime = (string) $file->getMimeType();
+            if (strpos($mime, 'image/') !== 0) {
+                return false;
+            }
+        } else {
+            $raw = @file_get_contents($file->getTempName());
+            if ($raw === false || stripos($raw, '<svg') === false) {
+                return false;
+            }
+        }
+
+        $dir = FCPATH . 'assets/img/landing/integrations';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        $filename = $file->getRandomName();
+        if ($ext === 'svg' && !str_ends_with(strtolower($filename), '.svg')) {
+            $filename = pathinfo($filename, PATHINFO_FILENAME) . '.svg';
+        }
+
+        $file->move($dir, $filename);
+
+        return 'assets/img/landing/integrations/' . $filename;
     }
 
     /**

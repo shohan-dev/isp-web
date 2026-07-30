@@ -130,6 +130,7 @@ $lpData = [
     'lpCaseStudy' => $lpCaseStudy ?? null,
     'lpPlugins' => $lpPlugins ?? [],
     'lpProductShowcase' => $lpProductShowcase ?? ['website' => [], 'mobile' => []],
+    'lpIntegrations' => $lpIntegrations ?? ['core' => [], 'also' => []],
 ];
 ?>
 <!DOCTYPE html>

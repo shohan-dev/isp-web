@@ -326,6 +326,18 @@ $routes->group('product-showcase', function ($routes) {
         'as' => 'route.productShowcase.reorderImages',
         'filter' => 'role:super_admin',
     ]);
+    $routes->post('store-integration', 'ProductShowcase::storeIntegration', [
+        'as' => 'route.productShowcase.storeIntegration',
+        'filter' => 'role:super_admin',
+    ]);
+    $routes->post('update-integration/(:num)', 'ProductShowcase::updateIntegration/$1', [
+        'as' => 'route.productShowcase.updateIntegration',
+        'filter' => 'role:super_admin',
+    ]);
+    $routes->post('delete-integration/(:num)', 'ProductShowcase::deleteIntegration/$1', [
+        'as' => 'route.productShowcase.deleteIntegration',
+        'filter' => 'role:super_admin',
+    ]);
 });
 
 /**
