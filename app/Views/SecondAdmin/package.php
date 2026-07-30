@@ -46,17 +46,25 @@
       </div>
       <div class="box-body">
         <p class="text-muted" style="margin-bottom:12px">
-          Controls the "Save N months" badge and the yearly-price math on the public landing pricing page.
+          Controls the yearly badge and the yearly-price math on the public landing pricing page.
           Display-only — it does not change how any tenant is actually billed.
         </p>
-        <form id="pricingSettingsForm" class="form-inline">
-          <div class="form-group">
-            <label for="yearly_discount_months" style="margin-right:8px">Months free when billed yearly</label>
+        <form id="pricingSettingsForm" class="form-inline" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;">
+          <div class="form-group" style="margin:0;">
+            <label for="yearly_discount_months" style="display:block;margin-bottom:4px;">Months free when billed yearly</label>
             <input type="number" class="form-control" id="yearly_discount_months" name="yearly_discount_months"
-              min="0" max="11" value="<?= (int) ($yearlyDiscountMonths ?? 2) ?>" style="width:90px">
+              min="0" max="11" value="<?= (int) ($yearlyDiscountMonths ?? 2) ?>" style="width:110px">
           </div>
-          <button type="button" class="btn btn-primary" id="savePricingSettingsBtn" style="margin-left:12px">Save</button>
-          <span id="pricingSettingsPreview" class="text-muted" style="display:block;margin-top:10px"></span>
+          <div class="form-group" style="margin:0;">
+            <label for="yearly_discount_percent" style="display:block;margin-bottom:4px;">Discount percentage shown</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="number" class="form-control" id="yearly_discount_percent" name="yearly_discount_percent"
+                min="0" max="99" value="<?= (int) ($yearlyDiscountPercent ?? 17) ?>" style="width:110px">
+              <span class="text-muted">%</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" id="savePricingSettingsBtn">Save</button>
+          <span id="pricingSettingsPreview" class="text-muted" style="flex-basis:100%;margin:0;"></span>
         </form>
       </div>
     </div>
@@ -592,22 +600,28 @@
     var csrfToken = $('meta[name="csrf-token"]').attr('content');
     var csrfHeader = $('meta[name="csrf-header"]').attr('content');
 
-    // Yearly billing discount ("Save N months" badge) — live preview + save
+    // Yearly billing discount — months (price math) + percent (landing badge)
     function renderPricingPreview() {
-      var $input = $('#yearly_discount_months');
-      if (!$input.length) return;
-      var months = parseInt($input.val(), 10);
+      var $monthsInput = $('#yearly_discount_months');
+      var $percentInput = $('#yearly_discount_percent');
+      if (!$monthsInput.length || !$percentInput.length) return;
+      var months = parseInt($monthsInput.val(), 10);
+      var percent = parseInt($percentInput.val(), 10);
       if (isNaN(months)) months = 0;
+      if (isNaN(percent)) percent = 0;
       months = Math.max(0, Math.min(11, months));
-      var percent = Math.round(months / 12 * 100);
-      $('#pricingSettingsPreview').text('Badge will read: Save ' + months + (months === 1 ? ' month' : ' months') + ' (~' + percent + '% off)');
+      percent = Math.max(0, Math.min(99, percent));
+      $('#pricingSettingsPreview').text(
+        'Landing badge: Save ' + percent + '% · yearly billed as ' + (12 - months) + ' months (effective monthly price)'
+      );
     }
     renderPricingPreview();
-    $(document).on('input', '#yearly_discount_months', renderPricingPreview);
+    $(document).on('input', '#yearly_discount_months, #yearly_discount_percent', renderPricingPreview);
 
     $('#savePricingSettingsBtn').on('click', function() {
       var $btn = $(this);
       var months = $('#yearly_discount_months').val();
+      var percent = $('#yearly_discount_percent').val();
       $btn.prop('disabled', true);
       $.ajax({
         url: '<?= route_to('Admin.savePricingSettings'); ?>',
@@ -615,10 +629,14 @@
         headers: {
           'X-CSRF-TOKEN': csrfToken
         },
-        data: { yearly_discount_months: months },
+        data: {
+          yearly_discount_months: months,
+          yearly_discount_percent: percent
+        },
         success: function(response) {
           if (response.success) {
             $('#yearly_discount_months').val(response.yearly_discount_months);
+            $('#yearly_discount_percent').val(response.yearly_discount_percent);
             renderPricingPreview();
             tata.success('Saved', 'Yearly billing discount updated.');
           } else {

@@ -28,20 +28,35 @@ class DataTables extends DataTablesCodeIgniter4
             return null;
         }
 
-        static $virtual = [
-            'select', 'action', 'pricing', 'employee', 'area', 'package',
-            'purpose', 'checkbox', 'options', 'btn', 'buttons',
-        ];
-        if (in_array($column, $virtual, true)) {
+        // Resolve aliases FIRST so UI columns like "package" / "created_at" can map to
+        // qualified SQL (admin_packages.package_name / users.created_at) before we skip
+        // virtual/extra columns. addColumnAlias stores alias => qualifiedDbColumn.
+        if (!empty($this->columnAliases)) {
+            if (array_key_exists($column, $this->columnAliases)
+                && is_string($this->columnAliases[$column])
+                && $this->columnAliases[$column] !== ''
+                && $this->columnAliases[$column] !== $column
+            ) {
+                $column = $this->columnAliases[$column];
+            } else {
+                // Helper::getColumnAliases may store qualifiedDbColumn => alias
+                $dbCol = array_search($column, $this->columnAliases, true);
+                if ($dbCol !== false && is_string($dbCol) && strpos($dbCol, '.') !== false) {
+                    $column = $dbCol;
+                }
+            }
+        }
+
+        // Pure PHP columns with no SQL mapping are not searchable/orderable
+        if (isset($this->extraColumns[$column])) {
             return null;
         }
 
-        // Vendor stores aliases as [uiKey => 'table.column'] (see addColumnAlias).
-        // Map DataTables `data` keys (id, name, customer, …) to real SQL columns.
-        if (isset($this->columnAliases[$column])) {
-            $column = (string) $this->columnAliases[$column];
-        } elseif (isset($this->extraColumns[$column])) {
-            // addColumn() UI key with no alias — not SQL-sortable/searchable
+        static $virtual = [
+            'select', 'action', 'pricing', 'package', 'employee', 'area',
+            'purpose', 'checkbox', 'options', 'btn', 'buttons',
+        ];
+        if (in_array($column, $virtual, true)) {
             return null;
         }
 
@@ -109,16 +124,9 @@ class DataTables extends DataTablesCodeIgniter4
                     continue;
                 }
 
-                $candidates = [];
-                if (trim((string) ($request_column['name'] ?? '')) !== '') {
-                    $candidates[] = $request_column['name'];
-                }
-                if (isset($request_column['data']) && $request_column['data'] !== '') {
-                    $candidates[] = $request_column['data'];
-                }
+                $column = $request_column['data'];
 
                 if (! $this->asObject) {
-                    $column = $request_column['data'];
                     if ($this->sequenceNumber && $column == 0) {
                         continue;
                     }
@@ -129,16 +137,10 @@ class DataTables extends DataTablesCodeIgniter4
                         break;
                     }
 
-                    $candidates = [$this->returnedFieldNames[$fieldIndex]];
+                    $column = $this->returnedFieldNames[$fieldIndex];
                 }
 
-                $column = null;
-                foreach (array_unique($candidates) as $candidate) {
-                    $column = $this->resolveSqlColumn((string) $candidate);
-                    if ($column !== null) {
-                        break;
-                    }
-                }
+                $column = $this->resolveSqlColumn((string) $column);
                 if ($column === null) {
                     continue;
                 }
@@ -173,17 +175,9 @@ class DataTables extends DataTablesCodeIgniter4
                     continue;
                 }
 
-                // Prefer DataTables `name` (SQL path), then `data` (UI key).
-                $candidates = [];
-                if (trim((string) ($request_column['name'] ?? '')) !== '') {
-                    $candidates[] = $request_column['name'];
-                }
-                if (isset($request_column['data']) && $request_column['data'] !== '') {
-                    $candidates[] = $request_column['data'];
-                }
+                $column = $request_column['data'];
 
                 if (! $this->asObject) {
-                    $column = $request_column['data'];
                     if ($this->sequenceNumber && $column == 0) {
                         continue;
                     }
@@ -194,16 +188,10 @@ class DataTables extends DataTablesCodeIgniter4
                         break;
                     }
 
-                    $candidates = [$this->returnedFieldNames[$fieldIndex]];
+                    $column = $this->returnedFieldNames[$fieldIndex];
                 }
 
-                $column = null;
-                foreach (array_unique($candidates) as $candidate) {
-                    $column = $this->resolveSqlColumn((string) $candidate);
-                    if ($column !== null) {
-                        break;
-                    }
-                }
+                $column = $this->resolveSqlColumn((string) $column);
                 if ($column === null) {
                     continue;
                 }
@@ -217,16 +205,9 @@ class DataTables extends DataTablesCodeIgniter4
                 filter_var($request_column['searchable'] ?? false, FILTER_VALIDATE_BOOLEAN)
                 && ($colKeyword = $request_column['search']['value'] ?? '') != ''
             ) {
-                $candidates = [];
-                if (trim((string) ($request_column['name'] ?? '')) !== '') {
-                    $candidates[] = $request_column['name'];
-                }
-                if (isset($request_column['data']) && $request_column['data'] !== '') {
-                    $candidates[] = $request_column['data'];
-                }
+                $column = $request_column['data'];
 
                 if (! $this->asObject) {
-                    $column = $request_column['data'];
                     if ($this->sequenceNumber && $column == 0) {
                         continue;
                     }
@@ -237,16 +218,10 @@ class DataTables extends DataTablesCodeIgniter4
                         break;
                     }
 
-                    $candidates = [$this->returnedFieldNames[$fieldIndex]];
+                    $column = $this->returnedFieldNames[$fieldIndex];
                 }
 
-                $column = null;
-                foreach (array_unique($candidates) as $candidate) {
-                    $column = $this->resolveSqlColumn((string) $candidate);
-                    if ($column !== null) {
-                        break;
-                    }
-                }
+                $column = $this->resolveSqlColumn((string) $column);
                 if ($column === null) {
                     continue;
                 }

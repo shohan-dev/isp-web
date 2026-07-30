@@ -281,7 +281,8 @@ class AdminPackage extends Model
      *               payg: array{platform: float, perUser: float, minWallet: float, id?: int},
      *               addons: array<string, array{key: string, label: string, price: float}>,
      *               fixedPlans: list<array|object>,
-     *               yearlyDiscountMonths: int}
+     *               yearlyDiscountMonths: int,
+     *               yearlyDiscountPercent: int}
      */
     public function landingPricingPayload(): array
     {
@@ -335,20 +336,23 @@ class AdminPackage extends Model
             }
         }
 
-        // Marketing-display only (see Save-N-months badge on the pricing toggle) —
-        // never used for real billing math. Platform-wide setting, read via the
-        // same platformBrandingUserId() scope convention as other platform-wide
-        // settings (e.g. safeAuthBrandLogo()'s "auth-register" branch). Clamped to
-        // 0-11 in case the stored value is ever out of range (12+ would mean free
-        // forever).
+        // Marketing-display only (see Save-N-months / Save-X% badge on the pricing
+        // toggle) — never used for real billing math. Platform-wide settings.
+        // Months drive the yearly effective-monthly price math; percent is the
+        // badge / "save X%" copy and is independently editable by Super Admin.
         $yearlyDiscountMonths = max(0, min(11, (int) getSetting('yearly_discount_months', 2, platformBrandingUserId())));
+        $storedPercent = getSetting('yearly_discount_percent', null, platformBrandingUserId());
+        $yearlyDiscountPercent = ($storedPercent === null || $storedPercent === '')
+            ? (int) round($yearlyDiscountMonths / 12 * 100)
+            : max(0, min(99, (int) $storedPercent));
 
         return [
-            'tiers'                => $tiers,
-            'payg'                 => $payg,
-            'addons'               => $addons,
-            'fixedPlans'           => array_slice($fixed, 0, 6),
-            'yearlyDiscountMonths' => $yearlyDiscountMonths,
+            'tiers'                 => $tiers,
+            'payg'                  => $payg,
+            'addons'                => $addons,
+            'fixedPlans'            => array_slice($fixed, 0, 6),
+            'yearlyDiscountMonths'  => $yearlyDiscountMonths,
+            'yearlyDiscountPercent' => $yearlyDiscountPercent,
         ];
     }
 

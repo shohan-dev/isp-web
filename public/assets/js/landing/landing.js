@@ -16,9 +16,12 @@
   };
   var PAYG = PRICING.payg || { platform: 500, perUser: 1.5, minWallet: 750 };
   var ADDON_PRICES = PRICING.addons || {};
-  // Display-only "Save N months" yearly-discount config — super-admin editable,
-  // never used for real billing math. 0-11 (12+ would mean free forever).
+  // Display-only yearly-discount config — super-admin editable.
+  // Months drive effective yearly monthly price; percent drives badge / "save X%" copy.
   var YEARLY_DISCOUNT_MONTHS = typeof PRICING.yearlyDiscountMonths === 'number' ? PRICING.yearlyDiscountMonths : 2;
+  var YEARLY_DISCOUNT_PERCENT = typeof PRICING.yearlyDiscountPercent === 'number'
+    ? PRICING.yearlyDiscountPercent
+    : Math.round(YEARLY_DISCOUNT_MONTHS / 12 * 100);
 
   function easeOutExpo(t) {
     return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
@@ -574,7 +577,7 @@
 
         var noteEl = document.querySelector('[data-plan-note="' + plan + '"]');
         if (noteEl) {
-          var savePercent = Math.round(YEARLY_DISCOUNT_MONTHS / 12 * 100);
+          var savePercent = YEARLY_DISCOUNT_PERCENT;
           noteEl.textContent = isYearly
             ? fmt(base * billedMonths) + ' billed yearly · save ' + savePercent + '%'
             : '~৳' + (base / TIERS[plan].cap).toFixed(2) + ' per user';

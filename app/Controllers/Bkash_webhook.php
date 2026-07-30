@@ -564,6 +564,11 @@ class Bkash_webhook extends Controller
         }
 
         // ---- synchronous enable (flag OFF) — original inline logic, verbatim ----
+                // Webhooks have no user session to protect, but release anyway if one exists.
+                if (session_status() === PHP_SESSION_ACTIVE) {
+                    session_write_close();
+                }
+
                 $router_client = routerClient($details->router_id);
                 // $router_client = routerClient(0);
 

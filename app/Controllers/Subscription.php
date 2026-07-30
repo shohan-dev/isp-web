@@ -138,6 +138,10 @@ class Subscription extends BaseController
             'customer' => ['rules' => 'required'],
         ]);
 
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         if ($this->validation->run()) {
             $id = getPostInput('customer');
             $user = getUserById($id);
@@ -194,7 +198,11 @@ class Subscription extends BaseController
         $packageId = $this->request->getPost('package_id');
         log_message('info', 'Package ID: ' . $packageId);
 
-
+        // Release session lock before router I/O — renew can block up to ~15s
+        // on an offline MikroTik and would otherwise freeze the user's other tabs.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
 
         if ($this->validation->run()) {
             $id = getPostInput('customer');

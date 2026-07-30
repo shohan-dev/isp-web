@@ -32,9 +32,6 @@ $fmt = static function ($n) {
         <a href="<?= route_to('route.Admin.revenue'); ?>" class="ipb-btn-outline">
           <i class="fa fa-chart-line" aria-hidden="true"></i> Full revenue report
         </a>
-        <button type="button" class="ipb-btn-outline" data-ipb-open-theme>
-          <i class="fa fa-palette" aria-hidden="true"></i> Theme Studio
-        </button>
         <button type="button" class="ipb-btn-outline" data-ipb-open-customize>
           <i class="fa fa-sliders" aria-hidden="true"></i> <span data-label>Customize</span>
         </button>

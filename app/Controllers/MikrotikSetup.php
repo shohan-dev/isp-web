@@ -12,6 +12,11 @@ class MikrotikSetup extends BaseController
         set_time_limit(300);
         helper('router');
 
+        // Can run up to 5 minutes of router I/O — release session lock first.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $router_client = routerClient($router_id);
         if (!$router_client) {
             return $this->response->setJSON(['status' => 'error', 'message' => 'Cannot connect to router']);
@@ -377,6 +382,10 @@ class MikrotikSetup extends BaseController
     {
         set_time_limit(300);
         helper('router');
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
 
         $router_client = routerClient($router_id);
         if (!$router_client) {

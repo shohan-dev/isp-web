@@ -331,13 +331,40 @@
       window.IpbNetPulse.start();
     }
 
-    // Abort any previous in-flight nav fetch so only the latest click wins.
+    # Abort any previous in-flight nav fetch so only the latest click wins.
     if (navAbort) {
       try { navAbort.abort(); } catch (e) {}
     }
     navAbort = typeof AbortController !== "undefined" ? new AbortController() : null;
     var myToken = ++navToken;
     var signal = navAbort ? navAbort.signal : undefined;
+
+    // Hard cap so a hung PHP worker never looks like a permanent freeze.
+    // Prefer AbortSignal.timeout when available; else manual abort.
+    var timeoutMs = 15000;
+    var timeoutId = null;
+    if (navAbort) {
+      if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+        try {
+          signal = AbortSignal.any
+            ? AbortSignal.any([navAbort.signal, AbortSignal.timeout(timeoutMs)])
+            : navAbort.signal;
+          if (!AbortSignal.any) {
+            timeoutId = setTimeout(function () {
+              try { navAbort.abort(); } catch (e) {}
+            }, timeoutMs);
+          }
+        } catch (e) {
+          timeoutId = setTimeout(function () {
+            try { navAbort.abort(); } catch (err) {}
+          }, timeoutMs);
+        }
+      } else {
+        timeoutId = setTimeout(function () {
+          try { navAbort.abort(); } catch (e) {}
+        }, timeoutMs);
+      }
+    }
 
     // Do not teardown here — wait until applyPartial so we only abort once,
     // right before swapping content (prevents double-abort races).
@@ -347,6 +374,7 @@
       signal: signal,
     })
       .then(function (resp) {
+        if (timeoutId) clearTimeout(timeoutId);
         if (myToken !== navToken) return null;
         if (!resp.ok) throw new Error("ipb-nav: non-OK response");
         return resp.text();
@@ -363,10 +391,32 @@
         });
       })
       .catch(function (err) {
-        // Aborted because a newer navigateTo superseded us — not a failure.
-        if (err && (err.name === "AbortError" || myToken !== navToken)) return;
+        if (timeoutId) clearTimeout(timeoutId);
+        // Superseded by a newer navigateTo — ignore.
+        if (myToken !== navToken) return;
         if (window.IpbNetPulse && typeof window.IpbNetPulse.done === "function") {
           window.IpbNetPulse.done();
+        }
+        // Timed out (AbortError with this token still current) → recoverable UI.
+        if (err && err.name === "AbortError") {
+          if (window.Swal) {
+            window.Swal.fire({
+              icon: "warning",
+              title: "Page took too long",
+              text: "The server did not respond in time. Retry, or open the page fully.",
+              showCancelButton: true,
+              confirmButtonText: "Retry",
+              cancelButtonText: "Open fully",
+            }).then(function (r) {
+              if (r.isConfirmed) navigateTo(href, push);
+              else window.location.href = href;
+            });
+          } else if (window.confirm("Page took too long. Retry?")) {
+            navigateTo(href, push);
+          } else {
+            window.location.href = href;
+          }
+          return;
         }
         window.location.href = href;
       });

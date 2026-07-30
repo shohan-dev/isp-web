@@ -14,7 +14,7 @@ class LogoutController extends BaseController
     {
         $session = session();
 
-        // If impersonating, revert to the original admin session
+        // If impersonating, revert to the original admin / super_admin session
         if ($session->has('original_user')) {
             $original = $session->get('original_user');
 
@@ -26,8 +26,12 @@ class LogoutController extends BaseController
 
             $session->remove('original_user');
 
-            // Redirect back to admin dashboard instead of login
-            return redirect()->route('route.reseller');
+            $returnRoute = $original['return_route'] ?? 'route.reseller';
+            if (!is_string($returnRoute) || $returnRoute === '') {
+                $returnRoute = 'route.reseller';
+            }
+
+            return redirect()->route($returnRoute);
         }
 
         // If not impersonating, do a normal logout

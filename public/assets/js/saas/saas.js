@@ -334,7 +334,7 @@
       if (!li) return;
       var a = rowAnchor(li);
       // offsetTop is relative to the anchor's offsetParent, which for a NESTED
-      // submenu row (e.g. Product Showcase under Platform Admin) is the open
+      // submenu row (e.g. Product Showcase under Platform) is the open
       // treeview-menu — NOT the .sidebar-menu the rail lives in — so the rail
       // used to land near the top (the Dashboard row) for every nested page.
       // Measure against the menu itself so it's correct at any nesting depth.

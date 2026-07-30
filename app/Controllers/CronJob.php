@@ -408,9 +408,14 @@ class CronJob extends BaseController
         // Build command (Handle empty password)
         $passwordPart = !empty($pass) ? "--password=" . escapeshellarg($pass) : "";
 
+        // --single-transaction --quick: InnoDB consistent snapshot without
+        // LOCK TABLES ... READ across the whole DB (deploy/dr-runbook.md /
+        // deploy/backup.sh). Without these, the nightly dump freezes writers.
+        $dumpFlags = '--single-transaction --quick --routines --triggers';
+
         // --- Try saving in writable first ---
         $primaryBackupFile = $writableBackupDir . DIRECTORY_SEPARATOR . $fileName;
-        $cmd = "{$dumpPath} --user=" . escapeshellarg($user) . " {$passwordPart} --host=" . escapeshellarg($host) . " --port=" . escapeshellarg($port) . " " . escapeshellarg($database) . ' > ' . escapeshellarg($primaryBackupFile);
+        $cmd = "{$dumpPath} {$dumpFlags} --user=" . escapeshellarg($user) . " {$passwordPart} --host=" . escapeshellarg($host) . " --port=" . escapeshellarg($port) . " " . escapeshellarg($database) . ' > ' . escapeshellarg($primaryBackupFile);
 
         system($cmd, $status);
 
@@ -422,7 +427,7 @@ class CronJob extends BaseController
 
             // --- Try saving directly in public as fallback ---
             $publicBackupFile = $publicBackupDir . DIRECTORY_SEPARATOR . $fileName;
-            $cmd = "{$dumpPath} --user=" . escapeshellarg($user) . " {$passwordPart} --host=" . escapeshellarg($host) . " --port=" . escapeshellarg($port) . " " . escapeshellarg($database) . ' > ' . escapeshellarg($publicBackupFile);
+            $cmd = "{$dumpPath} {$dumpFlags} --user=" . escapeshellarg($user) . " {$passwordPart} --host=" . escapeshellarg($host) . " --port=" . escapeshellarg($port) . " " . escapeshellarg($database) . ' > ' . escapeshellarg($publicBackupFile);
 
             system($cmd, $status);
 

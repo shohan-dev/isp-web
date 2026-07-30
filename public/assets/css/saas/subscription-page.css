@@ -739,3 +739,246 @@ body.ipb .ipb-sub-modal .ipb-sub-amount-hint {
     transform: none;
   }
 }
+
+/* -- Customer subscription recharge form ----------------------- */
+.ipb-cust-recharge .ipb-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px 18px;
+}
+
+.ipb-cust-recharge .ipb-form-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ipb-cust-recharge .ipb-form-field.is-wide {
+  grid-column: 1 / -1;
+}
+
+.ipb-cust-recharge .ipb-form-label {
+  margin-bottom: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #51607a);
+}
+
+.ipb-cust-recharge .ipb-form-hint,
+.ipb-cust-recharge .ipb-form-hint-inline {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--error-600, #b91c1c);
+}
+
+.ipb-cust-recharge .ipb-form-hint-inline {
+  margin-top: 0;
+  margin-left: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 650;
+}
+
+.ipb-cust-recharge .ipb-form-field .error:empty {
+  display: none;
+}
+
+.ipb-cust-recharge-kpis {
+  margin-bottom: 18px;
+}
+
+.ipb-cust-recharge-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.ipb-cust-recharge-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sub-accent, #f75803) 6%, transparent), transparent);
+}
+
+.ipb-cust-recharge-card__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.ipb-cust-recharge-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--sub-accent-soft, #fff4ed);
+  color: var(--sub-accent-text, #d94601);
+  font-size: 18px;
+}
+
+.ipb-cust-recharge-card__title h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #0f172a);
+}
+
+.ipb-cust-recharge-card__title p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary, #51607a);
+  line-height: 1.45;
+}
+
+.ipb-cust-recharge-warn {
+  margin: 0;
+  max-width: 280px;
+}
+
+.ipb-cust-recharge-card__body {
+  padding: 8px 22px 8px;
+}
+
+.ipb-cust-recharge-section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border, #e6eaf0);
+}
+
+.ipb-cust-recharge-section:last-child {
+  border-bottom: 0;
+}
+
+.ipb-cust-recharge-section__label {
+  margin: 0 0 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-cust-recharge-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid var(--border, #e6eaf0);
+  background: var(--surface-2, #f8fafc);
+}
+
+.ipb-cust-recharge-foot-hint {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted, #94a3b8);
+}
+
+.ipb-cust-recharge-foot-hint i {
+  margin-right: 4px;
+  color: var(--sub-accent-text, #d94601);
+}
+
+.ipb-cust-recharge .ipb-choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ipb-cust-recharge .ipb-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border, #e6eaf0);
+  border-radius: 999px;
+  background: var(--surface, #fff);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary, #51607a);
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+}
+
+.ipb-cust-recharge .ipb-choice:hover {
+  border-color: var(--border-strong, #cbd5e1);
+  background: var(--surface-hover, #f1f5f9);
+}
+
+.ipb-cust-recharge .ipb-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ipb-cust-recharge .ipb-choice:has(input:checked),
+.ipb-cust-recharge .ipb-choice.is-active {
+  border-color: color-mix(in srgb, var(--sub-accent, #f75803) 45%, transparent);
+  background: var(--sub-accent-soft, #fff4ed);
+  color: var(--sub-accent-text, #d94601);
+}
+
+.ipb-cust-recharge .ipb-pay-method .option {
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.ipb-cust-recharge .ipb-pay-method .option i {
+  width: 18px;
+  text-align: center;
+  color: var(--sub-accent-text, #d94601);
+}
+
+.ipb-cust-recharge .ipb-pay-method .selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.ipb-cust-recharge .ipb-sub-btn--primary {
+  min-width: 180px;
+}
+
+@media (max-width: 767px) {
+  .ipb-cust-recharge-card__head,
+  .ipb-cust-recharge-card__foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ipb-cust-recharge .ipb-sub-btn--primary {
+    width: 100%;
+  }
+
+  .ipb-cust-recharge-warn {
+    max-width: none;
+  }
+}
+
+body.ipb[data-theme="dark"] .ipb-cust-recharge-card,
+body.ipb.dark-mode .ipb-cust-recharge-card {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+body.ipb[data-theme="dark"] .ipb-cust-recharge-card__foot,
+body.ipb.dark-mode .ipb-cust-recharge-card__foot {
+  background: color-mix(in srgb, var(--surface) 88%, #000);
+}

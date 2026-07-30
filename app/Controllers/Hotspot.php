@@ -143,6 +143,10 @@ class Hotspot extends BaseController
 
     public function get_Hotspot_Dashboard()
     {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $router_id = $this->request->getGet('router_id');
         log_message('debug', 'get_Hotspot_Dashboard called for router_id: ' . $router_id);
 
@@ -331,6 +335,10 @@ class Hotspot extends BaseController
 
     public function get_users()
     {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $router_id = $this->request->getGet('router_id');
         log_message('debug', 'get_user_profiles called for get_users router_id: ' . $router_id);
 

@@ -26,6 +26,7 @@ use App\Filters\SubscriptionGuard;
 
 //cron shared-secret guard
 use App\Filters\CronAuth;
+use App\Filters\CronLockFilter;
 
 //login brute-force throttle (flag-gated)
 use App\Filters\ThrottleFilter;
@@ -57,6 +58,7 @@ class Filters extends BaseConfig
         'permissioncheck' => PermissionCheck::class,
         'subscriptionguard' => SubscriptionGuard::class,
         'cronauth' => CronAuth::class,
+        'cronlock' => CronLockFilter::class,
         'throttle' => ThrottleFilter::class,
         'zapijwt' => JwtAuthFilter::class,
         'zapirole' => RoleAuthFilter::class,

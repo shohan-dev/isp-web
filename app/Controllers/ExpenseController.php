@@ -28,7 +28,6 @@ class ExpenseController extends BaseController
         $user_id = session()->get('user_id');
 
         $expenseTypeModel = model('App\Models\ExpenseTypeModel');
-        $expenseModel     = model('App\Models\ExpenseModel');
 
         $data['employees'] = $this->user_model
             ->where('admin_id', $user_id)
@@ -42,12 +41,104 @@ class ExpenseController extends BaseController
             ->orderBy('id', 'DESC')
             ->findAll();
 
-        $data['expenses'] = $expenseModel
-            ->where('user_id', $user_id)
-            ->orderBy('id', 'DESC')
-            ->findAll();
+        // Ledger rows load via fetch() (server-side DataTables) — never findAll().
+        $data['expenses'] = [];
 
         return view('accounts/expenses', $data);
+    }
+
+    /**
+     * Server-side DataTables feed for the expense ledger (freeze cause #6).
+     */
+    public function fetch()
+    {
+        $user_id = session()->get('user_id');
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $expenseModel = model('App\Models\ExpenseModel');
+        $draw = (int) ($this->request->getPost('draw') ?? $this->request->getGet('draw') ?? 1);
+        $start = max(0, (int) ($this->request->getPost('start') ?? $this->request->getGet('start') ?? 0));
+        $length = (int) ($this->request->getPost('length') ?? $this->request->getGet('length') ?? 50);
+        if ($length <= 0 || $length > 500) {
+            $length = 50;
+        }
+        $searchArr = $this->request->getPost('search') ?? $this->request->getGet('search');
+        $search = is_array($searchArr) ? trim((string) ($searchArr['value'] ?? '')) : '';
+
+        $builder = $expenseModel->builder()->where('user_id', $user_id);
+        $recordsTotal = (clone $builder)->countAllResults(false);
+
+        if ($search !== '') {
+            $builder->groupStart()
+                ->like('name', $search)
+                ->orLike('expense_head', $search)
+                ->orLike('employee', $search)
+                ->orLike('invoice_no', $search)
+                ->orLike('description', $search)
+                ->orLike('status', $search)
+                ->groupEnd();
+        }
+        $recordsFiltered = (clone $builder)->countAllResults(false);
+        $rows = $builder->orderBy('id', 'DESC')->limit($length, $start)->get()->getResultArray();
+
+        $data = [];
+        foreach ($rows as $row) {
+            $status = (string) ($row['status'] ?? '');
+            $statusHtml = '<span class="ipb-pay-badge is-info">' . esc($status) . '</span>';
+            if ($status === 'approved') {
+                $statusHtml = '<span class="ipb-pay-badge is-success">Approved</span>';
+            } elseif ($status === 'pending') {
+                $statusHtml = '<span class="ipb-pay-badge is-warning">Pending</span>';
+            } elseif ($status === 'rejected') {
+                $statusHtml = '<span class="ipb-pay-badge is-danger">Rejected</span>';
+            }
+
+            $doc = '';
+            if (!empty($row['document'])) {
+                $doc = '<button type="button" class="ipb-row-btn tone-info" title="View file" onclick="viewFile(\'' . esc($row['document'], 'js') . '\')"><i class="fa fa-file" aria-hidden="true"></i></button>';
+            } else {
+                $doc = '<span class="text-muted">—</span>';
+            }
+
+            $actions = '<div class="ipb-row-actions">';
+            if ($status !== 'approved') {
+                $actions .= '<button type="button" class="ipb-row-btn tone-success" title="Approve" onclick="approveExpense(' . (int) $row['id'] . ')"><i class="fa fa-check" aria-hidden="true"></i></button>';
+            }
+            if ($status !== 'rejected') {
+                $actions .= '<button type="button" class="ipb-row-btn tone-danger" title="Reject" onclick="rejectExpense(' . (int) $row['id'] . ')"><i class="fa fa-times" aria-hidden="true"></i></button>';
+            }
+            $actions .= '<button type="button" class="ipb-row-btn tone-brand" title="Edit" onclick="editExpense(' . (int) $row['id'] . ')"><i class="fa fa-edit" aria-hidden="true"></i></button>';
+            $actions .= '<button type="button" class="ipb-row-btn tone-danger" title="Delete" onclick="deleteExpense(' . (int) $row['id'] . ')"><i class="fa fa-trash" aria-hidden="true"></i></button>';
+            $actions .= '</div>';
+
+            $date = !empty($row['date']) ? date('d/m/Y', strtotime($row['date'])) : '—';
+
+            $data[] = [
+                '<input type="checkbox" class="rowCheckbox" value="' . (int) $row['id'] . '">',
+                (int) $row['id'],
+                $statusHtml,
+                esc($row['name'] ?? ''),
+                esc($row['expense_head'] ?? ''),
+                esc($row['employee'] ?? '--'),
+                esc($row['invoice_no'] ?? '--'),
+                $date,
+                number_format((float) ($row['amount'] ?? 0), 2),
+                esc($row['bank_account'] ?? '--'),
+                $doc,
+                esc($row['description'] ?? ''),
+                esc($row['created_by'] ?? ''),
+                $actions,
+            ];
+        }
+
+        return $this->response->setJSON([
+            'draw'            => $draw,
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data'            => $data,
+        ]);
     }
 
 

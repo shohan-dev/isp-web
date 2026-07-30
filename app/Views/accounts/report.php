@@ -1,19 +1,43 @@
 <?= $this->extend('layout/main-layout'); ?>
 
 <?= $this->section('css'); ?>
-<link rel="stylesheet" href="<?= base_url('assets/css/saas/accounts-pages.css?v=4'); ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/saas/accounts-pages.css?v=2'); ?>">
 <?= $this->endSection('css'); ?>
 
 <?= $this->section('content'); ?>
 
-<?php
-$net = (float) ($period_current_amount ?? 0);
-$netTone = $net < 0 ? 'is-danger' : ($net > 0 ? 'is-success' : 'is-info');
-$periodLabel = esc($from_date) . ' — ' . esc($to_date);
-?>
+<style>
+    .ipb-acc-report .loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: color-mix(in srgb, var(--surface) 82%, transparent);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: var(--z-overlay, 1095);
+        backdrop-filter: blur(4px);
+    }
+
+    .ipb-acc-report .loading-spinner {
+        width: 44px;
+        height: 44px;
+        border: 3px solid var(--border);
+        border-top-color: var(--primary-500, #f75803);
+        border-radius: 50%;
+        animation: ipbAccSpin 0.8s linear infinite;
+    }
+
+    @keyframes ipbAccSpin {
+        to { transform: rotate(360deg); }
+    }
+</style>
 
 <div class="content-wrapper">
-  <section class="content ipb-saas-list ipb-acc-report" id="ipbAccReportPage">
+    <section class="content ipb-saas-list ipb-acc-report">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
 
     <?= $this->include('components/page-header', [
       'title' => $page_title ?? 'Accounts Report',
@@ -24,247 +48,216 @@ $periodLabel = esc($from_date) . ' — ' . esc($to_date);
       ],
     ]); ?>
 
-    <form id="dateRangeForm"
-          method="GET"
-          action="<?= esc(current_url(), 'attr') ?>"
-          class="ipb-acc-filters"
-          novalidate>
-      <div class="ipb-acc-field">
-        <label for="fromDate">From date</label>
-        <input type="date"
-               name="from_date"
-               class="form-control"
-               value="<?= esc($from_date) ?>"
-               id="fromDate"
-               max="<?= date('Y-m-d') ?>"
-               required>
-      </div>
-      <div class="ipb-acc-field">
-        <label for="toDate">To date</label>
-        <input type="date"
-               name="to_date"
-               class="form-control"
-               value="<?= esc($to_date) ?>"
-               id="toDate"
-               max="<?= date('Y-m-d') ?>"
-               required>
-      </div>
-      <div class="ipb-acc-filter-actions">
-        <button type="submit" class="btn btn-primary" id="searchBtn">
-          <i class="fa fa-search" aria-hidden="true"></i>
-          <span class="ipb-acc-btn-label">Search</span>
-        </button>
-        <button type="button" class="btn btn-default" id="resetBtn">
-          <i class="fa fa-refresh" aria-hidden="true"></i> Reset
-        </button>
-      </div>
+    <form id="dateRangeForm" method="GET" action="<?= current_url() ?>" class="ipb-acc-filters">
+        <div class="ipb-acc-field">
+            <label for="fromDate">From date</label>
+            <input type="date"
+                name="from_date"
+                class="form-control"
+                value="<?= esc($from_date) ?>"
+                id="fromDate"
+                max="<?= date('Y-m-d') ?>">
+        </div>
+        <div class="ipb-acc-field">
+            <label for="toDate">To date</label>
+            <input type="date"
+                name="to_date"
+                class="form-control"
+                value="<?= esc($to_date) ?>"
+                id="toDate"
+                max="<?= date('Y-m-d') ?>">
+        </div>
+        <div class="ipb-acc-filter-actions">
+            <button type="submit" class="btn btn-primary" id="searchBtn">
+                <i class="fa fa-search" aria-hidden="true"></i> Search
+            </button>
+            <button type="button" class="btn btn-default" id="resetBtn">
+                <i class="fa fa-refresh" aria-hidden="true"></i> Reset
+            </button>
+        </div>
     </form>
 
-    <div id="ipbAccReportResults" class="ipb-acc-report-results" aria-live="polite">
-      <?= $this->include('accounts/partials/report-results', [
-        'from_date' => $from_date,
-        'to_date' => $to_date,
-        'periodLabel' => $periodLabel,
-        'customers_payment_received' => $customers_payment_received,
-        'Band_sell' => $Band_sell,
-        'totalOtc' => $totalOtc,
-        'other_income' => $other_income,
-        'total_income' => $total_income,
-        'EmployeePayment' => $EmployeePayment,
-        'Band_buy' => $Band_buy,
-        'other_expenses' => $other_expenses,
-        'total_expense' => $total_expense,
-        'period_total_income' => $period_total_income,
-        'period_total_expenses' => $period_total_expenses,
-        'period_current_amount' => $period_current_amount,
-        'netTone' => $netTone,
-      ]); ?>
+    <div class="ipb-acc-report-grid">
+        <div class="ipb-acc-panel">
+            <div class="ipb-acc-panel-head">
+                <i class="fa fa-arrow-trend-up" aria-hidden="true"></i> Income details
+            </div>
+            <div class="ipb-acc-panel-body">
+                <div class="ipb-acc-line">
+                    <a href="<?= route_to('route.customer.payment'); ?>">Customers payment received</a>
+                    <strong><?= number_format($customers_payment_received, 2) ?> ৳</strong>
+                </div>
+                <div class="ipb-acc-line">
+                    <a href="<?= route_to('bandwidth.sell.purchase_list'); ?>">Bandwidth sell</a>
+                    <strong><?= number_format($Band_sell, 2) ?> ৳</strong>
+                </div>
+                <div class="ipb-acc-line">
+                    <a href="<?= route_to('otc.report'); ?>">OTC</a>
+                    <strong><?= number_format($totalOtc, 2) ?> ৳</strong>
+                </div>
+                <div class="ipb-acc-line">
+                    <a href="<?= route_to('route.income.list'); ?>">Other income</a>
+                    <strong><?= number_format($other_income, 2) ?> ৳</strong>
+                </div>
+                <div class="ipb-acc-line is-total is-success">
+                    <span>Total income</span>
+                    <strong><?= number_format($total_income, 2) ?> ৳</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="ipb-acc-panel">
+            <div class="ipb-acc-panel-head">
+                <i class="fa fa-arrow-trend-down" aria-hidden="true"></i> Expense details
+            </div>
+            <div class="ipb-acc-panel-body">
+                <div class="ipb-acc-line">
+                    <a href="<?= route_to('route.employee.payment'); ?>">Employee payment</a>
+                    <strong><?= number_format($EmployeePayment, 2) ?> ৳</strong>
+                </div>
+                <div class="ipb-acc-line">
+                    <a href="<?= route_to('bandwidth.purchess'); ?>">Bandwidth buy</a>
+                    <strong><?= number_format($Band_buy, 2) ?> ৳</strong>
+                </div>
+                <div class="ipb-acc-line">
+                    <a href="<?= route_to('route.expense.list'); ?>">Other expenses</a>
+                    <strong><?= number_format($other_expenses, 2) ?> ৳</strong>
+                </div>
+                <div class="ipb-acc-line is-total is-danger">
+                    <span>Total expense</span>
+                    <strong><?= number_format($total_expense, 2) ?> ৳</strong>
+                </div>
+            </div>
+        </div>
     </div>
 
-  </section>
+    <div class="ipb-acc-panel">
+        <div class="ipb-acc-panel-head">
+            <i class="fa fa-clock" aria-hidden="true"></i>
+            Period summary (<?= esc($from_date) ?> – <?= esc($to_date) ?>)
+        </div>
+        <div class="ipb-acc-panel-body">
+            <div class="ipb-acc-kpi-grid">
+                <div class="ipb-acc-kpi is-success">
+                    <span>Total income</span>
+                    <strong><?= number_format($period_total_income, 2) ?> ৳</strong>
+                </div>
+                <div class="ipb-acc-kpi is-danger">
+                    <span>Total expenses</span>
+                    <strong><?= number_format($period_total_expenses, 2) ?> ৳</strong>
+                </div>
+                <div class="ipb-acc-kpi is-info">
+                    <span>Current amount</span>
+                    <strong><?= number_format($period_current_amount, 2) ?> ৳</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    </section>
 </div>
 
-<?= $this->endSection('content'); ?>
-
-<?= $this->section('script'); ?>
 <script>
-/**
- * Accounts Report — SPA-safe search.
- * Never paint a full-viewport blank overlay; refresh only the results panel.
- */
-(function ($) {
-  function todayIso() {
-    var d = new Date();
-    var m = String(d.getMonth() + 1).padStart(2, '0');
-    var day = String(d.getDate()).padStart(2, '0');
-    return d.getFullYear() + '-' + m + '-' + day;
-  }
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('dateRangeForm');
+        const fromDate = document.getElementById('fromDate');
+        const toDate = document.getElementById('toDate');
+        const resetBtn = document.getElementById('resetBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const searchBtn = document.getElementById('searchBtn');
 
-  function firstOfMonthIso() {
-    var d = new Date();
-    var m = String(d.getMonth() + 1).padStart(2, '0');
-    return d.getFullYear() + '-' + m + '-01';
-  }
-
-  function validateDates(fromEl, toEl) {
-    if (!fromEl.value || !toEl.value) {
-      if (window.tata) tata.error('Missing dates', 'Choose both from and to dates.');
-      return false;
-    }
-    var from = new Date(fromEl.value);
-    var to = new Date(toEl.value);
-    var today = new Date(todayIso());
-
-    if (from > to) {
-      if (window.tata) tata.error('Invalid range', 'From date cannot be after to date.');
-      return false;
-    }
-    if (to > today) {
-      toEl.value = todayIso();
-    }
-    if (from > today) {
-      fromEl.value = firstOfMonthIso();
-    }
-    return true;
-  }
-
-  function buildUrl(form) {
-    var params = new URLSearchParams();
-    params.set('from_date', form.from_date.value);
-    params.set('to_date', form.to_date.value);
-    var base = form.getAttribute('action') || window.location.pathname;
-    return base.split('?')[0] + '?' + params.toString();
-  }
-
-  function setBusy(busy) {
-    var $page = $('#ipbAccReportPage');
-    var $results = $('#ipbAccReportResults');
-    var $btn = $('#searchBtn');
-    var $reset = $('#resetBtn');
-
-    $page.toggleClass('is-searching', !!busy);
-    $results.attr('aria-busy', busy ? 'true' : 'false');
-    $btn.prop('disabled', !!busy);
-    $reset.prop('disabled', !!busy);
-
-    if (busy) {
-      $btn.data('ipbLabel', $btn.html());
-      $btn.html('<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> <span class="ipb-acc-btn-label">Searching…</span>');
-    } else if ($btn.data('ipbLabel')) {
-      $btn.html($btn.data('ipbLabel'));
-      $btn.removeData('ipbLabel');
-    }
-  }
-
-  function extractResultsHtml(html) {
-    var doc = new DOMParser().parseFromString(html, 'text/html');
-
-    // SPA partial response (<template id="ipb-nav-content">…)
-    var contentTpl = doc.getElementById('ipb-nav-content');
-    if (contentTpl) {
-      var fromTpl = contentTpl.content
-        ? contentTpl.content.querySelector('#ipbAccReportResults')
-        : null;
-      if (!fromTpl) {
-        var wrap = doc.createElement('div');
-        wrap.innerHTML = contentTpl.innerHTML;
-        fromTpl = wrap.querySelector('#ipbAccReportResults');
-      }
-      if (fromTpl) return fromTpl.innerHTML;
-    }
-
-    // Full document fallback
-    var fromFull = doc.querySelector('#ipbAccReportResults');
-    if (fromFull) return fromFull.innerHTML;
-
-    return null;
-  }
-
-  var searchAbort = null;
-
-  function runSearch(form, push) {
-    var fromEl = form.querySelector('#fromDate');
-    var toEl = form.querySelector('#toDate');
-    if (!validateDates(fromEl, toEl)) return;
-
-    var url = buildUrl(form);
-    setBusy(true);
-
-    if (searchAbort) {
-      try { searchAbort.abort(); } catch (e) {}
-    }
-    searchAbort = typeof AbortController !== 'undefined' ? new AbortController() : null;
-
-    fetch(url, {
-      headers: {
-        'X-IPB-Nav': '1',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Accept': 'text/html'
-      },
-      credentials: 'same-origin',
-      signal: searchAbort ? searchAbort.signal : undefined
-    })
-      .then(function (resp) {
-        if (!resp.ok) throw new Error('Report request failed');
-        return resp.text();
-      })
-      .then(function (html) {
-        var next = extractResultsHtml(html);
-        if (!next) throw new Error('Could not parse report response');
-
-        var $results = $('#ipbAccReportResults');
-        $results.addClass('is-refreshing');
-        $results.html(next);
-        // Force reflow then clear refresh cue
-        void $results[0].offsetWidth;
-        $results.removeClass('is-refreshing');
-
-        if (push !== false && window.history && history.pushState) {
-          history.pushState({ ipbAccReport: true }, '', url);
+        // Set default dates if not set
+        if (!fromDate.value) {
+            const firstDay = new Date();
+            firstDay.setDate(1);
+            fromDate.value = firstDay.toISOString().split('T')[0];
         }
-      })
-      .catch(function (err) {
-        if (err && err.name === 'AbortError') return;
-        if (window.tata) {
-          tata.error('Search failed', 'Could not refresh the report. Try again.');
+
+        if (!toDate.value) {
+            toDate.value = new Date().toISOString().split('T')[0];
         }
-      })
-      .finally(function () {
-        setBusy(false);
-      });
-  }
 
-  window.ipbAccReportInit = function () {
-    var form = document.getElementById('dateRangeForm');
-    if (!form || form.dataset.ipbBound === '1') return;
-    form.dataset.ipbBound = '1';
+        // Validate dates
+        function validateDates() {
+            const from = new Date(fromDate.value);
+            const to = new Date(toDate.value);
 
-    var fromDate = document.getElementById('fromDate');
-    var toDate = document.getElementById('toDate');
-    var resetBtn = document.getElementById('resetBtn');
+            if (from > to) {
+                alert('From date cannot be greater than to date');
+                return false;
+            }
 
-    if (fromDate && !fromDate.value) fromDate.value = firstOfMonthIso();
-    if (toDate && !toDate.value) toDate.value = todayIso();
+            if (to > new Date()) {
+                alert('To date cannot be in the future');
+                toDate.value = new Date().toISOString().split('T')[0];
+                return false;
+            }
 
-    $(form).off('submit.ipbAcc').on('submit.ipbAcc', function (e) {
-      e.preventDefault();
-      runSearch(form, true);
+            return true;
+        }
+
+        // Handle form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            if (validateDates()) {
+                // Show loading overlay
+                loadingOverlay.style.display = 'flex';
+                searchBtn.disabled = true;
+
+                // Submit the form
+                form.submit();
+            }
+        });
+
+        // Handle reset button
+        resetBtn.addEventListener('click', function() {
+            // Set to first day of current month
+            const firstDay = new Date();
+            firstDay.setDate(1);
+            fromDate.value = firstDay.toISOString().split('T')[0];
+
+            // Set to today
+            toDate.value = new Date().toISOString().split('T')[0];
+
+            // Auto submit after reset
+            if (validateDates()) {
+                loadingOverlay.style.display = 'flex';
+                searchBtn.disabled = true;
+                form.submit();
+            }
+        });
+
+        // Prevent future dates in date inputs
+        fromDate.addEventListener('change', function() {
+            if (new Date(this.value) > new Date()) {
+                alert('From date cannot be in the future');
+                this.value = new Date().toISOString().split('T')[0];
+            }
+            validateDates();
+        });
+
+        toDate.addEventListener('change', function() {
+            if (new Date(this.value) > new Date()) {
+                alert('To date cannot be in the future');
+                this.value = new Date().toISOString().split('T')[0];
+            }
+            validateDates();
+        });
+
+        // Hide loading overlay when page is fully loaded
+        window.addEventListener('load', function() {
+            loadingOverlay.style.display = 'none';
+            searchBtn.disabled = false;
+        });
+
+        // Handle browser back/forward buttons
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                loadingOverlay.style.display = 'none';
+                searchBtn.disabled = false;
+            }
+        });
     });
-
-    $(resetBtn).off('click.ipbAcc').on('click.ipbAcc', function () {
-      fromDate.value = firstOfMonthIso();
-      toDate.value = todayIso();
-      runSearch(form, true);
-    });
-
-    $(fromDate).add(toDate).off('change.ipbAcc').on('change.ipbAcc', function () {
-      validateDates(fromDate, toDate);
-    });
-  };
-
-  // SPA injects after DOM ready — call immediately; $(fn) covers full reload.
-  window.ipbAccReportInit();
-  $(window.ipbAccReportInit);
-})(jQuery);
 </script>
-<?= $this->endSection('script'); ?>
+
+<?= $this->endSection(); ?>

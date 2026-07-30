@@ -1112,19 +1112,27 @@ body.ipb[data-theme="dark"] .ipb-loading-overlay { background: rgba(10, 16, 30, 
 }
 
 /* ── 05 §3.8 — toggle switch (opt-in, no markup churn until a screen adopts it) */
-.ipb .ipb-switch { position: relative; width: 40px; height: 22px; display: inline-block; }
-.ipb .ipb-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.ipb .ipb-switch { position: relative; width: 40px; height: 22px; display: inline-block; vertical-align: middle; }
+.ipb .ipb-switch input {
+  position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0;
+  cursor: pointer; z-index: 2;
+}
 .ipb .ipb-switch-track {
   position: absolute; inset: 0; border-radius: 999px; background: var(--border-strong);
+  pointer-events: none;
   transition: background var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
 }
 .ipb .ipb-switch-thumb {
   position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; box-shadow: var(--shadow-1);
+  background: #fff; box-shadow: var(--shadow-1); pointer-events: none;
   transition: transform var(--dur, .18s) var(--ease-out, cubic-bezier(.3,.8,.4,1));
 }
 .ipb .ipb-switch input:checked ~ .ipb-switch-track { background: var(--primary-500); }
 .ipb .ipb-switch input:checked ~ .ipb-switch-thumb { transform: translateX(18px); }
+.ipb .ipb-switch input:focus-visible ~ .ipb-switch-track {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
 
 /* ── 05 §3.9 — checkbox check-draw (SVG stroke, opt-in) */
 .ipb-check svg { width: 22px; height: 22px; fill: none; stroke: var(--primary-500); stroke-width: 3;

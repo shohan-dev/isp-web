@@ -146,10 +146,16 @@
               <span class="hidden-xs">Admin</span>
             </a>
             <ul class="dropdown-menu">
+              <li class="dropdown-header">Tenants</li>
               <li><a href="<?= route_to('route.tenants'); ?>"><i class="fa fa-globe"></i> Tenant Portals</a></li>
               <li><a href="<?= route_to('route.tenants.create'); ?>"><i class="fa fa-plus-circle"></i> Create Portal</a></li>
+              <li class="divider"></li>
+              <li class="dropdown-header">Admins</li>
               <li><a href="<?= route_to('route.Admin'); ?>"><i class="fa fa-user-lock"></i> Second Admins</a></li>
               <li><a href="<?= route_to('Admin.packages'); ?>"><i class="fa fa-box"></i> Admin Packages</a></li>
+              <li class="divider"></li>
+              <li class="dropdown-header">Platform</li>
+              <li><a href="<?= route_to('route.productShowcase.index'); ?>"><i class="fa fa-images"></i> Product Showcase</a></li>
               <li><a href="<?= route_to('route.Admin.revenue'); ?>"><i class="fa fa-chart-line"></i> Platform Revenue</a></li>
               <li><a href="<?= route_to('route.contact.fetch'); ?>"><i class="fa fa-address-book"></i> Contact Info's</a></li>
             </ul>

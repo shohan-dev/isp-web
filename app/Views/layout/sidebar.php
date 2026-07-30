@@ -179,6 +179,22 @@
             </a>
           </li>
 
+          <li class="treeview <?= ($uri->getSegment(1) === 'whatsapp') ? 'active' : ''; ?>">
+            <a href="#">
+              <i class="fa-brands fa-whatsapp"></i>
+              <span>WhatsApp Business</span>
+              <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+            </a>
+            <ul class="treeview-menu">
+              <li><a href="<?= route_to('route.whatsapp.inbox'); ?>"><i class="fa fa-circle-o"></i> Inbox</a></li>
+              <li><a href="<?= route_to('route.whatsapp.templates'); ?>"><i class="fa fa-circle-o"></i> Templates</a></li>
+              <li><a href="<?= route_to('route.whatsapp.message_log'); ?>"><i class="fa fa-circle-o"></i> Message Log</a></li>
+              <li><a href="<?= route_to('route.whatsapp.opt_ins'); ?>"><i class="fa fa-circle-o"></i> Opt-ins</a></li>
+              <li><a href="<?= route_to('route.whatsapp.campaigns'); ?>"><i class="fa fa-circle-o"></i> Campaigns</a></li>
+              <li><a href="<?= route_to('route.whatsapp.settings'); ?>"><i class="fa fa-circle-o"></i> Settings</a></li>
+            </ul>
+          </li>
+
         <?php else: ?>
 
         <?php if (!in_array($currentRole, ['super_admin', 'user'], true) && ($isReseller || userHasPermission('area'))): ?>
@@ -652,6 +668,48 @@
               <i class="fa fa-gears"></i>
               <span>Software Settings</span>
             </a>
+          </li>
+        <?php endif; ?>
+
+        <?php
+          $waMenuVisible = userHasPermission('whatsapp_business', 'read')
+            && (
+              (function_exists('isPlatformSuperAdmin') && isPlatformSuperAdmin())
+              || (
+                class_exists(\App\Libraries\WhatsAppBusiness::class)
+                && \App\Libraries\WhatsAppBusiness::currentTenantHasWhatsAppAccess()
+              )
+            );
+        ?>
+        <?php if ($waMenuVisible): ?>
+          <li class="treeview <?= ($uri->getSegment(1) === 'whatsapp') ? 'active' : ''; ?>">
+            <a href="#">
+              <i class="fa-brands fa-whatsapp"></i>
+              <span>WhatsApp Business</span>
+              <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+            </a>
+            <ul class="treeview-menu">
+              <li class="<?= ($uri->getSegment(2) === 'inbox') ? 'active' : ''; ?>">
+                <a href="<?= route_to('route.whatsapp.inbox'); ?>"><i class="fa fa-circle-o"></i> Inbox</a>
+              </li>
+              <li class="<?= ($uri->getSegment(2) === 'templates') ? 'active' : ''; ?>">
+                <a href="<?= route_to('route.whatsapp.templates'); ?>"><i class="fa fa-circle-o"></i> Templates</a>
+              </li>
+              <li class="<?= ($uri->getSegment(2) === 'message-log') ? 'active' : ''; ?>">
+                <a href="<?= route_to('route.whatsapp.message_log'); ?>"><i class="fa fa-circle-o"></i> Message Log</a>
+              </li>
+              <?php if (userHasPermission('whatsapp_business', 'marketing')): ?>
+              <li class="<?= ($uri->getSegment(2) === 'opt-ins') ? 'active' : ''; ?>">
+                <a href="<?= route_to('route.whatsapp.opt_ins'); ?>"><i class="fa fa-circle-o"></i> Opt-ins</a>
+              </li>
+              <li class="<?= ($uri->getSegment(2) === 'campaigns') ? 'active' : ''; ?>">
+                <a href="<?= route_to('route.whatsapp.campaigns'); ?>"><i class="fa fa-circle-o"></i> Campaigns</a>
+              </li>
+              <?php endif; ?>
+              <li class="<?= ($uri->getSegment(2) === 'settings') ? 'active' : ''; ?>">
+                <a href="<?= route_to('route.whatsapp.settings'); ?>"><i class="fa fa-circle-o"></i> Settings</a>
+              </li>
+            </ul>
           </li>
         <?php endif; ?>
 

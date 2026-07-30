@@ -31,6 +31,17 @@
     'profile_update' => ['label' => 'Profile Update', 'actions' => ['read' => 'View', 'update' => 'Update']],
     'password_change' => ['label' => 'Change Password', 'actions' => ['update' => 'Update']],
     'ai_chat' => ['label' => 'AI Chat Assistant', 'actions' => ['chat' => 'Access Chat']],
+    'whatsapp_business' => [
+      'label' => 'WhatsApp Business',
+      'actions' => [
+        'read'           => 'View settings and inbox',
+        'update'         => 'Configure credentials and toggles',
+        'ai'             => 'Service AI auto-reply',
+        'utility'        => 'Send Utility templates',
+        'authentication' => 'Send Authentication OTP templates',
+        'marketing'      => 'Send Marketing templates and campaigns',
+      ],
+    ],
   ];
 
   foreach ($sections as $key => $section): ?>

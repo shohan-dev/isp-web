@@ -72,9 +72,6 @@ $ticketSolvedPct = (int) round((($ticket_stats['solved'] ?? 0) / $ticketTotal) *
         <button type="button" class="ipb-btn-outline" data-ipb-metrics-group-toggle aria-pressed="false" title="Group all metric sections together">
           <i class="fa-solid fa-layer-group" aria-hidden="true"></i> <span class="ipb-metrics-group-btn-label">Group Metrics</span>
         </button>
-        <button type="button" class="ipb-btn-outline" data-ipb-open-theme>
-          <i class="fa fa-palette" aria-hidden="true"></i> Theme Studio
-        </button>
         <button type="button" class="ipb-btn-outline" data-ipb-open-customize>
           <i class="fa fa-sliders" aria-hidden="true"></i> <span data-label>Customize</span>
         </button>

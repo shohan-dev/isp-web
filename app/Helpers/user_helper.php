@@ -1374,7 +1374,9 @@ if (!function_exists('userHasPermission')) {
 
         // POP/reseller baseline: keep core operations available even when the
         // tenant's default permission JSON omits these menus.
-        if ($role === 'resellerAdmin' && resellerHasCorePermission((string) $menu)) {
+        // Case-insensitive: some rows historically store reselleradmin / ResellerAdmin.
+        if (strcasecmp((string) $role, 'resellerAdmin') === 0
+            && resellerHasCorePermission((string) $menu)) {
             return $__permCache[$__k] = true;
         }
 

@@ -1314,4 +1314,196 @@ class Routers extends BaseController
             'message' => 'MAC Binding saved successfully'
         ]);
     }
+
+    /**
+     * Server-side DataTables feed for RouterUsers pages (all/active/inactive).
+     * Uses the same cache key as loadTraffic() when warm; otherwise fetches
+     * MikroTik once and caches — never builds a huge HTML table in the browser.
+     */
+    public function usersDatatable($id)
+    {
+        $userRole = $this->request->getGet('user_role') ?? session()->get('user_role');
+        $userId   = $this->request->getGet('user_id')   ?? session()->get('user_id');
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $mode = (string) ($this->request->getGet('mode') ?? 'all');
+        $draw = (int) ($this->request->getGet('draw') ?? 1);
+        $start = max(0, (int) ($this->request->getGet('start') ?? 0));
+        $length = (int) ($this->request->getGet('length') ?? 100);
+        if ($length <= 0 || $length > 500) {
+            $length = 100;
+        }
+        $searchArr = $this->request->getGet('search');
+        $search = is_array($searchArr) ? trim((string) ($searchArr['value'] ?? '')) : '';
+
+        $interface = '';
+        $cacheKey = 'traffic_router_' . $id . '_' . md5((string) $interface . (string) $userRole . (string) $userId);
+        $cachedData = cache($cacheKey);
+
+        if (! is_array($cachedData)) {
+            helper('flag');
+            helper('router');
+            if (flag('degrade_mode') || ! flag('live_router_widgets', true)) {
+                $cachedData = ['data' => ['allusers' => [], 'activeusers' => []]];
+            } else {
+                self::$router_client = RouterService::getClient($id);
+                if (is_array(self::$router_client)) {
+                    $cachedData = ['data' => ['allusers' => [], 'activeusers' => []]];
+                } else {
+                    $pppoeIds = [];
+                    if ($userRole !== 'admin') {
+                        $details = $this->user_model
+                            ->select('pppoe_id')
+                            ->where(['admin_id' => $userId])
+                            ->findAll();
+                        $pppoeIds = array_filter(array_map(static function ($item) {
+                            return trim((string) ($item->pppoe_id ?? ''));
+                        }, $details));
+                    }
+
+                    $data = getSystemResources(self::$router_client, null);
+                    if (
+                        isset($data['data']['allusers']) &&
+                        is_array($data['data']['allusers']) &&
+                        $userRole !== 'admin'
+                    ) {
+                        $filteredUsers = [];
+                        $filteredActiveUsers = [];
+                        $validNames = [];
+                        foreach ($data['data']['allusers'] as $user) {
+                            $uId = trim((string) ($user['.id'] ?? ''));
+                            $userName = trim((string) ($user['name'] ?? ''));
+                            if (in_array($uId, $pppoeIds, true)) {
+                                $filteredUsers[] = $user;
+                                if ($userName !== '') {
+                                    $validNames[] = $userName;
+                                }
+                            }
+                        }
+                        if (isset($data['data']['activeusers']) && is_array($data['data']['activeusers'])) {
+                            foreach ($data['data']['activeusers'] as $activeUser) {
+                                $activeName = trim((string) ($activeUser['name'] ?? ''));
+                                if (in_array($activeName, $validNames, true)) {
+                                    $filteredActiveUsers[] = $activeUser;
+                                }
+                            }
+                        }
+                        $data['data']['allusers'] = $filteredUsers;
+                        $data['data']['activeusers'] = $filteredActiveUsers;
+                    }
+                    $cachedData = $data;
+                    if (! empty($cachedData)) {
+                        cache()->save($cacheKey, $cachedData, 5);
+                    }
+                }
+            }
+        }
+
+        $dataBlock = $cachedData['data'] ?? [];
+        $all = is_array($dataBlock['allusers'] ?? null) ? $dataBlock['allusers'] : [];
+        $active = is_array($dataBlock['activeusers'] ?? null) ? $dataBlock['activeusers'] : [];
+
+        if ($mode === 'active') {
+            $rows = $active;
+        } elseif ($mode === 'inactive') {
+            $activeNames = [];
+            foreach ($active as $u) {
+                $n = trim((string) ($u['name'] ?? ''));
+                if ($n !== '') {
+                    $activeNames[$n] = true;
+                }
+            }
+            $rows = array_values(array_filter($all, static function ($u) use ($activeNames) {
+                $n = trim((string) ($u['name'] ?? ''));
+                return $n !== '' && ! isset($activeNames[$n]);
+            }));
+        } else {
+            $rows = $all;
+        }
+
+        $names = [];
+        foreach ($rows as $u) {
+            $n = trim((string) ($u['name'] ?? ''));
+            if ($n !== '') {
+                $names[] = $n;
+            }
+        }
+        $customerMap = [];
+        if ($names !== []) {
+            $routerDataModel = model('App\Models\UserRouterDataModel');
+            $found = $routerDataModel
+                ->select('user_router_data.pppoe_secret, users.name AS customer_name')
+                ->join('users', 'users.id = user_router_data.user_id', 'left')
+                ->whereIn('user_router_data.pppoe_secret', array_values(array_unique($names)))
+                ->findAll();
+            foreach ($found as $row) {
+                $secret = is_array($row) ? ($row['pppoe_secret'] ?? '') : ($row->pppoe_secret ?? '');
+                $cname = is_array($row) ? ($row['customer_name'] ?? '') : ($row->customer_name ?? '');
+                if ($secret !== '') {
+                    $customerMap[$secret] = $cname !== '' ? $cname : 'N/A';
+                }
+            }
+        }
+
+        if ($search !== '') {
+            $q = mb_strtolower($search);
+            $rows = array_values(array_filter($rows, static function ($u) use ($q, $customerMap) {
+                $name = (string) ($u['name'] ?? '');
+                $cust = $customerMap[$name] ?? (string) ($u['customer_name'] ?? '');
+                $hay = mb_strtolower($name . ' ' . $cust . ' ' . (string) ($u['profile'] ?? '') . ' ' . (string) ($u['service'] ?? ''));
+                return str_contains($hay, $q);
+            }));
+        }
+
+        $total = count($rows);
+        $page = array_slice($rows, $start, $length);
+        $out = [];
+        foreach ($page as $i => $user) {
+            $name = (string) ($user['name'] ?? '');
+            $cust = $customerMap[$name] ?? ($user['customer_name'] ?? 'N/A');
+            if ($mode === 'active') {
+                $out[] = [
+                    $start + $i + 1,
+                    $name,
+                    $cust,
+                    $user['service'] ?? '-',
+                    $user['caller-id'] ?? '-',
+                    $user['address'] ?? '-',
+                    $user['uptime'] ?? '-',
+                    $user['session-id'] ?? '-',
+                ];
+            } elseif ($mode === 'inactive') {
+                $out[] = [
+                    $start + $i + 1,
+                    $name,
+                    $cust,
+                    $user['service'] ?? '-',
+                    $user['last-caller-id'] ?? '-',
+                    $user['last-logged-out'] ?? '-',
+                    $user['last-disconnect-reason'] ?? '-',
+                    $user['profile'] ?? '-',
+                ];
+            } else {
+                $out[] = [
+                    $start + $i + 1,
+                    $name,
+                    $cust,
+                    $user['service'] ?? '-',
+                    $user['last-caller-id'] ?? ($user['caller-id'] ?? '-'),
+                    $user['last-logged-out'] ?? '-',
+                    $user['profile'] ?? '-',
+                ];
+            }
+        }
+
+        return $this->response->setJSON([
+            'draw'            => $draw,
+            'recordsTotal'    => $total,
+            'recordsFiltered' => $total,
+            'data'            => $out,
+        ]);
+    }
 }

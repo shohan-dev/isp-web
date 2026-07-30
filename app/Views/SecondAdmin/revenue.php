@@ -869,14 +869,6 @@ $fmt = static function ($n) {
 
   initRevenueTable();
 
-  if (window.IpbFilters) {
-    IpbFilters.bind(revenueTable, {
-      storageKey: 'ipb_filters_revenue_payments',
-      root: '#revenueFilterForm',
-      resetBtn: '#clearRevenueFilter',
-    });
-  }
-
   function switchTab(tabId) {
     var id = tabId === 'packages' ? 'packages' : 'payments';
     $('.ipb-rev-tab').each(function () {
@@ -908,6 +900,14 @@ $fmt = static function ($n) {
       switchTab('packages');
     }
   })();
+
+  if (window.IpbFilters) {
+    IpbFilters.bind(revenueTable, {
+      storageKey: 'ipb_filters_revenue_payments',
+      root: '#revenueFilterForm',
+      resetBtn: '#clearRevenueFilter',
+    });
+  }
 
   function togglePackagePeriodFields() {
     var type = $('#pkg_period_type').val();

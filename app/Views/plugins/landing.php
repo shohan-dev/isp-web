@@ -212,6 +212,6 @@ $seoCanonicalUrl = base_url('plugins');
     <a href="<?= route_to('route.auth.registration') ?>" class="lp-btn lp-btn--primary lp-btn--block">Start Free Trial</a>
 </div>
 
-<script src="<?= base_url('assets/js/landing/landing.js') ?>?v=3.9"></script>
+<script src="<?= base_url('assets/js/landing/landing.js') ?>?v=4.0"></script>
 </body>
 </html>

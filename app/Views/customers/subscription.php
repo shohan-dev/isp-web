@@ -9,16 +9,41 @@ if (isset($payment_details) && is_array($payment_details))
 
 <?= $this->extend('layout/main-layout'); ?>
 
+<?= $this->section('css'); ?>
+<link rel="stylesheet" href="<?= base_url('assets/css/saas/subscription-page.css?v=5'); ?>">
+<?= $this->endSection(); ?>
+
 <?= $this->section('content'); ?>
+
+<?php
+$currentPkgName = '--';
+if (!empty($packages)) {
+  foreach ($packages as $p) {
+    $pid = is_object($p) ? ($p->id ?? null) : ($p['id'] ?? null);
+    $pname = is_object($p) ? ($p->package_name ?? '') : ($p['package_name'] ?? '');
+    if ((string) $pid === (string) ($details->package_id ?? '')) {
+      $currentPkgName = $pname !== '' ? $pname : $currentPkgName;
+      break;
+    }
+  }
+}
+$expireDisplay = !empty($details->will_expire)
+  ? date('d M Y, h:i A', strtotime($details->will_expire))
+  : '—';
+$connectedDisplay = !empty($details->created_at)
+  ? date('d M Y, h:i A', strtotime($details->created_at))
+  : '—';
+?>
 
 <!-- Content Wrapper. Contains page content -->
 <div class="content-wrapper">
   <!-- Main content -->
-  <section class="content ipb-saas-list">
+  <section class="content ipb-saas-list ipb-sub-page ipb-cust-recharge">
 
     
     <?= $this->include('components/page-header', [
       'title' => 'Customer Subscription',
+      'subtitle' => 'Full package recharge for ' . (string) ($details->name ?? 'customer'),
       'breadcrumb' => [
         ['label' => 'Dashboard', 'url' => route_to('route.dashboard')],
         ['label' => 'Customers', 'url' => route_to('route.customer')],
@@ -26,7 +51,7 @@ if (isset($payment_details) && is_array($payment_details))
       ],
     ]); ?>
 
-    <?php if ($showTabs ?? true): ?>
+    <?php if (!empty($showTabs)): ?>
       <!-- ═══════════════════════════════════════════════════════
          SECTION SELECTOR TABS
     ════════════════════════════════════════════════════════════ -->
@@ -52,14 +77,16 @@ if (isset($payment_details) && is_array($payment_details))
 
     <?= form_open('', 'id="form"'); ?>
 
-    <!-- Hidden field: which section is active -->
-    <input type="hidden" name="status_only" id="status_only_hidden" value="1">
+    <?php $rechargeOnly = empty($showTabs); ?>
+
+    <!-- Hidden field: which section is active (0 = full recharge) -->
+    <input type="hidden" name="status_only" id="status_only_hidden" value="<?= $rechargeOnly ? '0' : '1' ?>">
 
     <!-- ═══════════════════════════════════════════════════════
           PAYMENT STATUS UPDATE (No Fund Deduction)
     ════════════════════════════════════════════════════════════ -->
     <div class="box" id="section1-box"
-      style="border-top:3px solid #00a65a; border-radius:12px; box-shadow:var(--shadow-1, 0 10px 30px rgba(0,0,0,0.08));">
+      style="<?= $rechargeOnly ? 'display:none;' : '' ?>border-top:3px solid #00a65a; border-radius:12px; box-shadow:var(--shadow-1, 0 10px 30px rgba(0,0,0,0.08));">
       <div class="box-header with-border" style="background:var(--success-50, #f0fff4);">
         <h3 class="box-title" style="color:var(--success-700, #155724); font-size:16px;">
           <i class="fa fa-check-circle" style="color:var(--success-500, #00a65a);"></i>&nbsp; Payment Status Update
@@ -223,49 +250,88 @@ if (isset($payment_details) && is_array($payment_details))
 
 
     <!-- ═══════════════════════════════════════════════════════
-         FULL SUBSCRIPTION RECHARGE (Existing flow)
+         FULL SUBSCRIPTION RECHARGE
     ════════════════════════════════════════════════════════════ -->
-    <div class="box box-warning" id="section2-box"
-      style="display:none; border-radius:12px; box-shadow:var(--shadow-1, 0 10px 30px rgba(0,0,0,0.08));">
-      <div class="box-header with-border">
-        <h3 class="box-title" style="font-size:16px;">
-          <i class="fa fa-refresh text-warning"></i>&nbsp; Full Subscription Recharge
-        </h3>
-        <p style="margin:6px 0 0; color:var(--text-secondary, #6c757d); font-size:12.5px;">
-          Change package, update PPPoE profile, and extend the expiry date.
-          <strong class="text-danger">Fund will be deducted from your balance.</strong>
-        </p>
+    <div class="ipb-cust-recharge-panel" id="section2-box"
+      style="<?= $rechargeOnly ? 'display:block;' : 'display:none;' ?>">
+
+      <div class="ipb-sub-kpis ipb-cust-recharge-kpis">
+        <div class="ipb-sub-kpi">
+          <span class="ipb-sub-kpi__ic" aria-hidden="true"><i class="fa fa-user"></i></span>
+          <div class="ipb-sub-kpi__body">
+            <span class="ipb-sub-kpi__label">Customer</span>
+            <span class="ipb-sub-kpi__value" style="font-size:1rem">
+              <?= esc(isset($multiple) && $multiple === 'true' ? implode(', ', $userNames ?? []) : ($details->name ?? '—')) ?>
+            </span>
+          </div>
+        </div>
+        <div class="ipb-sub-kpi">
+          <span class="ipb-sub-kpi__ic" aria-hidden="true"><i class="fa fa-layer-group"></i></span>
+          <div class="ipb-sub-kpi__body">
+            <span class="ipb-sub-kpi__label">Current package</span>
+            <span class="ipb-sub-kpi__value" style="font-size:1rem"><?= esc($currentPkgName) ?></span>
+          </div>
+        </div>
+        <div class="ipb-sub-kpi">
+          <span class="ipb-sub-kpi__ic" aria-hidden="true"><i class="fa fa-plug"></i></span>
+          <div class="ipb-sub-kpi__body">
+            <span class="ipb-sub-kpi__label">Connected</span>
+            <span class="ipb-sub-kpi__value" style="font-size:0.95rem"><?= esc($connectedDisplay) ?></span>
+          </div>
+        </div>
+        <div class="ipb-sub-kpi">
+          <span class="ipb-sub-kpi__ic" aria-hidden="true"><i class="fa fa-calendar-day"></i></span>
+          <div class="ipb-sub-kpi__body">
+            <span class="ipb-sub-kpi__label">Expires</span>
+            <span class="ipb-sub-kpi__value ipb-sub-kpi__value--accent" style="font-size:0.95rem"><?= esc($expireDisplay) ?></span>
+          </div>
+        </div>
       </div>
 
-      <div class="box-body">
+      <article class="ipb-cust-recharge-card">
+        <header class="ipb-cust-recharge-card__head">
+          <div class="ipb-cust-recharge-card__title">
+            <span class="ipb-cust-recharge-card__icon" aria-hidden="true"><i class="fa fa-rotate"></i></span>
+            <div>
+              <h3>Full Subscription Recharge</h3>
+              <p>Change package, update PPPoE profile, and extend expiry.</p>
+            </div>
+          </div>
+          <div class="ipb-sub-callout ipb-cust-recharge-warn" role="note">
+            <i class="fa fa-wallet" aria-hidden="true"></i>
+            Fund will be deducted from your balance
+          </div>
+        </header>
+
+        <div class="ipb-cust-recharge-card__body">
 
         <!-- Customer Info Row -->
-        <div class="row">
-          <div class="col-md-6 col-sm-6 col-xs-12">
-            <div class="form-group">
-              <label>Customer Name</label>
+        <div class="ipb-cust-recharge-section">
+          <h4 class="ipb-cust-recharge-section__label">Customer</h4>
+          <div class="ipb-form-grid">
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="cust-name">Customer Name</label>
               <?php if (isset($multiple) && $multiple === 'true'): ?>
-                <?= form_input(['class' => 'form-control', 'value' => implode(', ', $userNames), 'disabled' => 'disabled']); ?>
+                <?= form_input(['id' => 'cust-name', 'class' => 'form-control', 'value' => implode(', ', $userNames), 'disabled' => 'disabled']); ?>
               <?php else: ?>
-                <?= form_input(['class' => 'form-control', 'value' => $details->name, 'disabled' => 'disabled']); ?>
+                <?= form_input(['id' => 'cust-name', 'class' => 'form-control', 'value' => $details->name, 'disabled' => 'disabled']); ?>
               <?php endif; ?>
               <small id="name-error" class="error text-danger"></small>
             </div>
-          </div>
-          <div class="col-md-6 col-sm-6 col-xs-12">
-            <div class="form-group">
-              <label>Connection Date</label>
-              <?= form_input(['name' => 'created_at', 'class' => 'form-control', 'value' => $details->created_at]); ?>
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="cust-created">Connection Date</label>
+              <?= form_input(['id' => 'cust-created', 'name' => 'created_at', 'class' => 'form-control', 'value' => $details->created_at]); ?>
               <small id="connection_date-error" class="error text-danger"></small>
             </div>
           </div>
         </div>
 
         <!-- Package & Profile Row -->
-        <div class="row">
-          <div class="col-md-6 col-sm-6 col-xs-12">
-            <div class="form-group">
-              <label>Package</label>
+        <div class="ipb-cust-recharge-section">
+          <h4 class="ipb-cust-recharge-section__label">Package &amp; billing</h4>
+          <div class="ipb-form-grid">
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="packageDropdown">Package</label>
               <?php
               $pkgData = [];
               if (empty($packages)) {
@@ -301,8 +367,7 @@ if (isset($payment_details) && is_array($payment_details))
               }
               ?>
               <?php if ($showReadonly): ?>
-                <input type="text" id="packageReadonly" class="form-control" value="<?= esc($readonlyVal) ?>" readonly
-                  style="cursor:pointer;">
+                <input type="text" id="packageReadonly" class="form-control" value="<?= esc($readonlyVal) ?>" readonly>
               <?php endif; ?>
               <?= form_dropdown('package_id', $pkgData, $selectedPkg, [
                 'class' => 'form-control',
@@ -311,39 +376,33 @@ if (isset($payment_details) && is_array($payment_details))
               ]) ?>
               <small id="package_id-error" class="error text-danger"></small>
             </div>
-          </div>
 
           <?php if (session()->get('user_role') === 'resellerAdmin'): ?>
-            <div class="col-md-6 col-sm-6 col-xs-12">
-              <div class="form-group">
-                <label>PPPoE Profile</label>
-                <?php
-                $profileData = [];
-                if (empty($profiles)):
-                  $profileData[''] = 'No profile found!';
-                else:
-                  $profileData = ['' => '--Select--'];
-                  foreach ($profiles as $profile) {
-                    $profileData[$profile] = $profile;
-                  }
-                endif;
-                echo form_dropdown('pppoe_profile', $profileData, isset($pppoe_profile) ? $pppoe_profile : '', 'class="form-control"');
-                ?>
-                <small id="pppoe_profile-error" class="error text-danger"></small>
-              </div>
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="pppoe_profile">PPPoE Profile</label>
+              <?php
+              $profileData = [];
+              if (empty($profiles)):
+                $profileData[''] = 'No profile found!';
+              else:
+                $profileData = ['' => '--Select--'];
+                foreach ($profiles as $profile) {
+                  $profileData[$profile] = $profile;
+                }
+              endif;
+              echo form_dropdown('pppoe_profile', $profileData, isset($pppoe_profile) ? $pppoe_profile : '', 'class="form-control" id="pppoe_profile"');
+              ?>
+              <small id="pppoe_profile-error" class="error text-danger"></small>
             </div>
           <?php endif; ?>
 
-          <!-- Payment Month -->
-          <div class="col-md-6 col-sm-6 col-xs-12">
-            <div class="form-group">
-              <label>Payment Month</label>
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="payment-month">Payment Month</label>
               <?php
               $currentYear2 = date('Y');
               $payments2 = $payment_months ?? [];
               $month_status2 = [];
               foreach ($payments2 as $pmt2) {
-                // Handle both object and array results from the Payment model
                 $pmt2_month = is_object($pmt2) ? ($pmt2->month ?? null) : ($pmt2['month'] ?? null);
                 $pmt2_status = is_object($pmt2) ? ($pmt2->status ?? null) : ($pmt2['status'] ?? null);
                 $pmt2_created = is_object($pmt2) ? ($pmt2->created_at ?? null) : ($pmt2['created_at'] ?? null);
@@ -361,76 +420,69 @@ if (isset($payment_details) && is_array($payment_details))
                   $lbl2 .= ' (' . $month_status2[$mn2] . ')';
                 $months2[$mn2] = $lbl2;
               }
-              echo form_dropdown('month', $months2, date('F'), 'class="form-control"');
+              echo form_dropdown('month', $months2, date('F'), 'class="form-control" id="payment-month"');
               ?>
               <small id="month-error" class="error text-danger"></small>
             </div>
-          </div> <!-- Daily Bill Generate for prepaid resellers -->
           <?php if (isset($show_daily_bill) && $show_daily_bill): ?>
-            <div class="col-md-6 col-sm-6 col-xs-12">
-              <div class="form-group">
-                <label>Daily Bill Generate</label>
-                <?php
-                echo form_dropdown('s2_daily_bill', [
-                  '0' => 'Disable',
-                  '1' => 'Enable'
-                ], $details->daily_bill ?? '0', 'class="form-control" id="s2_daily_bill"');
-                ?>
-                <small id="s2_daily_bill-error" class="error text-danger"></small>
-              </div>
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="s2_daily_bill">Daily Bill Generate</label>
+              <?php
+              echo form_dropdown('s2_daily_bill', [
+                '0' => 'Disable',
+                '1' => 'Enable'
+              ], $details->daily_bill ?? '0', 'class="form-control" id="s2_daily_bill"');
+              ?>
+              <small id="s2_daily_bill-error" class="error text-danger"></small>
             </div>
           <?php endif; ?>
-        </div><!-- /.row -->
-
-        <!-- Payment Method (custom dropdown) -->
-        <?php
-        $selected_method = isset($payment_details->paid_via) ? $payment_details->paid_via : '';
-        ?>
-        <div class="form-group">
-          <label>Payment Method</label>
-          <div class="custom-dropdown" id="paymentDropdown" data-selected="<?= htmlspecialchars($selected_method) ?>">
-            <div class="selected">--Select--</div>
-            <div class="options">
-              <div class="option" data-value="Cash" style="padding:4px 10px;display:flex;align-items:center;">
-                <img src="https://cdn-icons-png.flaticon.com/512/2165/2165704.png" alt="Cash"
-                  style="height:25px;margin-right:10px;"> Cash Payment
-              </div>
-              <div class="option" data-value="Bkash" style="padding:4px 10px;display:flex;align-items:center;">
-                <img
-                  src="https://th.bing.com/th/id/OIP.yLaqS0qzh9XUki83tGecVAHaHa?w=164&h=180&c=7&r=0&o=7&cb=iwp1&dpr=1.3&pid=1.7&rm=3"
-                  alt="Bkash" style="height:25px;margin-right:10px;"> Bkash
-              </div>
-              <div class="option" data-value="Nagad" style="padding:4px 10px;display:flex;align-items:center;">
-                <img
-                  src="https://th.bing.com/th/id/OIP.uwsiXx1haFEmcVTrUGBZkgHaKa?w=128&h=181&c=7&r=0&o=7&cb=iwp1&dpr=1.3&pid=1.7&rm=3"
-                  alt="Nagad" style="height:25px;margin-right:10px;"> Nagad
-              </div>
-              <div class="option" data-value="Rocket" style="padding:4px 10px;display:flex;align-items:center;">
-                <img
-                  src="https://th.bing.com/th?q=Rocket+BD+Logo&w=120&h=120&c=1&rs=1&qlt=70&o=7&cb=1&dpr=1.3&pid=InlineBlock&rm=3&mkt=en-WW&cc=BD&setlang=en&adlt=strict&t=1&mw=247"
-                  alt="Rocket" style="height:25px;margin-right:10px;"> Rocket
-              </div>
-              <div class="option" data-value="Upay" style="padding:4px 10px;display:flex;align-items:center;">
-                <img
-                  src="https://th.bing.com/th/id/OIP.P1DIuj_Nh2pgEDt_LyREJQAAAA?w=147&h=180&c=7&r=0&o=7&cb=iwp1&dpr=1.3&pid=1.7&rm=3"
-                  alt="Upay" style="height:25px;margin-right:10px;"> Upay
-              </div>
-              <div class="option" data-value="SSLCommerz" style="padding:4px 10px;display:flex;align-items:center;">
-                <img src="https://th.bing.com/th/id/OIP.HPKMMXqBiJcexDKSqX5jLQAAAA?cb=iwp1&rs=1&pid=ImgDetMain"
-                  alt="SSLCommerz" style="height:25px;margin-right:10px;"> SSLCommerz
-              </div>
-            </div>
-            <input type="hidden" name="paid_via" id="paid_via">
           </div>
-          <small id="paid_via-error" class="error text-danger"></small>
         </div>
 
-        <!-- Transaction ID & Renewal Date -->
-        <div class="row">
-          <div class="col-md-6 col-sm-6 col-xs-12">
-            <div class="form-group">
-              <label>Payment Transaction Id</label>
+        <!-- Payment Method -->
+        <div class="ipb-cust-recharge-section">
+          <h4 class="ipb-cust-recharge-section__label">Payment</h4>
+          <div class="ipb-form-grid">
+        <?php
+        $selected_method = isset($payment_details->paid_via) ? $payment_details->paid_via : '';
+        $methodIcons = [
+          'Cash' => 'fa-money-bill-wave',
+          'Bkash' => 'fa-mobile-screen',
+          'Nagad' => 'fa-mobile-screen',
+          'Rocket' => 'fa-mobile-screen',
+          'Upay' => 'fa-mobile-screen',
+          'SSLCommerz' => 'fa-credit-card',
+        ];
+        $methodLabels = [
+          'Cash' => 'Cash Payment',
+          'Bkash' => 'Bkash',
+          'Nagad' => 'Nagad',
+          'Rocket' => 'Rocket',
+          'Upay' => 'Upay',
+          'SSLCommerz' => 'SSLCommerz',
+        ];
+        ?>
+            <div class="ipb-form-field is-wide">
+              <label class="ipb-form-label">Payment Method</label>
+              <div class="custom-dropdown ipb-pay-method" id="paymentDropdown" data-selected="<?= htmlspecialchars($selected_method) ?>">
+                <div class="selected">--Select--</div>
+                <div class="options">
+                  <?php foreach ($methodLabels as $value => $label): ?>
+                    <div class="option" data-value="<?= esc($value, 'attr') ?>">
+                      <i class="fa <?= esc($methodIcons[$value] ?? 'fa-wallet') ?>" aria-hidden="true"></i>
+                      <span><?= esc($label) ?></span>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="paid_via" id="paid_via">
+              </div>
+              <small id="paid_via-error" class="error text-danger"></small>
+            </div>
+
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="method_trx">Payment Transaction Id</label>
               <?= form_input([
+                'id' => 'method_trx',
                 'name' => 'method_trx',
                 'type' => 'text',
                 'class' => 'form-control',
@@ -438,7 +490,6 @@ if (isset($payment_details) && is_array($payment_details))
               ]); ?>
               <small id="method_trx-error" class="error text-danger"></small>
             </div>
-          </div>
 
           <?php
           $payment_status = !empty($payment_details->status) ? $payment_details->status : '';
@@ -446,12 +497,13 @@ if (isset($payment_details) && is_array($payment_details))
             ? date("Y-m-d\TH:i")
             : date("Y-m-d\TH:i", strtotime($details->last_renewed));
           ?>
-          <div class="col-md-6 col-sm-6 col-xs-12">
-            <div class="form-group">
-              <label>Renewal Date *
-                <small class="form-text text-danger">Renew day should be today</small>
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="last_renewed">
+                Renewal Date
+                <span class="ipb-form-hint-inline">Should be today</span>
               </label>
               <?= form_input([
+                'id' => 'last_renewed',
                 'type' => 'datetime-local',
                 'name' => 'last_renewed',
                 'class' => 'form-control',
@@ -461,10 +513,12 @@ if (isset($payment_details) && is_array($payment_details))
               <small id="last_renewed-error" class="error text-danger"></small>
             </div>
           </div>
-        </div><!-- /.row -->
+        </div>
 
-        <!-- Validity Period OR Expire Date -->
-        <div class="row">
+        <!-- Validity / Expire / Status -->
+        <div class="ipb-cust-recharge-section">
+          <h4 class="ipb-cust-recharge-section__label">Dates &amp; status</h4>
+          <div class="ipb-form-grid">
           <?php
           $now2 = new DateTime();
           $oldExpire = !empty($details->will_expire) ? new DateTime($details->will_expire) : null;
@@ -492,90 +546,87 @@ if (isset($payment_details) && is_array($payment_details))
           }
           ?>
           <?php if (isset($details->created_by) && $details->created_by === 'resellerAdmin' && isset($admin_details) && ($admin_details->billing_type ?? 'postpaid') === 'postpaid'): ?>
-            <div class="col-md-6 col-sm-6 col-xs-12">
-              <div class="form-group">
-                <label>Validity Period</label>
-                <select name="duration" id="selected_duration" class="form-control">
-                  <?php
-                  $periods = !empty($admin_details->reseller_validity_periods)
-                    ? explode(',', $admin_details->reseller_validity_periods)
-                    : ['3', '5', '7', '30'];
-                  foreach ($periods as $period): ?>
-                    <option value="<?= trim($period) ?>" <?= trim($period) == '30' ? 'selected' : '' ?>><?= trim($period) ?>
-                      Days</option>
-                  <?php endforeach; ?>
-                </select>
-                <small id="duration-error" class="error text-danger"></small>
-              </div>
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="selected_duration">Validity Period</label>
+              <select name="duration" id="selected_duration" class="form-control">
+                <?php
+                $periods = !empty($admin_details->reseller_validity_periods)
+                  ? explode(',', $admin_details->reseller_validity_periods)
+                  : ['3', '5', '7', '30'];
+                foreach ($periods as $period): ?>
+                  <option value="<?= trim($period) ?>" <?= trim($period) == '30' ? 'selected' : '' ?>><?= trim($period) ?>
+                    Days</option>
+                <?php endforeach; ?>
+              </select>
+              <small id="duration-error" class="error text-danger"></small>
             </div>
-            <!-- Hidden input for will_expire -->
             <input type="hidden" name="will_expire" value="<?= $expireValue ?>">
           <?php else: ?>
-            <div class="col-md-6 col-sm-6 col-xs-12">
-              <div class="form-group">
-                <label><?= $expireLabel ?></label>
-                <?= form_input([
-                  'type' => 'datetime-local',
-                  'name' => 'will_expire',
-                  'class' => 'form-control',
-                  'value' => $expireValue,
-                ]); ?>
-                <?php if (isset($payment_status) && $payment_status == 'pending' && $daysDifference > 0): ?>
-                  <small class="form-text text-danger"><?= $daysDifference ?> days payment was due</small>
-                <?php endif; ?>
-                <small id="will_expire-error" class="error text-danger"></small>
-              </div>
+            <div class="ipb-form-field">
+              <label class="ipb-form-label" for="will_expire"><?= esc($expireLabel) ?></label>
+              <?= form_input([
+                'id' => 'will_expire',
+                'type' => 'datetime-local',
+                'name' => 'will_expire',
+                'class' => 'form-control',
+                'value' => $expireValue,
+              ]); ?>
+              <?php if (isset($payment_status) && $payment_status == 'pending' && $daysDifference > 0): ?>
+                <span class="ipb-form-hint"><?= (int) $daysDifference ?> days payment was due</span>
+              <?php endif; ?>
+              <small id="will_expire-error" class="error text-danger"></small>
             </div>
           <?php endif; ?>
 
-          <!-- Status -->
           <?php
           $payment_status = !empty($payment_details->status) ? $payment_details->status : 'pending';
           ?>
-          <div class="col-md-6 col-sm-6 col-xs-12">
-            <div class="form-group">
-              <label>Status</label>
-              <div class="radio">
-                <label class="radio-inline">
-                  <?= form_radio(['name' => 'status', 'value' => 'successful', 'checked' => ($payment_status == 'successful')]); ?>
+            <div class="ipb-form-field">
+              <span class="ipb-form-label">Status</span>
+              <div class="ipb-choice-group" role="radiogroup" aria-label="Payment status">
+                <label class="ipb-choice <?= $payment_status == 'successful' ? 'is-active' : '' ?>">
+                  <?= form_radio(['name' => 'status', 'value' => 'successful', 'checked' => ($payment_status == 'successful'), 'class' => 'ipb-choice-input']); ?>
+                  <i class="fa fa-circle-check" aria-hidden="true"></i>
                   Successful
                 </label>
-                <label class="radio-inline">
-                  <?= form_radio(['name' => 'status', 'value' => 'pending', 'checked' => ($payment_status != 'successful')]); ?>
+                <label class="ipb-choice <?= $payment_status != 'successful' ? 'is-active' : '' ?>">
+                  <?= form_radio(['name' => 'status', 'value' => 'pending', 'checked' => ($payment_status != 'successful'), 'class' => 'ipb-choice-input']); ?>
+                  <i class="fa fa-clock" aria-hidden="true"></i>
                   Pending
                 </label>
               </div>
               <small id="status-error" class="error text-danger"></small>
             </div>
+
+            <div class="ipb-form-field is-wide">
+              <label class="ipb-form-label" for="description">Description / Note</label>
+              <?= form_textarea([
+                'id' => 'description',
+                'name' => 'description',
+                'class' => 'form-control',
+                'rows' => 3,
+                'placeholder' => 'Add any notes about this recharge (optional)…',
+                'value' => '',
+              ]); ?>
+            </div>
           </div>
-
-
-
-        </div><!-- /.row -->
-
-        <!-- Description for Section 2 -->
-        <div class="form-group">
-          <label>Description / Note</label>
-          <?= form_textarea([
-            'name' => 'description',
-            'class' => 'form-control',
-            'rows' => 2,
-            'placeholder' => 'Add any notes about this recharge (optional)…',
-            'value' => '',
-          ]); ?>
         </div>
 
-      </div><!-- /.box-body -->
+        </div><!-- /.card body -->
 
-      <div class="box-footer">
-        <?= form_button([
-          "content" => '<i class="fa fa-refresh"></i>&nbsp; Update Recharge',
-          "class" => "btn btn-warning",
-          "type" => "submit",
-          "id" => "s2-submit-btn",
-        ]); ?>
-        <small class="text-muted" style="margin-left:12px;">Fund deduction applies</small>
-      </div>
+        <footer class="ipb-cust-recharge-card__foot">
+          <?= form_button([
+            "content" => '<i class="fa fa-rotate" aria-hidden="true"></i><span>Update Recharge</span>',
+            "class" => "ipb-sub-btn ipb-sub-btn--primary",
+            "type" => "submit",
+            "id" => "s2-submit-btn",
+          ]); ?>
+          <span class="ipb-cust-recharge-foot-hint">
+            <i class="fa fa-info-circle" aria-hidden="true"></i>
+            Fund deduction applies on successful recharge
+          </span>
+        </footer>
+      </article>
     </div><!-- /#section2-box -->
 
     <?= form_close(); ?>
@@ -771,11 +822,16 @@ if (isset($payment_details) && is_array($payment_details))
      SECTION SWITCHER
   ══════════════════════════════════════════ */
   function switchSection(n) {
-    document.getElementById('tab-sec1').classList.toggle('active', n === 1);
-    document.getElementById('tab-sec2').classList.toggle('active', n === 2);
-    document.getElementById('section1-box').style.display = n === 1 ? 'block' : 'none';
-    document.getElementById('section2-box').style.display = n === 2 ? 'block' : 'none';
-    document.getElementById('status_only_hidden').value = n === 1 ? '1' : '0';
+    var tab1 = document.getElementById('tab-sec1');
+    var tab2 = document.getElementById('tab-sec2');
+    if (tab1) tab1.classList.toggle('active', n === 1);
+    if (tab2) tab2.classList.toggle('active', n === 2);
+    var sec1 = document.getElementById('section1-box');
+    var sec2 = document.getElementById('section2-box');
+    if (sec1) sec1.style.display = n === 1 ? 'block' : 'none';
+    if (sec2) sec2.style.display = n === 2 ? 'block' : 'none';
+    var statusOnly = document.getElementById('status_only_hidden');
+    if (statusOnly) statusOnly.value = n === 1 ? '1' : '0';
   }
 
   /* ══════════════════════════════════════════
@@ -822,27 +878,40 @@ if (isset($payment_details) && is_array($payment_details))
 
     /* ── Custom Dropdown (Payment Method, Section 2) ── */
     var dropdown = document.getElementById('paymentDropdown');
-    var selected = dropdown.querySelector('.selected');
-    var options = dropdown.querySelector('.options');
-    var hiddenInput = dropdown.querySelector('input');
-    var defaultVal = dropdown.getAttribute('data-selected');
+    if (dropdown) {
+      var selected = dropdown.querySelector('.selected');
+      var options = dropdown.querySelector('.options');
+      var hiddenInput = dropdown.querySelector('input');
+      var defaultVal = dropdown.getAttribute('data-selected');
 
-    function setOption(option) {
-      selected.innerHTML = option.innerHTML;
-      hiddenInput.value = option.getAttribute('data-value');
-      dropdown.querySelectorAll('.option').forEach(function (o) { o.classList.remove('active'); });
-      option.classList.add('active');
+      function setOption(option) {
+        selected.innerHTML = option.innerHTML;
+        hiddenInput.value = option.getAttribute('data-value');
+        dropdown.querySelectorAll('.option').forEach(function (o) { o.classList.remove('active'); });
+        option.classList.add('active');
+      }
+
+      selected.addEventListener('click', function () {
+        options.style.display = options.style.display === 'block' ? 'none' : 'block';
+      });
+      dropdown.querySelectorAll('.option').forEach(function (option) {
+        option.addEventListener('click', function () { setOption(this); options.style.display = 'none'; });
+        if (defaultVal && option.getAttribute('data-value') === defaultVal) setOption(option);
+      });
+      document.addEventListener('click', function (e) {
+        if (!dropdown.contains(e.target)) options.style.display = 'none';
+      });
     }
 
-    selected.addEventListener('click', function () {
-      options.style.display = options.style.display === 'block' ? 'none' : 'block';
-    });
-    dropdown.querySelectorAll('.option').forEach(function (option) {
-      option.addEventListener('click', function () { setOption(this); options.style.display = 'none'; });
-      if (defaultVal && option.getAttribute('data-value') === defaultVal) setOption(option);
-    });
-    document.addEventListener('click', function (e) {
-      if (!dropdown.contains(e.target)) options.style.display = 'none';
+    document.querySelectorAll('.ipb-cust-recharge .ipb-choice-group').forEach(function (group) {
+      group.querySelectorAll('.ipb-choice').forEach(function (choice) {
+        var input = choice.querySelector('input[type="radio"]');
+        if (!input) return;
+        input.addEventListener('change', function () {
+          group.querySelectorAll('.ipb-choice').forEach(function (c) { c.classList.remove('is-active'); });
+          if (input.checked) choice.classList.add('is-active');
+        });
+      });
     });
 
     /* ── Initial PPPoE filter ── */

@@ -825,6 +825,7 @@ if (request()->getHeaderLine('X-IPB-Nav') === '1') {
             dataType: 'json',
             contentType: 'application/json',
             data: JSON.stringify(payload),
+            timeout: 15000,
             success: function(response) {
               removeTypingIndicator();
               $input.prop('disabled', false);
@@ -864,6 +865,9 @@ if (request()->getHeaderLine('X-IPB-Nav') === '1') {
               $input.focus();
 
               let errorMsg = 'Could not connect to AI Assistant. Please check connection.';
+              if (status === 'timeout') {
+                errorMsg = 'AI Assistant timed out. Please retry.';
+              }
               try {
                 if (xhr.responseJSON && xhr.responseJSON.response) {
                   errorMsg = xhr.responseJSON.response;

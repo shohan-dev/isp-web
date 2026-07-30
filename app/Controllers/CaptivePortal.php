@@ -21,19 +21,18 @@ class CaptivePortal extends BaseController
         // 1. Detect if Localhost for easier testing
         $isLocalhost = ($userIp === '::1' || $userIp === '127.0.0.1');
 
-        // Page-load-performance audit (Axis1 #2): this used to sweep EVERY
-        // active router (routerClient() ~15s worst case each) synchronously
-        // on render whenever the MikroTik walled-garden redirect omitted
-        // `rid` — a public, unauthenticated page that could block for
-        // minutes. Only the single-router case (rid given — the designed
-        // MikroTik flow) still resolves on render; the no-rid fallback
-        // renders immediately and resolves via resolve() after paint.
+        // Never call routerClient() on first paint — even the designed MikroTik
+        // flow (?rid=) used to block up to ~15s here and exhaust PHP-FPM under
+        // a flapping router. Resolve after paint via resolve() for both paths.
         $resolveNeeded = false;
-        $pppoeName = null;
         if ($routerId) {
             $specificRouter = $routerModel->find($routerId);
             if ($specificRouter) {
-                $pppoeName = $this->matchPppoeOnRouter($routerId, $userIp);
+                $resolveNeeded = true;
+            } elseif (!$isLocalhost) {
+                // Unknown rid — fall back to sweep-all after paint.
+                $routerId = null;
+                $resolveNeeded = true;
             }
         } elseif (!$isLocalhost) {
             $resolveNeeded = true;
@@ -41,9 +40,9 @@ class CaptivePortal extends BaseController
             log_message('info', "[CaptivePortal] Localhost detected, skipping real router lookup.");
         }
 
-        [$foundUser, $paymentId] = $this->resolveUserAndPayment($pppoeName);
+        // First paint: dummy payment id only; resolve() patches Pay Now after paint.
+        [$foundUser, $paymentId] = $this->resolveUserAndPayment(null);
 
-        // 4. Show the design
         return view('captive/expired_generic', [
             'payment_id' => $paymentId,
             'user' => $foundUser,
@@ -54,33 +53,47 @@ class CaptivePortal extends BaseController
     }
 
     /**
-     * Post-paint AJAX counterpart to index()'s no-rid fallback: does the
-     * sweep-all-active-routers lookup that used to block the page render,
-     * then returns the resolved payment id so the view can patch the
-     * "Pay Now" button without ever blocking first paint. Public/unauth,
-     * same as index() — this IS the captive portal.
+     * Post-paint AJAX: resolve PPPoE → payment id without blocking first paint.
+     * Accepts optional ?rid= to check one router; otherwise sweeps active routers.
      */
     public function resolve()
     {
+        // Public page — no session writes; release lock if PHP started one.
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $userIp = $this->request->getIPAddress();
         $isLocalhost = ($userIp === '::1' || $userIp === '127.0.0.1');
+        $routerId = $this->request->getGet('rid') ?? null;
 
         helper('router');
         $routerModel = model('App\Models\Router');
 
         $pppoeName = null;
-        $routerId = null;
+        $matchedRouterId = null;
+
         if (!$isLocalhost) {
-            // Optimization: prevent this (bounded, background-from-the-user's-
-            // perspective) loop from hard timing out mid-sweep.
-            set_time_limit(180);
-            $routersToCheck = $routerModel->where('status', 'active')->findAll();
-            foreach ($routersToCheck as $router) {
-                $ridToCheck = is_array($router) ? $router['id'] : $router->id;
-                $pppoeName = $this->matchPppoeOnRouter($ridToCheck, $userIp);
-                if ($pppoeName !== null) {
-                    $routerId = $ridToCheck;
-                    break;
+            if ($routerId) {
+                $specificRouter = $routerModel->find($routerId);
+                if ($specificRouter) {
+                    $pppoeName = $this->matchPppoeOnRouter($routerId, $userIp);
+                    if ($pppoeName !== null) {
+                        $matchedRouterId = $routerId;
+                    }
+                }
+            } else {
+                // Optimization: prevent this (bounded, background-from-the-user's-
+                // perspective) loop from hard timing out mid-sweep.
+                set_time_limit(180);
+                $routersToCheck = $routerModel->where('status', 'active')->findAll();
+                foreach ($routersToCheck as $router) {
+                    $ridToCheck = is_array($router) ? $router['id'] : $router->id;
+                    $pppoeName = $this->matchPppoeOnRouter($ridToCheck, $userIp);
+                    if ($pppoeName !== null) {
+                        $matchedRouterId = $ridToCheck;
+                        break;
+                    }
                 }
             }
         }
@@ -90,7 +103,8 @@ class CaptivePortal extends BaseController
         return $this->response->setJSON([
             'ok' => true,
             'payment_id' => $paymentId,
-            'router_id' => $routerId,
+            'router_id' => $matchedRouterId,
+            'user_found' => $foundUser !== null,
         ]);
     }
 

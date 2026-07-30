@@ -7,8 +7,7 @@
   border-top: 1px solid var(--border, #e6eaf0) !important;
   border-radius: var(--radius-lg, 14px) !important;
   box-shadow: var(--shadow-1, 0 1px 2px rgba(15, 23, 42, 0.04)) !important;
-  /* visible — overflow:hidden clipped the table scrollbar and broke sticky cells */
-  overflow: visible;
+  overflow: hidden;
   background: var(--surface, #fff) !important;
 }
 
@@ -357,72 +356,16 @@ body.ipb .ipb-customers-page .ipb-row-btn:focus i {
   color: inherit !important;
 }
 
-/* Outer wrap holds DataTables chrome (length/filter/info). It must NOT scroll
-   once the table is isolated — but before JS runs, keep a fallback scroller. */
 .ipb-customers-page .ipb-customers-table-wrap {
-  overflow: visible !important;
-  width: 100%;
-  max-width: 100%;
-  position: relative;
-}
-.ipb-customers-page .ipb-customers-table-wrap:not(:has(.ipb-customers-table-scroll)) {
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch;
-}
-
-/* Isolated horizontal scroller around the <table> only */
-.ipb-customers-page .ipb-customers-table-scroll {
-  overflow-x: auto !important;
-  overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-x: contain;
   width: 100%;
-  max-width: 100%;
   position: relative;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  margin: 0 -4px;
-  padding: 0 4px 6px;
 }
-
-.ipb-customers-page .ipb-customers-table-scroll::-webkit-scrollbar {
-  height: 10px;
-}
-.ipb-customers-page .ipb-customers-table-scroll::-webkit-scrollbar-thumb {
-  background: var(--border-strong, #cbd5e1);
-  border-radius: 8px;
-}
-.ipb-customers-page .ipb-customers-table-scroll::-webkit-scrollbar-track {
-  background: var(--surface-2, #f8fafc);
-  border-radius: 8px;
-}
-
-/* Swipe affordance when content is wider than the viewport */
-.ipb-customers-page .ipb-customers-table-scroll.is-scrollable::after {
-  content: "Swipe for more →";
-  position: absolute;
-  right: 12px;
-  bottom: 14px;
-  z-index: 5;
-  pointer-events: none;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-secondary, #51607a);
-  background: color-mix(in srgb, var(--surface, #fff) 92%, var(--primary-500, #f75803));
-  border: 1px solid var(--border, #e6eaf0);
-  box-shadow: var(--shadow-1, 0 1px 2px rgba(15, 23, 42, 0.06));
-}
-
-.ipb-customers-page .ipb-customers-table-scroll table.dataTable,
 .ipb-customers-page .ipb-customers-table-wrap table.dataTable {
-  min-width: 1120px !important;
-  width: max-content !important;
-  max-width: none !important;
+  min-width: 980px !important;
+  width: 100% !important;
 }
-.ipb-customers-page .ipb-customers-table-scroll table.dataTable thead th,
-.ipb-customers-page .ipb-customers-table-scroll table.dataTable tbody td,
 .ipb-customers-page .ipb-customers-table-wrap table.dataTable thead th,
 .ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody td {
   white-space: nowrap !important;
@@ -433,46 +376,18 @@ body.ipb .ipb-customers-page .ipb-row-btn:focus i {
 /* Address is free text (the only unbounded column). Once the touch tiers put
    every cell on one line it would otherwise claim a column wider than the rest
    of the table put together — cap it and ellipsis the overflow. */
-.ipb-customers-page .ipb-customers-table-scroll table.dataTable tbody td.ipb-c-address,
 .ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody td.ipb-c-address {
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ipb-customers-page .ipb-customers-table-scroll table.dataTable tbody tr:hover td,
 .ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody tr:hover td {
   background: var(--surface-hover, #f8fafc) !important;
 }
 
-/* Sticky identity (select + customer) and actions while scrolling sideways */
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-select,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-select {
-  position: sticky !important;
-  left: 0 !important;
-  z-index: calc(var(--z-sticky-cell, 3) + 1);
-  background: var(--surface, #fff) !important;
-  box-shadow: 6px 0 10px -8px rgba(15, 23, 42, 0.22);
-  min-width: 44px;
-  width: 44px;
-}
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-name,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-name {
-  position: sticky !important;
-  left: 0 !important;
-  z-index: var(--z-sticky-cell, 3);
-  background: var(--surface, #fff) !important;
-  box-shadow: 6px 0 10px -8px rgba(15, 23, 42, 0.22);
-  min-width: 140px;
-}
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable:has(.ipb-c-select) > thead > tr > th.ipb-c-name,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable:has(.ipb-c-select) > tbody > tr > td.ipb-c-name {
-  left: 44px !important;
-}
-
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-action,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-action,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th:last-child,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td:last-child,
+/* Keep Update / View / Recharge pinned while the wide table scrolls.
+   Desktop never got responsive.css sticky (phone-only), and phone used to
+   force position:static — so Action sat off-screen behind Address/PPPoE. */
 body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
 body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td.ipb-c-action,
 body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child,
@@ -482,51 +397,29 @@ body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody >
   z-index: var(--z-sticky-cell, 3);
   background: var(--surface, #fff) !important;
   box-shadow: -6px 0 10px -8px rgba(15, 23, 42, 0.28);
-  min-width: 148px;
+  min-width: 86px;
 }
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-select,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-name,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-action,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th:last-child,
 body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
 body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child {
   z-index: var(--z-sticky-head, 4);
   background: var(--surface-2, #f8fafc) !important;
 }
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable.table-striped > tbody > tr:nth-of-type(odd) > td.ipb-c-select,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable.table-striped > tbody > tr:nth-of-type(odd) > td.ipb-c-name,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable.table-striped > tbody > tr:nth-of-type(odd) > td.ipb-c-action,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable.table-striped > tbody > tr:nth-of-type(odd) > td:last-child,
 body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable.table-striped > tbody > tr:nth-of-type(odd) > td.ipb-c-action,
 body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable.table-striped > tbody > tr:nth-of-type(odd) > td:last-child {
   background: var(--surface-2, #f8fafc) !important;
 }
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr:hover > td.ipb-c-select,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr:hover > td.ipb-c-name,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr:hover > td.ipb-c-action,
-body.ipb .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr:hover > td:last-child,
 body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr:hover > td.ipb-c-action,
 body.ipb .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr:hover > td:last-child {
   background: var(--surface-hover, #f8fafc) !important;
 }
-body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-select,
-body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-select,
-body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-name,
-body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-name,
-body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-action,
-body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-action,
-body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-select,
-body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-select,
-body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-name,
-body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-name,
-body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-action,
-body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-action {
-  box-shadow: 6px 0 10px -8px rgba(0, 0, 0, 0.55);
-}
-body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-action,
-body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-action,
-body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTable > thead > tr > th.ipb-c-action,
-body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTable > tbody > tr > td.ipb-c-action {
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td.ipb-c-action,
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child,
+body.ipb[data-theme="dark"] .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td:last-child,
+body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th.ipb-c-action,
+body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td.ipb-c-action,
+body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-wrap table.dataTable > thead > tr > th:last-child,
+body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-wrap table.dataTable > tbody > tr > td:last-child {
   box-shadow: -6px 0 10px -8px rgba(0, 0, 0, 0.6);
 }
 
@@ -579,13 +472,10 @@ body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTab
      mid-word instead of scrolling. Floor it at a width the columns can
      actually lay out in — saas.js's .is-scrollable "Swipe for more" hint
      already advertises the horizontal scroll. */
-  .ipb-customers-page .ipb-customers-table-scroll table.dataTable,
   .ipb-customers-page .ipb-customers-table-wrap table.dataTable {
-    min-width: 1120px !important;
+    min-width: 940px !important;
   }
 
-  .ipb-customers-page .ipb-customers-table-scroll table.dataTable thead th,
-  .ipb-customers-page .ipb-customers-table-scroll table.dataTable tbody td,
   .ipb-customers-page .ipb-customers-table-wrap table.dataTable thead th,
   .ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody td {
     white-space: nowrap !important;
@@ -593,7 +483,6 @@ body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTab
     overflow-wrap: normal !important;
   }
 
-  body.ipb .ipb-customers-page .ipb-customers-table-scroll .ipb-row-actions,
   body.ipb .ipb-customers-page .ipb-customers-table-wrap .ipb-row-actions {
     flex-wrap: nowrap !important;
   }
@@ -711,13 +600,10 @@ body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTab
      scroll inside .ipb-customers-table-wrap instead of being crushed into the
      viewport: every cell then reads on a single line. saas.js's
      .is-scrollable "Swipe for more →" hint already advertises the scroll. */
-  .ipb-customers-page .ipb-customers-table-scroll table.dataTable,
   .ipb-customers-page .ipb-customers-table-wrap table.dataTable {
-    min-width: 1120px !important;
+    min-width: 940px !important;
   }
 
-  .ipb-customers-page .ipb-customers-table-scroll table.dataTable thead th,
-  .ipb-customers-page .ipb-customers-table-scroll table.dataTable tbody td,
   .ipb-customers-page .ipb-customers-table-wrap table.dataTable thead th,
   .ipb-customers-page .ipb-customers-table-wrap table.dataTable tbody td {
     white-space: nowrap !important;
@@ -728,7 +614,6 @@ body.ipb.dark-mode .ipb-customers-page .ipb-customers-table-scroll table.dataTab
   }
 
   /* 2 buttons per row layout maintained */
-  body.ipb .ipb-customers-page .ipb-customers-table-scroll .ipb-row-actions,
   body.ipb .ipb-customers-page .ipb-customers-table-wrap .ipb-row-actions {
     width: 70px !important;
     max-width: 70px !important;

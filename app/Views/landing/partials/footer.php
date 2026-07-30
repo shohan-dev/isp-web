@@ -86,7 +86,10 @@
         <?php endif; ?>
 
         <div class="lp-footer__bottom">
-            <span>© <?= date('Y') ?> <?= esc($appName ?? 'ISP Pay BD') ?>. All rights reserved.</span>
+            <div class="lp-footer__copy">
+                <span>© <?= date('Y') ?> <?= esc($appName ?? 'ISP Pay BD') ?>. All rights reserved.</span>
+                <span class="lp-footer__dev">Developed by WebCore Solution</span>
+            </div>
             <div class="lp-footer__legal">
                 <a href="<?= $lpfAnchor('#lp-faq') ?>">Terms</a>
                 <a href="<?= $lpfAnchor('#lp-faq') ?>">Privacy</a>

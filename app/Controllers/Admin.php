@@ -235,9 +235,15 @@ class Admin extends BaseController
                 ->where('role', 'admin')
                 ->orderBy('name', 'asc')
                 ->get()->getResult();
-            // Landing-page "Save N months" yearly-discount badge — platform-wide,
+            // Landing-page yearly-discount badge/math — platform-wide,
             // super-admin editable (see Admin::savePricingSettings()).
-            $data['yearlyDiscountMonths'] = max(0, min(11, (int) getSetting('yearly_discount_months', 2, platformBrandingUserId())));
+            $yearlyMonths = max(0, min(11, (int) getSetting('yearly_discount_months', 2, platformBrandingUserId())));
+            $storedPercent = getSetting('yearly_discount_percent', null, platformBrandingUserId());
+            $yearlyPercent = ($storedPercent === null || $storedPercent === '')
+                ? (int) round($yearlyMonths / 12 * 100)
+                : max(0, min(99, (int) $storedPercent));
+            $data['yearlyDiscountMonths'] = $yearlyMonths;
+            $data['yearlyDiscountPercent'] = $yearlyPercent;
         }
         // log_message('info', 'User Data: ' . json_encode($data));
 
@@ -401,10 +407,10 @@ class Admin extends BaseController
     }
 
     /**
-     * Platform-wide "Save N months" yearly-discount config for the landing
-     * pricing toggle. Display-only — never used for real billing math. Route
-     * is already filtered role:super_admin (see Routes.php); the in-method
-     * check below is defense-in-depth, matching collectPlanTypeFields().
+     * Platform-wide yearly-discount config for the landing pricing toggle.
+     * Display-only — never used for real billing math. Route is already
+     * filtered role:super_admin (see Routes.php); the in-method check below
+     * is defense-in-depth, matching collectPlanTypeFields().
      */
     public function savePricingSettings()
     {
@@ -414,17 +420,24 @@ class Admin extends BaseController
 
         $validation = \Config\Services::validation();
         $validation->setRules([
-            'yearly_discount_months' => 'required|integer|greater_than_equal_to[0]|less_than_equal_to[11]',
+            'yearly_discount_months'  => 'required|integer|greater_than_equal_to[0]|less_than_equal_to[11]',
+            'yearly_discount_percent' => 'required|integer|greater_than_equal_to[0]|less_than_equal_to[99]',
         ]);
 
         if (!$validation->withRequest($this->request)->run()) {
             return $this->response->setJSON(['success' => false, 'errors' => $validation->getErrors()]);
         }
 
-        $months = (int) $this->request->getPost('yearly_discount_months');
+        $months  = (int) $this->request->getPost('yearly_discount_months');
+        $percent = (int) $this->request->getPost('yearly_discount_percent');
         setSetting('yearly_discount_months', $months);
+        setSetting('yearly_discount_percent', $percent);
 
-        return $this->response->setJSON(['success' => true, 'yearly_discount_months' => $months]);
+        return $this->response->setJSON([
+            'success'                 => true,
+            'yearly_discount_months'  => $months,
+            'yearly_discount_percent' => $percent,
+        ]);
     }
 
     public function activatePackage($id)
@@ -521,23 +534,22 @@ class Admin extends BaseController
             $data = $this->user_model->builder()
                 ->select('users.*, COALESCE(admin_packages.package_name, "--") as joined_package_name')
                 ->join('admin_packages', 'admin_packages.id = users.package_id', 'left')
-                ->where('role', 'admin')
-                ->where('subscription_status', 'inactive')
-                ->orderBy('id', 'desc');
+                ->where('users.role', 'admin')
+                ->where('users.subscription_status', 'inactive')
+                ->orderBy('users.id', 'desc');
         } elseif ($status === 'active') {
             $data = $this->user_model->builder()
                 ->select('users.*, COALESCE(admin_packages.package_name, "--") as joined_package_name')
                 ->join('admin_packages', 'admin_packages.id = users.package_id', 'left')
-                ->where('role', 'admin')
-                ->where('subscription_status', 'active')
-                ->orderBy('id', 'desc');
+                ->where('users.role', 'admin')
+                ->where('users.subscription_status', 'active')
+                ->orderBy('users.id', 'desc');
         } else {
             $data = $this->user_model->builder()
                 ->select('users.*, COALESCE(admin_packages.package_name, "--") as joined_package_name')
                 ->join('admin_packages', 'admin_packages.id = users.package_id', 'left')
-                ->where('role', 'admin')
-
-                ->orderBy('id', 'desc');
+                ->where('users.role', 'admin')
+                ->orderBy('users.id', 'desc');
         }
 
         $datatables = new DataTables($data);
@@ -601,6 +613,7 @@ class Admin extends BaseController
 
             if (getSession('user_role') === 'super_admin') {
                 $html .= '<a href="' . route_to('route.Admin.adminsubscription', $row->id) . '" class="ipb-row-btn tone-success" title="Update subscription" data-toggle="tooltip"><i class="fa fa-bolt" aria-hidden="true"></i><span class="sr-only">Subscription</span></a>';
+                $html .= '<a href="' . route_to('route.Admin.login', $row->id) . '" class="ipb-row-btn tone-success" title="Login as Second Admin" data-toggle="tooltip"><i class="fa fa-right-to-bracket" aria-hidden="true"></i><span class="sr-only">Login</span></a>';
             }
             if (userHasPermission('admin', 'update_subscription') && getSession('user_role') === 'admin') {
                 $html .= '<a href="' . route_to('route.Admin.subscription', $row->id) . '" class="ipb-row-btn tone-success" title="Update subscription" data-toggle="tooltip"><i class="fa fa-bolt" aria-hidden="true"></i><span class="sr-only">Subscription</span></a>';
@@ -631,6 +644,22 @@ class Admin extends BaseController
             'password',
             'updated_at',
             'admin_id',
+            'joined_package_name',
+        ]);
+
+        // Join with admin_packages makes bare columns like created_at/id ambiguous
+        // during DataTables search/order — qualify them to users.* (and package name).
+        $datatables->addColumnAliases([
+            'users.id' => 'id',
+            'users.name' => 'name',
+            'users.mobile' => 'mobile',
+            'users.email' => 'email',
+            'users.created_at' => 'created_at',
+            'users.auto_disconnect' => 'auto_disconnect',
+            'users.conn_status' => 'conn_status',
+            'users.status' => 'status',
+            'users.subscription_status' => 'subscription_status',
+            'admin_packages.package_name' => 'package',
         ]);
 
         $datatables->asObject();
@@ -1775,6 +1804,77 @@ class Admin extends BaseController
             'this_month_label' => date('F Y'),
             'last_month_label' => date('F Y', $lastMonthTs),
         ];
+    }
+
+    /**
+     * Super Admin passwordless login into a Second Admin session
+     * (same pattern as Reseller::reseller_login).
+     */
+    public function admin_login($id)
+    {
+        $role = (string) (session()->get('user_role') ?? '');
+        $isPlatform = function_exists('isPlatformSuperAdmin')
+            ? isPlatformSuperAdmin($role)
+            : strtolower($role) === 'super_admin';
+
+        if (!$isPlatform) {
+            log_message('error', 'Blocked unauthorized impersonation of Second Admin ' . $id);
+            show_404();
+        }
+
+        $admin = $this->user_model
+            ->groupStart()
+            ->where('role', 'admin')
+            ->orWhere('role', 'sAdmin')
+            ->groupEnd()
+            ->where('id', (int) $id)
+            ->first();
+
+        if (empty($admin)) {
+            show_404();
+        }
+
+        if (($admin->status ?? '') !== 'active') {
+            session()->setFlashdata('error', 'Cannot login — this Second Admin is disabled');
+            return redirect()->to(route_to('route.Admin'));
+        }
+
+        $session = session();
+        $session->set('original_user', [
+            'user_id'      => $session->get('user_id'),
+            'user_role'    => $session->get('user_role'),
+            'admin_id'     => $session->get('admin_id'),
+            'return_route' => 'route.Admin',
+        ]);
+
+        $session->set([
+            'user_id'   => $admin->id,
+            'user_role' => $admin->role,
+            'admin_id'  => $admin->admin_id ?? null,
+        ]);
+
+        log_message('info', 'Super Admin impersonating Second Admin ' . $admin->id);
+
+        return redirect()->to(route_to('route.dashboard'));
+    }
+
+    /**
+     * Exit Second Admin impersonation and restore Super Admin session.
+     */
+    public function returnToSuperAdmin()
+    {
+        $session = session();
+        if ($session->has('original_user')) {
+            $original = $session->get('original_user');
+            $session->set([
+                'user_id'   => $original['user_id'],
+                'user_role' => $original['user_role'],
+                'admin_id'  => $original['admin_id'] ?? null,
+            ]);
+            $session->remove('original_user');
+        }
+
+        return redirect()->to(route_to('route.Admin'));
     }
 }
 

@@ -196,6 +196,13 @@
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td></td>
+                                                <td>No expense types found</td>
+                                                <td></td>
+                                                <td></td>
+                                            </tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
@@ -377,275 +384,283 @@
 <?= $this->section('script'); ?>
 
 <script>
-    /**
-     * Handlers are attached to window so they survive SPA partial-nav:
-     * ipb-nav wraps page scripts in an IIFE, which would otherwise hide
-     * function declarations from inline onclick="..." attributes.
-     * (Same fix already applied on accounts/incomes.)
-     */
-    (function ($) {
-        function csrfPayload(extra) {
-            var data = extra || {};
-            data['<?= csrf_token() ?>'] = '<?= csrf_hash() ?>';
-            return data;
-        }
+    // Check if jQuery is loaded
+    console.log('jQuery loaded:', typeof jQuery !== 'undefined');
 
-        function initExpenseTables() {
-            if (!$.fn.DataTable) {
-                console.error('DataTables is not loaded');
-                return;
-            }
+    $(document).ready(function() {
+        console.log('Document ready - initializing');
 
-            if ($.fn.DataTable.isDataTable('#expenseTypeTable')) {
-                $('#expenseTypeTable').DataTable().destroy();
-            }
-            if ($.fn.DataTable.isDataTable('#expenseTable')) {
-                $('#expenseTable').DataTable().destroy();
-            }
+        // Initialize DataTable for main expense table (server-side — no unbounded findAll)
+        $('#expenseTable').DataTable({
+            processing: true,
+            serverSide: true,
+            deferRender: true,
+            ajax: {
+                url: "<?= site_url('expense/fetch'); ?>",
+                type: "POST",
+                headers: { '<?= csrf_header() ?>': '<?= csrf_hash() ?>' }
+            },
+            "pageLength": 50,
+            "lengthMenu": [
+                [10, 25, 50, 100, 200],
+                [10, 25, 50, 100, 200]
+            ],
+            "ordering": false,
+            "responsive": true,
+            "autoWidth": true
+        });
 
-            $('#expenseTable').DataTable({
-                pageLength: 100,
-                lengthMenu: [
-                    [10, 25, 50, 100, 200],
-                    [10, 25, 50, 100, 200]
+        // Initialize DataTable for expense type table
+        if ($('#expenseTypeTable').length) {
+            $('#expenseTypeTable').DataTable({
+                "pageLength": 10,
+                "lengthMenu": [
+                    [10, 25, 50, -1],
+                    [10, 25, 50, "All"]
                 ],
-                ordering: true,
-                responsive: false,
-                scrollX: true,
-                autoWidth: true,
-                columnDefs: [{
-                    targets: [0, 13],
-                    orderable: false
-                }],
-                language: {
-                    search: 'Search:',
-                    emptyTable: 'No expense records found',
-                    zeroRecords: 'No matching expenses found'
+                "ordering": true,
+                "autoWidth": false,
+                "responsive": true,
+                "columnDefs": [{
+                        "orderable": false,
+                        "targets": 3
+                    },
+                    {
+                        "width": "15%",
+                        "targets": 0
+                    },
+                    {
+                        "width": "35%",
+                        "targets": 1
+                    },
+                    {
+                        "width": "30%",
+                        "targets": 2
+                    },
+                    {
+                        "width": "20%",
+                        "targets": 3
+                    }
+                ],
+                "language": {
+                    "lengthMenu": "Show _MENU_ entries",
+                    "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+                    "infoEmpty": "Showing 0 to 0 of 0 entries",
+                    "infoFiltered": "(filtered from _MAX_ total entries)",
+                    "search": "Search:",
+                    "paginate": {
+                        "first": "First",
+                        "last": "Last",
+                        "next": "Next",
+                        "previous": "Previous"
+                    }
                 }
             });
-
-            if ($('#expenseTypeTable').length) {
-                $('#expenseTypeTable').DataTable({
-                    pageLength: 10,
-                    lengthMenu: [
-                        [10, 25, 50, -1],
-                        [10, 25, 50, 'All']
-                    ],
-                    ordering: true,
-                    autoWidth: false,
-                    responsive: true,
-                    columnDefs: [{
-                        targets: 3,
-                        orderable: false
-                    }],
-                    language: {
-                        search: 'Search:',
-                        emptyTable: 'No expense types found',
-                        zeroRecords: 'No matching types found'
-                    }
-                });
-            }
         }
 
-        window.viewFile = function (filename) {
-            if (!filename) {
-                tata.error('No file available', 'There is no document attached to this expense.');
-                return;
+        /* ================= Expense Type AJAX ================= */
+        $('#expenseTypeForm').on('submit', function(e) {
+            e.preventDefault();
+            saveExpenseType();
+        });
+
+        // Select All functionality
+        $('#selectAll').on('click', function() {
+            $('.rowCheckbox').prop('checked', this.checked);
+        });
+
+        $(document).on('click', '.rowCheckbox', function() {
+            if ($('.rowCheckbox:checked').length != $('.rowCheckbox').length) {
+                $('#selectAll').prop('checked', false);
             }
-            window.open('<?= base_url('assets/expenses/') ?>' + filename, '_blank');
-        };
+        });
+    });
 
-        window.showExpenseTypeModal = function () {
-            window.resetExpenseTypeForm();
-            $('#expenseTypeModal').modal('show');
-        };
+    // ================= File Viewing Function =================
+    function viewFile(filename) {
+        if (!filename) {
+            alert('No file available');
+            return;
+        }
 
-        window.resetExpenseTypeForm = function () {
-            $('#expense_type_id').val('');
-            $('#expense_type_name').val('');
-            $('#saveTypeBtn').html('<i class="fa fa-save"></i> Save Type');
-        };
+        // Construct the full file URL - using assets/expenses/ as per your save path
+        const fileUrl = '<?= base_url("assets/expenses/") ?>' + filename;
 
-        window.saveExpenseType = function () {
-            var form = $('#expenseTypeForm');
-            var submitBtn = $('#saveTypeBtn');
-            var typeId = $('#expense_type_id').val();
-            var url = typeId
-                ? '<?= base_url('accounts/expense-type/update') ?>'
-                : '<?= base_url('accounts/expense-type/save') ?>';
+        // Open in new tab/window
+        window.open(fileUrl, '_blank');
+    }
 
+    // ================= Expense Type Functions =================
+    function showExpenseTypeModal() {
+        resetExpenseTypeForm();
+        $('#expenseTypeModal').modal('show');
+    }
+
+    function saveExpenseType() {
+        const form = $('#expenseTypeForm');
+        const submitBtn = $('#saveTypeBtn');
+        const formData = form.serialize();
+        const typeId = $('#expense_type_id').val();
+
+        // Use base_url() for the URLs
+        let url = typeId ? '<?= base_url("accounts/expense-type/update") ?>' : '<?= base_url("accounts/expense-type/save") ?>';
+
+        $.ajax({
+            url: url,
+            type: "POST",
+            data: formData,
+            dataType: "json",
+            beforeSend: function() {
+                submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    alert(response.message);
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function(xhr) {
+                console.error(xhr.responseText);
+                alert('Database Error: Could not save. Check console for details.');
+            },
+            complete: function() {
+                submitBtn.html('<i class="fa fa-save"></i> Save Type').prop('disabled', false);
+            }
+        });
+    }
+
+    function editExpenseType(id, name) {
+        $('#expense_type_id').val(id);
+        $('#expense_type_name').val(name);
+        $('#saveTypeBtn').html('<i class="fa fa-pencil"></i> Update Type');
+        $('#expenseTypeModal').modal('show');
+    }
+
+    function deleteExpenseType(id) {
+        if (confirm('Are you sure you want to delete this expense type?')) {
             $.ajax({
-                url: url,
-                type: 'POST',
-                data: form.serialize(),
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                beforeSend: function () {
-                    submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+                url: '<?= base_url("accounts/expense-type/delete") ?>',
+                type: "POST",
+                data: {
+                    id: id,
+                    '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
                 },
-                success: function (response) {
-                    if (response && response.status === 'success') {
-                        tata.success('Type saved', response.message);
-                        setTimeout(function () { location.reload(); }, 800);
+                dataType: "json",
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert(response.message);
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
                     } else {
-                        tata.error("Couldn't save type", (response && response.message) || 'Save failed');
+                        alert('Error: ' + response.message);
                     }
                 },
-                error: function (xhr) {
-                    var msg = 'Could not save. Check console for details.';
-                    try {
-                        var parsed = JSON.parse(xhr.responseText);
-                        if (parsed && parsed.message) msg = parsed.message;
-                    } catch (e) {}
-                    tata.error("Couldn't save type", msg);
-                },
-                complete: function () {
-                    submitBtn.html('<i class="fa fa-save"></i> Save Type').prop('disabled', false);
+                error: function(xhr) {
+                    console.error(xhr.responseText);
+                    alert('Error deleting expense type');
                 }
             });
-        };
+        }
+    }
 
-        window.editExpenseType = function (id, name) {
-            $('#expense_type_id').val(id);
-            $('#expense_type_name').val(name);
-            $('#saveTypeBtn').html('<i class="fa fa-pencil"></i> Update Type');
-            $('#expenseTypeModal').modal('show');
-        };
+    function resetExpenseTypeForm() {
+        $('#expense_type_id').val('');
+        $('#expense_type_name').val('');
+        $('#saveTypeBtn').html('<i class="fa fa-save"></i> Save Type');
+    }
 
-        window.deleteExpenseType = function (id) {
-            swal({
-                title: 'Delete type?',
-                text: 'Are you sure you want to delete this expense type?',
-                icon: 'warning',
-                dangerMode: true,
-                buttons: ['Cancel', 'Delete type'],
-            }).then(function (willDelete) {
-                if (!willDelete) return;
-                $.ajax({
-                    url: '<?= base_url('accounts/expense-type/delete') ?>',
-                    type: 'POST',
-                    data: csrfPayload({ id: id }),
-                    dataType: 'json',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    success: function (response) {
-                        if (response && response.status === 'success') {
-                            tata.success('Type deleted', response.message);
-                            setTimeout(function () { location.reload(); }, 800);
-                        } else {
-                            tata.error("Couldn't delete type", (response && response.message) || 'Delete failed');
-                        }
-                    },
-                    error: function () {
-                        tata.error("Couldn't delete type", 'Error deleting expense type.');
-                    }
-                });
-            });
-        };
+    // ================= Expense Functions =================
+    function showExpenseModal() {
+        resetExpenseForm();
+        $('#expenseModal .modal-title').text('Add New Expense');
+        $('#expenseModal').modal('show');
+    }
 
-        window.showExpenseModal = function () {
-            window.resetExpenseForm();
-            $('#expenseModal .modal-title').text('Add New Expense');
-            $('#expenseModal').modal('show');
-        };
+    function resetExpenseForm() {
+        $('#expenseForm')[0].reset();
+        $('#expense_id').val('');
+        $('#current_document').hide();
+        $('#existing_document_name').val('');
+    }
 
-        window.resetExpenseForm = function () {
-            var form = document.getElementById('expenseForm');
-            if (form) form.reset();
-            $('#expense_id').val('');
-            $('#current_document').hide();
-            $('#existing_document_name').val('');
-        };
+    function saveExpense() {
+        let formData = new FormData(document.getElementById('expenseForm'));
+        const expenseId = $('#expense_id').val();
 
-        window.saveExpense = function () {
-            var formEl = document.getElementById('expenseForm');
-            if (!formEl) return;
+        // Use base_url() for the URLs
+        let url = expenseId ? '<?= base_url("accounts/expense/update") ?>' : '<?= base_url("accounts/expense/save") ?>';
 
-            if (typeof formEl.reportValidity === 'function' && !formEl.reportValidity()) {
-                return;
+        $.ajax({
+            url: url,
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            beforeSend: function() {
+                $('#expenseModal .btn-success').html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
+            },
+            success: function(response) {
+                console.log('Expense success:', response);
+                alert(response.message);
+                $('#expenseModal').modal('hide');
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
+            },
+            error: function(xhr, status, error) {
+                console.error('Expense error:', error);
+                console.error('Response:', xhr.responseText);
+                alert('Error saving expense: ' + error);
+            },
+            complete: function() {
+                $('#expenseModal .btn-success').html('<i class="fa fa-save"></i> Save Expense').prop('disabled', false);
             }
+        });
+    }
 
-            var formData = new FormData(formEl);
-            var expenseId = $('#expense_id').val();
-            var url = expenseId
-                ? '<?= base_url('accounts/expense/update') ?>'
-                : '<?= base_url('accounts/expense/save') ?>';
-            var $btn = $('#expenseModal .btn-success');
+    function editExpense(id) {
+        $.ajax({
+            url: '<?= base_url("accounts/expense/get") ?>/' + id,
+            type: "GET",
+            dataType: "json",
+            success: function(response) {
+                if (response.status === 'success') {
+                    const data = response.data;
 
-            $.ajax({
-                url: url,
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                beforeSend: function () {
-                    $btn.html('<i class="fa fa-spinner fa-spin"></i> Saving...').prop('disabled', true);
-                },
-                success: function (response) {
-                    if (response && response.status === 'success') {
-                        tata.success(expenseId ? 'Expense updated' : 'Expense added', response.message);
-                        $('#expenseModal').modal('hide');
-                        setTimeout(function () { location.reload(); }, 800);
-                    } else {
-                        tata.error(
-                            expenseId ? "Couldn't update expense" : "Couldn't add expense",
-                            (response && response.message) || 'Save failed'
-                        );
-                    }
-                },
-                error: function (xhr) {
-                    var msg = 'Error saving expense';
-                    try {
-                        var parsed = JSON.parse(xhr.responseText);
-                        if (parsed && parsed.message) msg = parsed.message;
-                    } catch (e) {}
-                    tata.error(expenseId ? "Couldn't update expense" : "Couldn't add expense", msg);
-                },
-                complete: function () {
-                    $btn.html('<i class="fa fa-save"></i> Save Expense').prop('disabled', false);
-                }
-            });
-        };
-
-        window.editExpense = function (id) {
-            $.ajax({
-                url: '<?= base_url('accounts/expense/get') ?>/' + id,
-                type: 'GET',
-                dataType: 'json',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                success: function (response) {
-                    if (!(response && response.status === 'success')) {
-                        tata.error("Couldn't load expense", 'Error loading expense data.');
-                        return;
-                    }
-                    var data = response.data;
-                    var formattedDate = '';
+                    // Format date for input field (YYYY-MM-DD)
+                    let formattedDate = '';
                     if (data.date) {
-                        var dateObj = new Date(data.date);
-                        if (!isNaN(dateObj.getTime())) {
-                            var year = dateObj.getFullYear();
-                            var month = String(dateObj.getMonth() + 1).padStart(2, '0');
-                            var day = String(dateObj.getDate()).padStart(2, '0');
-                            formattedDate = year + '-' + month + '-' + day;
-                        } else if (typeof data.date === 'string' && data.date.length >= 10) {
-                            formattedDate = data.date.substring(0, 10);
-                        }
+                        const dateObj = new Date(data.date);
+                        const year = dateObj.getFullYear();
+                        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                        const day = String(dateObj.getDate()).padStart(2, '0');
+                        formattedDate = `${year}-${month}-${day}`;
                     }
 
                     $('#expense_id').val(data.id);
                     $('#expense_name').val(data.name);
+
+                    // Fix: Set dropdown values properly
                     $('#expense_head').val(data.expense_head).trigger('change');
                     $('#employee').val(data.employee).trigger('change');
                     $('#bank_account').val(data.bank_account).trigger('change');
+
                     $('#invoice_no').val(data.invoice_no);
                     $('#expense_date').val(formattedDate);
                     $('#expense_amount').val(data.amount);
                     $('#expense_description').val(data.description);
 
+                    // Handle document display
                     if (data.document) {
                         $('#current_document').show();
                         $('#existing_document_name').val(data.document);
+
+                        // Update the view button
                         $('#current_document button').attr('onclick', 'viewFile("' + data.document + '")');
                     } else {
                         $('#current_document').hide();
@@ -654,105 +669,96 @@
 
                     $('#expenseModal .modal-title').text('Edit Expense');
                     $('#expenseModal').modal('show');
-                },
-                error: function () {
-                    tata.error("Couldn't load expense", 'Error loading expense data.');
+                } else {
+                    alert('Error loading expense data');
                 }
-            });
-        };
-
-        window.deleteExpense = function (id) {
-            swal({
-                title: 'Delete expense?',
-                text: 'Are you sure you want to delete this expense?',
-                icon: 'warning',
-                dangerMode: true,
-                buttons: ['Cancel', 'Delete expense'],
-            }).then(function (willDelete) {
-                if (willDelete) {
-                    window.location.href = '<?= base_url('accounts/expense/delete') ?>/' + id;
-                }
-            });
-        };
-
-        window.approveExpense = function (id) {
-            swal({
-                title: 'Approve expense?',
-                text: 'Are you sure you want to approve this expense?',
-                icon: 'warning',
-                buttons: ['Cancel', 'Approve'],
-            }).then(function (willApprove) {
-                if (!willApprove) return;
-                $.ajax({
-                    url: '<?= base_url('accounts/expense/approve') ?>',
-                    type: 'POST',
-                    data: csrfPayload({ id: id }),
-                    dataType: 'json',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    success: function (response) {
-                        if (response && response.status === 'success') {
-                            tata.success('Expense approved', response.message);
-                            setTimeout(function () { location.reload(); }, 800);
-                        } else {
-                            tata.error("Couldn't approve expense", (response && response.message) || 'Approve failed');
-                        }
-                    },
-                    error: function () {
-                        tata.error("Couldn't approve expense", 'Error approving expense. Please try again.');
-                    }
-                });
-            });
-        };
-
-        window.rejectExpense = function (id) {
-            swal({
-                title: 'Reject expense?',
-                text: 'Are you sure you want to reject this expense?',
-                icon: 'warning',
-                dangerMode: true,
-                buttons: ['Cancel', 'Reject'],
-            }).then(function (willReject) {
-                if (!willReject) return;
-                $.ajax({
-                    url: '<?= base_url('accounts/expense/reject') ?>',
-                    type: 'POST',
-                    data: csrfPayload({ id: id }),
-                    dataType: 'json',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    success: function (response) {
-                        if (response && response.status === 'success') {
-                            tata.success('Expense rejected', response.message);
-                            setTimeout(function () { location.reload(); }, 800);
-                        } else {
-                            tata.error("Couldn't reject expense", (response && response.message) || 'Reject failed');
-                        }
-                    },
-                    error: function () {
-                        tata.error("Couldn't reject expense", 'Error rejecting expense. Please try again.');
-                    }
-                });
-            });
-        };
-
-        $(function () {
-            initExpenseTables();
-
-            $('#expenseTypeForm').off('submit.expenseType').on('submit.expenseType', function (e) {
-                e.preventDefault();
-                window.saveExpenseType();
-            });
-
-            $('#selectAll').off('click.expenseSelect').on('click.expenseSelect', function () {
-                $('.rowCheckbox').prop('checked', this.checked);
-            });
-
-            $(document).off('click.expenseRow', '.rowCheckbox').on('click.expenseRow', '.rowCheckbox', function () {
-                if ($('.rowCheckbox:checked').length !== $('.rowCheckbox').length) {
-                    $('#selectAll').prop('checked', false);
-                }
-            });
+            },
+            error: function(xhr) {
+                console.error(xhr.responseText);
+                alert('Error loading expense data');
+            }
         });
-    })(jQuery);
+    }
+
+    function deleteExpense(id) {
+        if (confirm('Are you sure you want to delete this expense?')) {
+            window.location.href = '<?= base_url("accounts/expense/delete") ?>/' + id;
+        }
+    }
+
+    // ================= Approval Functions =================
+    function approveExpense(id) {
+        if (confirm('Are you sure you want to approve this expense?')) {
+            $.ajax({
+                url: '<?= base_url("accounts/expense/approve") ?>',
+                type: "POST",
+                data: {
+                    id: id,
+                    '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
+                },
+                dataType: "json",
+                beforeSend: function() {
+                    // Optional: Show loading indicator
+                    $('body').css('cursor', 'wait');
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert(response.message);
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Approve error:', error);
+                    console.error('Response:', xhr.responseText);
+                    alert('Error approving expense. Please try again.');
+                },
+                complete: function() {
+                    $('body').css('cursor', 'default');
+                }
+            });
+        }
+    }
+
+    function rejectExpense(id) {
+        if (confirm('Are you sure you want to reject this expense?')) {
+            $.ajax({
+                url: '<?= base_url("accounts/expense/reject") ?>',
+                type: "POST",
+                data: {
+                    id: id,
+                    // reason: reason,
+                    '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
+                },
+                dataType: "json",
+                beforeSend: function() {
+                    // Optional: Show loading indicator
+                    $('body').css('cursor', 'wait');
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert(response.message);
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Reject error:', error);
+                    console.error('Response:', xhr.responseText);
+                    alert('Error rejecting expense. Please try again.');
+                },
+                complete: function() {
+                    $('body').css('cursor', 'default');
+                }
+            });
+        }
+    }
 </script>
 
 <?= $this->endSection(); ?>

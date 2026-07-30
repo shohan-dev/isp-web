@@ -24,6 +24,15 @@ $routes->get('api/dashboard/bandwidth-usage/(:any)', 'Dashboard::bandwidthUsage/
 $routes->get('check-admin-data', 'CheckAdminData::index');
 $routes->post('api/chat', '\App\Controllers\AiChatController::aiChat');
 
+// WhatsApp Business — internal S2S for AI Chatbot (auth via X-ISP-Internal-Key)
+$routes->group('zapi/internal/whatsapp', function ($routes) {
+    $routes->get('account-by-phone-id/(:segment)', 'WhatsAppInternal::accountByPhoneId/$1');
+    $routes->get('account-by-verify-token', 'WhatsAppInternal::accountByVerifyToken');
+    $routes->get('resolve-customer', 'WhatsAppInternal::resolveCustomer');
+    $routes->post('notify-escalation', 'WhatsAppInternal::notifyEscalation');
+    $routes->post('log-message', 'WhatsAppInternal::logMessage');
+    $routes->post('marketing-opt-out', 'WhatsAppInternal::marketingOptOut');
+});
 
 // Sitemap
 $routes->get('sitemap.xml', 'Sitemap::index');
@@ -238,6 +247,15 @@ $routes->group('admins', function ($routes) {
     $routes->get('details/(:num)', 'Admin::details/$1', [
         'as' => 'route.Admin.details',
         'filter' => 'role:super_admin',
+    ]);
+
+    $routes->get('login/(:num)', 'Admin::admin_login/$1', [
+        'as' => 'route.Admin.login',
+        'filter' => ['authcheck', 'role:super_admin'],
+    ]);
+    $routes->get('returnToSuperAdmin', 'Admin::returnToSuperAdmin', [
+        'as' => 'route.Admin.returnToSuperAdmin',
+        'filter' => 'authcheck',
     ]);
 
     $routes->get('(:num)', 'Admin::subscription/$1', [
@@ -730,6 +748,8 @@ $routes->group('accounts', ['filter' => 'authcheck'], function ($routes) {
 
     // Existing expense routes...
     $routes->get('expenses', 'ExpenseController::index', ['as' => 'route.expense.list']);
+    $routes->post('expense/fetch', 'ExpenseController::fetch', ['as' => 'route.expense.fetch']);
+    $routes->get('expense/fetch', 'ExpenseController::fetch');
     // In your Routes file
     $routes->post('expense-type/save', 'ExpenseController::saveType', ['as' => 'route.expense.type.save']);
     $routes->post('expense/save', 'ExpenseController::save', ['as' => 'route.expense.save']);
@@ -754,6 +774,8 @@ $routes->group('accounts', ['filter' => 'authcheck'], function ($routes) {
 
     // Income Routes
     $routes->get('incomes', 'IncomeController::index', ['as' => 'route.income.list']);
+    $routes->post('income/fetch', 'IncomeController::fetch', ['as' => 'route.income.fetch']);
+    $routes->get('income/fetch', 'IncomeController::fetch');
     $routes->post('income-category/save', 'IncomeController::saveCategory', ['as' => 'route.income.category.save']);
     $routes->post('income/save', 'IncomeController::save', ['as' => 'route.income.save']);
     $routes->post('income-category/update', 'IncomeController::updateCategory', ['as' => 'route.income.category.update']);
@@ -1648,6 +1670,53 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
         }
     );
 
+    // WhatsApp Business AI
+    $routes->group(
+        'whatsapp',
+        function ($routes) {
+            $routes->match(['get', 'post'], 'settings', 'WhatsAppSettings::index', [
+                'as' => 'route.whatsapp.settings',
+                'filter' => 'permissioncheck:whatsapp_business,read',
+            ]);
+            $routes->post('entitlements', 'WhatsAppSettings::setEntitlement', [
+                'as' => 'route.whatsapp.entitlements',
+                'filter' => 'permissioncheck:whatsapp_business,read',
+            ]);
+            $routes->get('inbox', 'WhatsAppSettings::inbox', [
+                'as' => 'route.whatsapp.inbox',
+                'filter' => 'permissioncheck:whatsapp_business,read',
+            ]);
+            $routes->get('conversations', 'WhatsAppSettings::conversations', [
+                'as' => 'route.whatsapp.conversations',
+                'filter' => 'permissioncheck:whatsapp_business,read',
+            ]);
+            $routes->get('conversations/(:segment)', 'WhatsAppSettings::conversation/$1', [
+                'as' => 'route.whatsapp.conversation',
+                'filter' => 'permissioncheck:whatsapp_business,read',
+            ]);
+            $routes->post('send', 'WhatsAppSettings::send', [
+                'as' => 'route.whatsapp.send',
+                'filter' => 'permissioncheck:whatsapp_business,update',
+            ]);
+            $routes->get('message-log', 'WhatsAppSettings::messageLog', [
+                'as' => 'route.whatsapp.message_log',
+                'filter' => 'permissioncheck:whatsapp_business,read',
+            ]);
+            $routes->match(['get', 'post'], 'templates', 'WhatsAppSettings::templates', [
+                'as' => 'route.whatsapp.templates',
+                'filter' => 'permissioncheck:whatsapp_business,read',
+            ]);
+            $routes->match(['get', 'post'], 'opt-ins', 'WhatsAppSettings::optIns', [
+                'as' => 'route.whatsapp.opt_ins',
+                'filter' => 'permissioncheck:whatsapp_business,read',
+            ]);
+            $routes->match(['get', 'post'], 'campaigns', 'WhatsAppSettings::campaigns', [
+                'as' => 'route.whatsapp.campaigns',
+                'filter' => 'permissioncheck:whatsapp_business,read',
+            ]);
+        }
+    );
+
 
     //Router routes
     $routes->group(
@@ -1696,6 +1765,9 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
             $routes->get('users_load-traffic/(:num)', 'Routers::UsersloadTraffic/$1', [
                 'as' => 'route.routers.Usersload_Traffic',
                 // 'filter' => 'permissioncheck:routers,read',
+            ]);
+            $routes->get('users-datatable/(:num)', 'Routers::usersDatatable/$1', [
+                'as' => 'route.routers.users_datatable',
             ]);
             $routes->get('allusers', 'Routers::allusers', [
                 'as' => 'route.routers.allusers',
@@ -1975,7 +2047,7 @@ $routes->group('', ['filter' => 'authcheck'], function ($routes) {
 /**
  * CronJob routesall
  */
-$routes->group('cron', ['filter' => 'cronauth'], function ($routes) {
+$routes->group('cron', ['filter' => ['cronauth', 'cronlock']], function ($routes) {
 
     // Web Routes
     $routes->get('manage-user', 'CronJob::index', ['as' => 'route.cronjob.manageuser']);

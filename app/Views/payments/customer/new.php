@@ -26,7 +26,8 @@
       <?= form_open('', ['id' => 'form']); ?>
       <div class="box-body">
         <div class="form-group">
-          <label>Customer</label>
+          <?php $customerLabel = $customer_label ?? 'Customer'; ?>
+          <label for="customer"><?= esc($customerLabel); ?></label>
           <?php
           $options = ['' => '--Select--'];
           foreach ($customers as $customer) {
@@ -35,7 +36,7 @@
             $customer_number = isset($customer->mobile) ? $customer->mobile : 'N/A';
             $options[$customer_id] = "{$customer_id} - {$customer_name} ({$customer_number})";
           }
-          echo form_dropdown('customer', $options, '', 'class="form-control" id="customer"');
+          echo form_dropdown('customer', $options, '', 'class="form-control select2" id="customer" style="width:100%"');
           ?>
           <small id="customer-error" class="error text-danger"></small>
         </div>
@@ -214,31 +215,6 @@
 <?= $this->section('script'); ?>
 
 <script>
-  function extractPaymentErrorMessage(result, xhr) {
-    if (!result || typeof result !== 'object') {
-      if (xhr && (xhr.status === 403 || xhr.status === 419)) {
-        return 'Session expired or security check failed. Refresh the page and try again.';
-      }
-      if (xhr && xhr.status === 500) {
-        return 'Server error while saving payment. Please try again.';
-      }
-      return 'Something went wrong. Please try again.';
-    }
-    if (result.status === 'validation-error') {
-      return null;
-    }
-    if (typeof result.response === 'string' && result.response.trim() !== '') {
-      return result.response;
-    }
-    if (typeof result.message === 'string' && result.message.trim() !== '') {
-      return result.message;
-    }
-    if (typeof result.error === 'string' && result.error.trim() !== '') {
-      return result.error;
-    }
-    return 'Something went wrong. Please try again.';
-  }
-
   $("#form").submit(function(e) {
     e.preventDefault();
     const form = this;
@@ -262,24 +238,18 @@
           },
         });
       },
-      error: function(xhr) {
-        let result = null;
-        try {
-          result = xhr.responseText ? JSON.parse(xhr.responseText) : null;
-        } catch (parseError) {
-          result = null;
-        }
-
+      error: function({
+        responseText
+      }) {
+        const result = JSON.parse(responseText);
         $(form).find('button[type="submit"]').html('Add Payment').removeAttr('disabled');
-
-        if (result && result.status === 'validation-error') {
+        if (result.status === 'validation-error') {
           $.each(result.response, function(prefix, val) {
             $(form).find('#' + prefix + '-error').text(val);
           });
-          return;
+        } else {
+          tata.error("Couldn't add payment", result.response);
         }
-
-        tata.error("Couldn't add payment", extractPaymentErrorMessage(result, xhr));
       }
     });
   });
@@ -289,6 +259,14 @@
 
 <script>
   $(document).ready(function() {
+
+    if ($('#customer').length && $.fn.select2) {
+      $('#customer').select2({
+        width: '100%',
+        placeholder: '--Select--',
+        allowClear: true
+      });
+    }
 
     // When customer changes → load package price
     $('#customer').on('change', function() {

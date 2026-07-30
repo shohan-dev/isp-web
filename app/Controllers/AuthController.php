@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Controllers\BaseController;
+use App\Libraries\WhatsAppBusiness;
 use App\Models\AdminPackage;
 use App\Models\User;
 use App\Models\ContactModel;
@@ -85,10 +86,11 @@ class AuthController extends BaseController
         try {
             $pricingPayload = (new \App\Models\AdminPackage())->landingPricingPayload();
             $data['lpPricing'] = [
-                'tiers'                => $pricingPayload['tiers'],
-                'payg'                 => $pricingPayload['payg'],
-                'addons'               => $pricingPayload['addons'],
-                'yearlyDiscountMonths' => $pricingPayload['yearlyDiscountMonths'],
+                'tiers'                 => $pricingPayload['tiers'],
+                'payg'                  => $pricingPayload['payg'],
+                'addons'                => $pricingPayload['addons'],
+                'yearlyDiscountMonths'  => $pricingPayload['yearlyDiscountMonths'],
+                'yearlyDiscountPercent' => $pricingPayload['yearlyDiscountPercent'],
             ];
             $data['lpFixedPlans'] = $pricingPayload['fixedPlans'];
         } catch (\Throwable $e) {
@@ -771,12 +773,45 @@ class AuthController extends BaseController
                             'password' => $newpass,
                             'admin_id' => $data->admin_id,
                             'user_id' => $data->id,
+                            'mobile' => $data->mobile ?? null,
+                            'name' => $data->name ?? null,
                         ];
-                        // event: password_reset | default template: 5
+                        // Phase 3 Auth OTP: WhatsApp first when otp_channel says so; SMS fallback when allowed
+                        $skipSms = false;
                         try {
-                            sendEventSms('password_reset', $datas, null, 5);
+                            $waAdminSrc = (int) ($data->admin_id ?? $data->id ?? 0);
+                            $waAdminId  = (int) (function_exists('getSAdminIdForUser')
+                                ? (getSAdminIdForUser($waAdminSrc) ?: $waAdminSrc)
+                                : $waAdminSrc);
+                            $waAccount  = WhatsAppBusiness::getAccountForAdmin($waAdminId);
+                            $otpChannel = $waAccount ? (string) ($waAccount->otp_channel ?? 'sms') : 'sms';
+                            $waPhone    = (string) ($data->mobile ?? '');
+
+                            if ($waPhone !== '' && in_array($otpChannel, ['whatsapp', 'whatsapp_then_sms'], true)) {
+                                $waOk = false;
+                                try {
+                                    $waOk = WhatsAppBusiness::sendAuthOtp($waAdminId, $waPhone, $newpass);
+                                } catch (\Throwable $e) {
+                                    log_message('error', 'WhatsApp Auth OTP failed: ' . $e->getMessage());
+                                }
+                                if ($waOk) {
+                                    $skipSms = true;
+                                } elseif ($otpChannel === 'whatsapp') {
+                                    // WhatsApp-only: do not fall back to SMS
+                                    $skipSms = true;
+                                }
+                            }
                         } catch (\Throwable $e) {
-                            log_message('error', 'Password Reset SMS Failed: ' . $e->getMessage());
+                            log_message('error', 'WhatsApp Auth OTP channel check failed: ' . $e->getMessage());
+                        }
+
+                        // event: password_reset | default template: 5
+                        if (!$skipSms) {
+                            try {
+                                sendEventSms('password_reset', $datas, null, 5);
+                            } catch (\Throwable $e) {
+                                log_message('error', 'Password Reset SMS Failed: ' . $e->getMessage());
+                            }
                         }
 
                         $requestModel->delete($request_data->id);

@@ -166,9 +166,6 @@
 
     <div class="ipb-dash fade-in" data-ipb-dashboard="employee">
       <div class="ipb-dash-toolbar">
-        <button type="button" class="ipb-btn-outline" data-ipb-open-theme>
-          <i class="fa fa-palette" aria-hidden="true"></i> Theme Studio
-        </button>
         <button type="button" class="ipb-btn-outline" data-ipb-open-customize>
           <i class="fa fa-sliders" aria-hidden="true"></i> <span data-label>Customize</span>
         </button>

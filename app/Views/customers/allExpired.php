@@ -146,7 +146,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
                 <th data-data="router_password" data-name="user_router_data.router_password" data-col="router_password" data-col-label="Password" scope="col">Password</th>
                 <th data-data="payment_expiry_sort" data-name="users.will_expire" data-col="payment" data-col-label="Payment" scope="col">Payment</th>
                 <th data-data="conn_status" data-name="users.activity" data-col="conn_status" data-col-label="Status" scope="col">Status</th>
-                <th data-data="acc_status" data-name="users.conn_status" data-col="acc_status" data-col-label="Acc. Status" scope="col">Acc. Status</th>
+                <th data-data="acc_status" data-name="users.status" data-col="acc_status" data-col-label="Acc. Status" scope="col">Acc. Status</th>
                 <th data-data="action" data-col="action" data-col-label="Action" data-col-locked="1" scope="col">Action</th>
               </tr>
             </thead>
@@ -168,7 +168,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 
 <?= $this->endSection('content'); ?>
 <?= $this->section('css'); ?>
-<link rel="stylesheet" href="<?= base_url('assets/css/saas/customers-list.css?v=24'); ?>">
+<link rel="stylesheet" href="<?= base_url('assets/css/saas/customers-list.css?v=23'); ?>">
 <style>
   /* PREMIUM CARD DESIGN */
   .box.box-warning {
@@ -373,7 +373,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
 </style>
 <?= $this->endSection('css'); ?>
 <?= $this->section('script'); ?>
-<script src="<?= base_url('assets/js/saas/customers-list.js?v=9'); ?>"></script>
+<script src="<?= base_url('assets/js/saas/customers-list.js?v=8'); ?>"></script>
 
 
 <script>
@@ -586,7 +586,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         { data: "router_password", name: "user_router_data.router_password", orderable: true, searchable: true, visible: colVisible("router_password") },
         { data: "payment_expiry_sort", name: "users.will_expire", orderable: true, searchable: true, visible: colVisible("payment") },
         { data: "conn_status", name: "users.activity", orderable: true, searchable: true, visible: colVisible("conn_status") },
-        { data: "acc_status", name: "users.conn_status", orderable: true, searchable: true, visible: colVisible("acc_status") },
+        { data: "acc_status", name: "users.status", orderable: true, searchable: true, visible: colVisible("acc_status") },
         { data: "action", orderable: false, searchable: false, visible: true }
       ],
       columnDefs: [{
@@ -607,18 +607,10 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
         // No live MikroTik poll — see customers/all.php drawCallback comment.
         // Blocking PPPoE status calls starved php spark serve and left the next
         // sidebar page empty / stuck on Loading.
-        if (window.IpbCustomersList) {
-          IpbCustomersList.bindRowTooltips(api);
-          if (IpbCustomersList.refreshTableScrollHint) {
-            IpbCustomersList.refreshTableScrollHint($(api.table().node()).parent('.ipb-customers-table-scroll'));
-          }
-        }
+        if (window.IpbCustomersList) IpbCustomersList.bindRowTooltips(api);
       },
       initComplete: function () {
-        if (window.IpbCustomersList) {
-          IpbCustomersList.initColumnPicker(this.api());
-          if (IpbCustomersList.isolateTableScroll) IpbCustomersList.isolateTableScroll(this.api());
-        }
+        if (window.IpbCustomersList) IpbCustomersList.initColumnPicker(this.api());
       }
 
     });
@@ -730,10 +722,16 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
     //   e.preventDefault();
     //   e.stopImmediatePropagation();
     // });
-    // Immediate action handler — native href navigation (no stale status queue).
     $(document).on('click', '.action-button', function (e) {
-      if (!this.href) return;
+      // Prevent any further queue processing
+      // console.log('Navigation triggered, clearing queue.');
+      navigationTriggered = true;
+      statusQueue.length = 0;
+
+      // Immediately go to target page
       window.location.assign(this.href);
+      // console.log(this.href);
+      // Stop default link behavior
       e.preventDefault();
     });
 
@@ -864,7 +862,7 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
             tata.error('Permission required', "You don't have permission to update connections. Ask your admin to grant \"Update Connection\".");
             console.log("You doesn't have this permission, ask your Admin.");
           } else {
-            tata.error("Couldn't update connection status", response.message);
+            tata.error("Couldn't update connection status", result.message);
 
             console.error(response.message);
           }
@@ -1098,6 +1096,17 @@ $customerZeroHtml = '<div class="ipb-empty ipb-dt-empty"><div class="ipb-empty-i
       });
 
     <?php endif; ?>
+
+      // Auto-reload on filter change
+      $('#filter-area, #filter-package, #filter-connection-status, #filter-acc-status').on('change', function () {
+        table.ajax.reload();
+      });
+
+      // Reset filters
+      $('#filter-reset-btn').on('click', function () {
+        $('#filter-area, #filter-package, #filter-connection-status, #filter-acc-status').val('');
+        table.ajax.reload();
+      });
 
   })();
 </script>

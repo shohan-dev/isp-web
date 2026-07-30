@@ -47,6 +47,11 @@ class AiChatController extends BaseController
             ])->setStatusCode(403);
         }
 
+        // Auth done — release session before the external AI curl (≤15s).
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $message = $json['message'] ?? '';
         $sessionId = $json['session_id'] ?? null;
 
@@ -78,8 +83,12 @@ class AiChatController extends BaseController
             $payload['session_id'] = $sessionId;
         }
 
-        // 4. Send request to external AI API
-        $url = 'http://203.18.158.157:8062/api/chat';
+        // 4. Send request to external AI API (AI_CHATBOT_URL / WHATSAPP_CHATBOT_URL in .env)
+        $base = getenv('AI_CHATBOT_URL') ?: getenv('WHATSAPP_CHATBOT_URL') ?: '';
+        if ($base === '') {
+            $base = 'http://127.0.0.1:8000';
+        }
+        $url = rtrim((string) $base, '/') . '/api/chat';
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);

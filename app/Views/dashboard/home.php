@@ -56,6 +56,7 @@ $lpPricing = $lpPricing ?? [
     'payg' => ['platform' => 500, 'perUser' => 1.5, 'minWallet' => 750],
     'addons' => [],
     'yearlyDiscountMonths' => 2,
+    'yearlyDiscountPercent' => 17,
 ];
 $lpTierOrder = ['basic', 'standard', 'premium', 'business', 'enterprise', 'ultimate'];
 $lpFixedCards = [];
@@ -216,6 +217,6 @@ $lpData = [
 window.LP_PRICING = <?= json_encode($lpPricing, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <?php /* reCAPTCHA is lazy-loaded by landing.js when the contact section approaches. */ ?>
-<script src="<?= base_url('assets/js/landing/landing.js') ?>?v=3.9"></script>
+<script src="<?= base_url('assets/js/landing/landing.js') ?>?v=4.0"></script>
 </body>
 </html>

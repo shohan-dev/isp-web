@@ -467,11 +467,13 @@
           $('#loader #loader-icon').removeClass('color-nagad');
           $('#loader').addClass('d-none');
 
-          if (result.status === 'success') {
-            location.href = result.response;
+          if (typeof result.response === 'object') {
+
+            tata.error("Couldn't start payment", result.response.message);
+
           } else {
-            const errorMsg = (typeof result.response === 'object' && result.response.message) ? result.response.message : result.response;
-            tata.error("Couldn't start payment", errorMsg);
+
+            location.href = result.response;
           }
         },
         error: function(response) {

@@ -46,10 +46,11 @@ $tierFeatures = [
         'Everything in Enterprise', 'Multi-Region Deployment', 'Dedicated Success Manager', 'Priority Feature Requests',
     ],
 ];
-// Yearly-discount badge value — super-admin editable (SecondAdmin/package.php),
+// Yearly-discount badge/math — super-admin editable (SecondAdmin/package.php),
 // read platform-wide via AdminPackage::landingPricingPayload(). Display-only,
 // never used for real billing math.
 $lpYearlyDiscountMonths = (int) ($lpPricing['yearlyDiscountMonths'] ?? 2);
+$lpYearlyDiscountPercent = (int) ($lpPricing['yearlyDiscountPercent'] ?? (int) round($lpYearlyDiscountMonths / 12 * 100));
 ?>
 <section class="lp-section lp-section--dark" id="lp-pricing" data-lp-section>
     <div class="lp-container">
@@ -80,7 +81,7 @@ $lpYearlyDiscountMonths = (int) ($lpPricing['yearlyDiscountMonths'] ?? 2);
                 <span class="lp-pricing-toggle__label is-active" id="lp-label-monthly">Monthly</span>
                 <button type="button" class="lp-pricing-toggle__switch" id="lp-pricing-toggle" aria-label="Toggle yearly pricing"></button>
                 <span class="lp-pricing-toggle__label" id="lp-label-yearly">Yearly</span>
-                <span class="lp-pricing-toggle__badge">Save <?= $lpYearlyDiscountMonths ?> month<?= $lpYearlyDiscountMonths === 1 ? '' : 's' ?></span>
+                <span class="lp-pricing-toggle__badge">Save <?= (int) $lpYearlyDiscountPercent ?>%</span>
             </div>
 
             <?php

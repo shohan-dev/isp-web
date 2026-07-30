@@ -1270,6 +1270,7 @@ class Reseller extends BaseController
                 'user_id' => $session->get('user_id'),
                 'user_role' => $session->get('user_role'),
                 'admin_id' => $session->get('admin_id'),
+                'return_route' => 'route.reseller',
             ]);
             log_message('info', 'Original User Session: ' . json_encode($session->get('original_user')));
 

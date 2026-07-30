@@ -2177,6 +2177,16 @@ input[type="range"].lp-custom-pricing__slider:focus-visible::-moz-range-thumb {
   flex-wrap: wrap;
   gap: 16px;
 }
+.lp-footer__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lp-footer__dev {
+  font-size: 0.75rem;
+  color: var(--lp-text-muted);
+  opacity: 0.85;
+}
 .lp-footer__social {
   display: flex;
   gap: 12px;

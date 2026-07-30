@@ -268,19 +268,28 @@ window.location.href = "<?= base_url('make-payment'); ?>/" + id;
 }
 
 <?php if (!empty($resolve_needed)): ?>
-// Page-load-performance audit (Axis1 #2): the server no longer sweeps every
-// MikroTik synchronously to resolve this customer when the walled-garden
-// redirect omitted `rid` — that could block this public, unauthenticated
-// page for minutes. First paint is instant with the dummy payment id; this
-// background call resolves the real one before the customer taps Pay Now.
-fetch("<?= base_url('captiveportal/resolve'); ?>", { credentials: 'omit' })
+// Never block first paint on routerClient() — both ?rid= and no-rid paths
+// resolve after paint. Pass rid when known so resolve() hits one router only.
+var __resolveUrl = "<?= base_url('captiveportal/resolve'); ?>";
+<?php if (!empty($router_id)): ?>
+__resolveUrl += "?rid=<?= rawurlencode((string) $router_id); ?>";
+<?php endif; ?>
+var __resolveCtrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+var __resolveTimer = setTimeout(function () {
+  if (__resolveCtrl) { try { __resolveCtrl.abort(); } catch (e) {} }
+}, 20000);
+fetch(__resolveUrl, {
+  credentials: 'omit',
+  signal: __resolveCtrl ? __resolveCtrl.signal : undefined
+})
   .then(function (r) { return r.json(); })
   .then(function (data) {
+    clearTimeout(__resolveTimer);
     if (data && data.ok && data.payment_id) {
       __resolvedPaymentId = parseInt(data.payment_id, 10);
     }
   })
-  .catch(function () {});
+  .catch(function () { clearTimeout(__resolveTimer); });
 <?php endif; ?>
 
 </script>

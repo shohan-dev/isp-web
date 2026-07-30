@@ -7,7 +7,6 @@
   <!-- Main content -->
   <section class="content ipb-saas-list">
 
-    
     <?= $this->include('components/page-header', [
       'title' => 'All Users',
       'breadcrumb' => [
@@ -17,47 +16,22 @@
     ]); ?>
 
 <div class="box box-warning">
-      <!-- <div class="box-header with-border ipb-box-toolbar">
-        <div class="ipb-list-toolbar">
-          <div class="ipb-list-toolbar-filters">
-            <span class="ipb-filter-label"><i class="fa fa-list" aria-hidden="true"></i> Records</span>
-          </div>
-          <div class="ipb-list-toolbar-actions">
-<?php if (userHasPermission('customer', 'create')) : ?>
-            <a class="btn btn-primary" href="<?= route_to('route.customer.new'); ?>">
-              <i class="fa fa-plus"></i> New Customer
-            </a>
-          <?php endif; ?>
-          <?php if (userHasPermission('customer', 'delete')) : ?>
-            <button class="btn btn-danger delete-btn">
-              <i class="far fa-trash-can"></i> Delete Selected
-            </button>
-          <?php endif; ?>
-          </div>
-        </div>
-      </div> -->
-
       <div class="box-body">
         <div class="table-responsive">
-          <table class="table table-bordered table-striped datatable" width="100%">
+          <table class="table table-bordered table-striped datatable" id="router-users-table" width="100%">
           <caption class="sr-only">All PPPoE users</caption>
           <thead>
             <tr>
-              <!-- <th><input type="checkbox" id="select_all"></th> -->
               <th scope="col">#</th>
               <th scope="col">PPPOE Name</th>
               <th scope="col">Customer Name</th>
               <th scope="col">Service</th>
               <th scope="col">Last Caller ID</th>
-
               <th scope="col">Last Logged Out</th>
               <th scope="col">profile</th>
-
             </tr>
           </thead>
-          <tbody id="customer-data">
-            <!-- Data will be populated here by AJAX -->
-          </tbody>
+          <tbody id="customer-data"></tbody>
         </table>
         </div>
       </div>
@@ -71,173 +45,19 @@
 
 <script>
   $(document).ready(function() {
-
-    const loadTraffic = () => {
-
-      var routerId = "<?= esc($routerId) ?>";
-
-      // Log the routerId to the browser's console
-      console.log("Routers ID:", routerId);
-
-      let baseUrl = "<?= base_url('/routers/load-traffic'); ?>";
-      let url = `${baseUrl}/${routerId}`;
-
-
-      $.ajax({
-        url: url,
-        type: 'GET',
-        success: function(response) {
-          const result = response.response;
-
-          // Display active users in the table
-          const activeUsers = result.data.allusers || [];
-          let userRows = '';
-
-          // Collect all usernames automatically
-          let allUsernames = [];
-
-          activeUsers.forEach((user, index) => {
-            allUsernames.push(user['name']); // collect username
-
-            userRows += `<tr>
-      <td>${index + 1}</td>
-      <td><a href="#" class="user-name" data-name="${user['name']}">${user['name']}</a></td>
-      <td>${user['customer_name'] || 'N/A'}</td>
-      <td>${user['service']}</td>
-      <td>${user['last-caller-id']}</td>
-      <td>${user['last-logged-out']}</td>
-      <td>${user['profile']}</td>
-    </tr>`;
-          });
-          // console.log("All User Rows:", userRows);
-
-          // Insert into table
-          $('#customer-data').html(userRows);
-
-          // Log or send usernames somewhere
-          // console.log("All usernames:", allUsernames);
-
-          // Example: send all usernames to backend automatically
-          $.ajax({
-            url: "<?= route_to('route.user.profile'); ?>",
-            type: "POST",
-            data: {
-              names: allUsernames
-            },
-            headers: {
-              '<?= csrf_header() ?>': '<?= csrf_hash() ?>',
-            },
-            success: function(response) {
-              if (response.status === "success") {
-                // console.log("User Profiles:", response.response);
-                const profiles = response.response;
-
-                // Map usernames -> customer names
-                const customerMap = {};
-                profiles.forEach(p => {
-                  customerMap[p.pppoe_secret] = p.customer_name;
-                });
-
-                // Update table rows dynamically
-                $("#customer-data tr").each(function() {
-                  let username = $(this).find(".user-name").data("name");
-                  if (customerMap[username]) {
-                    // Update Customer Name cell
-                    $(this).find("td").eq(2).text(customerMap[username]);
-                  }
-                });
-
-                // 🔹 Tell DataTables to redraw with new content
-                $('.datatable').DataTable().rows().invalidate().draw(false);
-              }
-            },
-
-            error: function(xhr) {
-              console.error("Error fetching profiles:", xhr.responseText);
-            }
-          });
-
-
-
-
-          // Reinitialize DataTable
-          $('.datatable').DataTable({
-            "destroy": false, // Allow reinitialization
-            "pageLength": 100,
-            "lengthChange": true,
-            "columnDefs": [{
-              "targets": "_all",
-              "defaultContent": "-"
-            }],
-            'lengthMenu': [
-              [25, 50, 100, 250, 500, 1000],
-              [25, 50, 100, 250, 500, "All"]
-            ],
-          });
-
-          // Set up a loop to refresh the data
-          //setTimeout(loadTraffic, 10000); // Refresh every 10 seconds
-        },
-        error: function({
-          responseText
-        }) {
-          const result = JSON.parse(responseText);
-          tata.error("Couldn't load traffic data", result.response);
-        }
-      });
-    }
-
-    loadTraffic(); // Load users on page load
-
-    // Check all checkbox function
-    $('#select_all').click(function() {
-      $('.input-check-selected').prop('checked', this.checked);
-    });
-
-    $(document).on('click', '.delete-btn', function() {
-      const selectedIds = $('.input-check-selected:checkbox:checked').map(function() {
-        return $(this).val();
-      }).get();
-
-      if (selectedIds.length > 0) {
-        // Confirm deletion
-        swal({
-          title: "Confirmation",
-          text: "Are you sure you want to delete the selected customers? This will also delete these PPPoE users from your MikroTik router.",
-          dangerMode: true,
-          icon: 'warning',
-          buttons: ["No", {
-            text: "Yes",
-            closeModal: false,
-          }],
-        }).then((willDelete) => {
-          if (willDelete) {
-            $.ajax({
-              url: '<?= route_to("route.customer.delete"); ?>',
-              type: 'DELETE',
-              data: {
-                ids: selectedIds
-              },
-              headers: {
-                '<?= csrf_header() ?>': '<?= csrf_hash() ?>',
-              },
-              success: function(result) {
-                swal.close();
-                tata.success('Customers deleted', result.response);
-                $('.datatable').DataTable().ajax.reload(null, false);
-                loadTraffic(); // Refresh the data after deletion
-              },
-              error: function(response) {
-                const result = jQuery.parseJSON(response.responseText);
-                swal.close();
-                tata.error("Couldn't delete customers", result.response);
-              }
-            });
-          }
-        });
-      } else {
-        tata.error('Select customers', 'No customers selected for deletion.');
-      }
+    var routerId = "<?= esc($routerId) ?>";
+    $('#router-users-table').DataTable({
+      processing: true,
+      serverSide: true,
+      deferRender: true,
+      pageLength: 100,
+      lengthMenu: [[25, 50, 100, 250, 500], [25, 50, 100, 250, 500]],
+      ajax: {
+        url: "<?= base_url('routers/users-datatable'); ?>/" + routerId,
+        data: function (d) { d.mode = 'all'; }
+      },
+      columnDefs: [{ targets: '_all', defaultContent: '-' }],
+      order: [[0, 'asc']]
     });
   });
 </script>

@@ -83,7 +83,15 @@
     'routers' => ['View','Create','Delete','Update','Sync Users'],
     'profile_update' => ['View','Update'],
     'password_change' => ['Update'],
-    'ai_chat' => ['Access Chat']
+    'ai_chat' => ['Access Chat'],
+    'whatsapp_business' => [
+      'View settings and inbox',
+      'Configure credentials and toggles',
+      'Service AI auto-reply',
+      'Send Utility templates',
+      'Send Authentication OTP templates',
+      'Send Marketing templates and campaigns',
+    ],
   ];
 
   $valueMap = [
@@ -95,7 +103,13 @@
     'update_conn'=>'update_conn','update_subscription'=>'update_subscription',
     'self_recharge'=>'self_recharge','daily_payment_generate'=>'daily_payment_generate',
     'Restore'=>'restore','Delete Forever'=>'delete_forever','Empty Trash'=>'empty',
-    'Access Chat'=>'chat'
+    'Access Chat'=>'chat',
+    'View settings and inbox'=>'read',
+    'Configure credentials and toggles'=>'update',
+    'Service AI auto-reply'=>'ai',
+    'Send Utility templates'=>'utility',
+    'Send Authentication OTP templates'=>'authentication',
+    'Send Marketing templates and campaigns'=>'marketing',
   ];
 
   foreach ($sections as $key => $labels):
