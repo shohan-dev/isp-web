@@ -159,7 +159,11 @@ class AdminPackage extends Model
     public function paygPackage(bool $seedIfMissing = true)
     {
         $row = $this->where(['plan_type' => self::TYPE_PAYG])
-            ->where('Activity', 'active')
+            ->groupStart()
+                ->where('LOWER(Activity)', 'active')
+                ->orWhere('Activity', '1')
+                ->orWhere('Activity IS NULL', null, false)
+            ->groupEnd()
             ->orderBy('id', 'asc')
             ->first();
 
@@ -201,7 +205,11 @@ class AdminPackage extends Model
      */
     public function publicFixedPackages()
     {
-        return $this->where('Activity', 'active')
+        return $this->groupStart()
+                ->where('LOWER(Activity)', 'active')
+                ->orWhere('Activity', '1')
+                ->orWhere('Activity IS NULL', null, false)
+            ->groupEnd()
             ->groupStart()
                 ->where('plan_type', self::TYPE_FIXED)
                 ->orWhere('plan_type IS NULL', null, false)

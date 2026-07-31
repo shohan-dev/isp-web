@@ -119,10 +119,14 @@ $logoUrl = $gateBrand['logoUrl'];
                       <option value="<?= (int) $package['id']; ?>"
                         data-bandwidth="<?= esc($package['duration'] ?? '', 'attr'); ?>"
                         data-package-details="<?= esc($package['price'] ?? '', 'attr'); ?>">
-                        <?= esc($package['package_name'] ?? ''); ?>
+                        <?= esc($package['package_name'] ?? ''); ?> (<?= (int) ($package['duration'] ?? 0); ?> Subscribers — ৳<?= number_format((float) ($package['price'] ?? 0)); ?>/<?= esc($package['pricing_type'] ?? 'monthly'); ?>)
                       </option>
                     <?php endforeach; ?>
                   <?php endif; ?>
+                  <?php if (!empty($paygPackage)): ?>
+                    <option value="payg">Pay-As-You-Go Wallet (no customer limit)</option>
+                  <?php endif; ?>
+                  <option value="custom">Custom plan — tell us what you need</option>
                 </select>
               </div>
               <div class="form-group form-group--full">

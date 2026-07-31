@@ -244,11 +244,15 @@ class AuthController extends BaseController
     public function registration()
     {
         $packageModel = model('App\Models\AdminPackage');
-        $packages = $packageModel->where(['Activity' => 'active'])->findAll();
+        $packages = $packageModel->publicFixedPackages();
+        $paygPackage = $packageModel->paygPackage();
+        $paygAddons = \App\Models\AdminPackage::addonCatalog($paygPackage);
 
         return view('auth/gate', [
             'authMode' => 'register',
             'packages' => $packages,
+            'paygPackage' => $paygPackage,
+            'paygAddons' => $paygAddons,
             'isTenantPortal' => false,
         ]);
     }

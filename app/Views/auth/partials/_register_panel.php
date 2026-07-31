@@ -144,7 +144,7 @@ if (!empty($paygPackage)) {
                   data-bandwidth="<?= esc($package['duration'] ?? '', 'attr'); ?>"
                   data-package-details="<?= esc($package['price'] ?? '', 'attr'); ?>"
                   data-trial-days="<?= esc((int) ($package['trial_days'] ?? 0) ?: 14, 'attr'); ?>">
-                  <?= esc($package['package_name'] ?? ''); ?>
+                  <?= esc($package['package_name'] ?? ''); ?> (<?= (int) ($package['duration'] ?? 0); ?> Subscribers — ৳<?= number_format((float) ($package['price'] ?? 0)); ?>/<?= esc($package['pricing_type'] ?? 'monthly'); ?>)
                 </option>
               <?php endforeach; ?>
               <?php if (!empty($paygPackage)): ?>
