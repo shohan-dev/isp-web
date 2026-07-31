@@ -426,19 +426,21 @@ $hasOlts = count($olts) > 0;
 
                 const ponId = 'pon-' + pi;
                 html += `
-                    <div class="tree-node">
-                        <div class="node-card pon-card" data-type="pon" data-toggle-target="${ponId}" data-pon="${escapeHtml(pon.name)}">
-                            <div class="card-header">
-                                <div class="card-icon c-purple"><i class="fa fa-plug-circle-plus"></i></div>
-                                <span class="card-tag tag-purple">Port</span>
-                                <span class="toggle-arrow">▶</span>
-                            </div>
-                            <div class="card-name">${escapeHtml(pon.name)}</div>
-                            <div class="card-meta">Capacity: ${escapeHtml(pon.capacity)}</div>
-                            <div class="card-meta">ONUs: ${pon.total}</div>
-                            <div class="card-stats">
-                                <span class="s-online"><i class="fa fa-circle" style="font-size:8px;"></i> ${pon.online}</span>
-                                <span class="s-offline"><i class="fa fa-circle" style="font-size:8px;"></i> ${pon.offline}</span>
+                    <div class="tree-row">
+                        <div class="tree-node">
+                            <div class="node-card pon-card" data-type="pon" data-toggle-target="${ponId}" data-pon="${escapeHtml(pon.name)}">
+                                <div class="card-header">
+                                    <div class="card-icon c-purple"><i class="fa fa-plug-circle-plus"></i></div>
+                                    <span class="card-tag tag-purple">Port</span>
+                                    <span class="toggle-arrow">▶</span>
+                                </div>
+                                <div class="card-name">${escapeHtml(pon.name)}</div>
+                                <div class="card-meta">Capacity: ${escapeHtml(pon.capacity)}</div>
+                                <div class="card-meta">ONUs: ${pon.total}</div>
+                                <div class="card-stats">
+                                    <span class="s-online"><i class="fa fa-circle" style="font-size:8px;"></i> ${pon.online}</span>
+                                    <span class="s-offline"><i class="fa fa-circle" style="font-size:8px;"></i> ${pon.offline}</span>
+                                </div>
                             </div>
                         </div>
                         <div class="tree-children collapsed" id="${ponId}">`;
@@ -446,18 +448,20 @@ $hasOlts = count($olts) > 0;
                 Object.values(pon.splitters).forEach(function(splitter, si) {
                     const spId = ponId + '-sp-' + si;
                     html += `
-                            <div class="tree-node">
-                                <div class="node-card splitter-card" data-type="splitter" data-toggle-target="${spId}" data-pon="${escapeHtml(pon.name)}" data-name="${escapeHtml(splitter.name)}">
-                                    <div class="card-header">
-                                        <div class="card-icon c-orange"><i class="fa fa-share-nodes"></i></div>
-                                        <span class="card-tag tag-orange">Splitter</span>
-                                        <span class="toggle-arrow">▶</span>
-                                    </div>
-                                    <div class="card-name">${escapeHtml(splitter.name)}</div>
-                                    <div class="card-meta">Users: ${splitter.total}</div>
-                                    <div class="card-stats">
-                                        <span class="s-online"><i class="fa fa-circle" style="font-size:8px;"></i> ${splitter.online}</span>
-                                        <span class="s-offline"><i class="fa fa-circle" style="font-size:8px;"></i> ${splitter.offline}</span>
+                            <div class="tree-row">
+                                <div class="tree-node">
+                                    <div class="node-card splitter-card" data-type="splitter" data-toggle-target="${spId}" data-pon="${escapeHtml(pon.name)}" data-name="${escapeHtml(splitter.name)}">
+                                        <div class="card-header">
+                                            <div class="card-icon c-orange"><i class="fa fa-share-nodes"></i></div>
+                                            <span class="card-tag tag-orange">Splitter</span>
+                                            <span class="toggle-arrow">▶</span>
+                                        </div>
+                                        <div class="card-name">${escapeHtml(splitter.name)}</div>
+                                        <div class="card-meta">Users: ${splitter.total}</div>
+                                        <div class="card-stats">
+                                            <span class="s-online"><i class="fa fa-circle" style="font-size:8px;"></i> ${splitter.online}</span>
+                                            <span class="s-offline"><i class="fa fa-circle" style="font-size:8px;"></i> ${splitter.offline}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="tree-children collapsed" id="${spId}">`;
@@ -500,12 +504,12 @@ $hasOlts = count($olts) > 0;
 
                     html += `
                                 </div><!-- end splitter children -->
-                            </div><!-- end splitter node -->`;
+                            </div><!-- end splitter row -->`;
                 });
 
                 html += `
                         </div><!-- end pon children -->
-                    </div><!-- end pon node -->`;
+                    </div><!-- end pon row -->`;
             });
 
             html += `
@@ -527,7 +531,14 @@ $hasOlts = count($olts) > 0;
             const wrapperElem = $wrapper[0];
             const wrapperRect = wrapperElem.getBoundingClientRect();
 
-            let pathHtml = '';
+            let defsHtml = `
+                <defs>
+                    <filter id="ipb-line-glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0f172a" flood-opacity="0.15"/>
+                    </filter>
+                </defs>`;
+            
+            let pathHtml = defsHtml;
 
             $('.node-card[data-toggle-target]').each(function() {
                 const $parentCard = $(this);
@@ -536,7 +547,7 @@ $hasOlts = count($olts) > 0;
 
                 if (!$childrenContainer.length || $childrenContainer.hasClass('collapsed')) return;
 
-                const $childCards = $childrenContainer.children('.tree-node').children('.node-card');
+                const $childCards = $childrenContainer.find('> .tree-row > .tree-node > .node-card, > .tree-node > .node-card');
                 if (!$childCards.length) return;
 
                 const parentRect = $parentCard[0].getBoundingClientRect();
@@ -544,20 +555,32 @@ $hasOlts = count($olts) > 0;
                 const y1 = (parentRect.top + parentRect.height / 2 - wrapperRect.top) / zoomLevel;
 
                 const cardType = $parentCard.data('type');
-                let strokeColor = '#94a3b8';
-                if (cardType === 'olt') strokeColor = '#2563eb';
-                else if (cardType === 'pon') strokeColor = '#7c3aed';
-                else if (cardType === 'splitter') strokeColor = '#d97706';
+                let defaultColor = '#94a3b8';
+                if (cardType === 'olt') defaultColor = '#2563eb';
+                else if (cardType === 'pon') defaultColor = '#7c3aed';
+                else if (cardType === 'splitter') defaultColor = '#d97706';
 
                 $childCards.each(function() {
+                    const $child = $(this);
                     const childRect = this.getBoundingClientRect();
                     const x2 = (childRect.left - wrapperRect.left) / zoomLevel;
                     const y2 = (childRect.top + childRect.height / 2 - wrapperRect.top) / zoomLevel;
 
-                    const dx = Math.max(24, Math.abs(x2 - x1) * 0.45);
+                    let strokeColor = defaultColor;
+                    if ($child.data('type') === 'user') {
+                        const status = String($child.data('status') || '').toLowerCase();
+                        strokeColor = status === 'online' ? '#16a34a' : '#dc2626';
+                    }
+
+                    const dx = Math.min(75, Math.max(24, Math.abs(x2 - x1) * 0.45));
                     const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 
-                    pathHtml += `<path d="${d}" stroke="${strokeColor}" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.85"/>`;
+                    pathHtml += `
+                        <g filter="url(#ipb-line-glow)">
+                            <path d="${d}" stroke="${strokeColor}" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.88"/>
+                            <circle cx="${x1}" cy="${y1}" r="3.5" fill="${strokeColor}"/>
+                            <circle cx="${x2}" cy="${y2}" r="3.5" fill="${strokeColor}"/>
+                        </g>`;
                 });
             });
 
