@@ -347,13 +347,8 @@ $routes->group('product-showcase', function ($routes) {
 $routes->get('/', 'AuthController::home', ['as' => 'route.home', 'filter' => 'logincheck']);
 
 
-$routes->get('network_diagram', 'Sadmin::diagram', [
+$routes->get('network_diagram', 'PremiumNetworkController::diagram', [
     'as' => 'network.diagram',
-    'filter' => 'permissioncheck:network,read',
-]);
-// Premium OLT topology (kept from test branch; uiux uses Sadmin::diagram above)
-$routes->get('network_diagram_premium', 'PremiumNetworkController::premiumDiagram', [
-    'as' => 'network.diagram.premium',
     'filter' => 'permissioncheck:network,read',
 ]);
 $routes->post('network_sync/(:num)', 'PremiumNetworkController::sync/$1', [

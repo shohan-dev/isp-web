@@ -1,4 +1,4 @@
-﻿<aside class="main-sidebar" aria-label="Main navigation">
+<aside class="main-sidebar" aria-label="Main navigation">
   <?php
   $uri = service('uri');
   $isExpiredSession = (getSession('status') === 'inactive');
@@ -579,7 +579,6 @@
             </a>
             <ul class="treeview-menu" style="display: none;">
               <li><a href="<?= route_to('network.diagram'); ?>"><i class="fa fa-diagram-project"></i>Diagram</a> </li>
-              <li><a href="<?= route_to('network.diagram.premium'); ?>"><i class="fa fa-sitemap"></i>Premium Diagram</a> </li>
               <li><a href="<?= route_to('network.map'); ?>"><i class="fa fa-map-location-dot"></i>Mapping</a> </li>
             </ul>
           </li>

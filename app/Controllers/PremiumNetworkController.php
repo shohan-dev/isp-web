@@ -27,7 +27,7 @@ class PremiumNetworkController extends BaseController
         $this->userModel = new User();
     }
 
-    public function premiumDiagram()
+    public function diagram()
     {
         if (!userHasPermission('network', 'read') && !(function_exists('isTenantAdminRole') && isTenantAdminRole())) {
             show_404();
@@ -45,12 +45,17 @@ class PremiumNetworkController extends BaseController
         $areas = $areaModel->where('status', 'active')->where('user_id', $userId)->findAll();
 
         $data = [
-            'title' => 'Premium Network Diagram',
+            'title' => 'Network Diagram',
             'olts' => $olts,
             'areas' => $areas,
         ];
 
-        return view('network/diagram_premium', $data);
+        return view('network/diagram', $data);
+    }
+
+    public function premiumDiagram()
+    {
+        return $this->diagram();
     }
 
     public function sync($oltId)

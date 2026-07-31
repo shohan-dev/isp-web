@@ -1,14 +1,18 @@
 <?= $this->extend('layout/main-layout'); ?>
 
 <?= $this->section('css'); ?>
-<link rel="stylesheet" href="<?= base_url('assets/css/saas/network-pages.css?v=1'); ?>">
-<link href="<?= base_url('assets/vis/vis-network.min.css'); ?>" rel="stylesheet">
+<?= saas_css('network-pages.css') ?>
+<link rel="stylesheet" href="<?= base_url('assets/map/leaflet.css'); ?>">
 <?= $this->endSection('css'); ?>
 
 <?= $this->section('content'); ?>
-
+<?php
+$olts = is_array($olts ?? null) ? $olts : [];
+$areas = is_array($areas ?? null) ? $areas : [];
+$hasOlts = count($olts) > 0;
+?>
 <div class="content-wrapper">
-  <section class="content ipb-saas-list ipb-net-page">
+  <section class="content ipb-net-page ipb-premium-net">
     <?= $this->include('components/page-header', [
       'title' => 'Network Diagram',
       'breadcrumb' => [
@@ -16,302 +20,812 @@
         ['label' => 'Network'],
         ['label' => 'Diagram'],
       ],
+      'subtitle' => 'Live OLT → PON → splitter → ONU topology',
     ]); ?>
 
-    <div class="ipb-net-toolbar">
-      <div class="ipb-net-field">
-        <label for="parentNode">Parent node</label>
-        <select id="parentNode" class="form-control">
-          <option value="0">Select parent (optional)</option>
-        </select>
+    <div class="ipb-premium-kpi">
+      <div class="ipb-premium-stat">
+        <span class="ipb-premium-stat-icon is-olt"><i class="fa fa-server" aria-hidden="true"></i></span>
+        <div>
+          <div class="ipb-premium-stat-label">Total OLT</div>
+          <div class="ipb-premium-stat-value" id="stat-total-olts"><?= count($olts); ?></div>
+        </div>
       </div>
-
-      <div class="ipb-net-field">
-        <label for="childNode">Node name</label>
-        <input type="text" id="childNode" class="form-control" placeholder="e.g. Switch, ONU, Customer">
+      <div class="ipb-premium-stat">
+        <span class="ipb-premium-stat-icon is-onu"><i class="fa fa-network-wired" aria-hidden="true"></i></span>
+        <div>
+          <div class="ipb-premium-stat-label">Total ONU</div>
+          <div class="ipb-premium-stat-value" id="stat-total-onus">0</div>
+        </div>
       </div>
-
-      <div class="ipb-net-field">
-        <label for="latitude">Latitude</label>
-        <input type="text" id="latitude" class="form-control" placeholder="24.331559">
+      <div class="ipb-premium-stat">
+        <span class="ipb-premium-stat-icon is-online"><i class="fa fa-circle-check" aria-hidden="true"></i></span>
+        <div>
+          <div class="ipb-premium-stat-label">Online ONU</div>
+          <div class="ipb-premium-stat-value is-online" id="stat-online-onus">0</div>
+        </div>
       </div>
-
-      <div class="ipb-net-field">
-        <label for="longitude">Longitude</label>
-        <input type="text" id="longitude" class="form-control" placeholder="90.949754">
-      </div>
-
-      <div class="ipb-net-actions">
-        <a href="<?= route_to('network.diagram.premium'); ?>" class="btn btn-default">
-          <i class="fa fa-sitemap" aria-hidden="true"></i> Premium OLT Diagram
-        </a>
-        <?php if (userHasPermission('network', 'create')): ?>
-          <button type="button" id="addNodeBtn" class="btn btn-primary">
-            <i class="fa fa-plus" aria-hidden="true"></i> Add node
-          </button>
-        <?php endif; ?>
-        <?php if (userHasPermission('network', 'update')): ?>
-          <button type="button" id="editNodeBtn" class="btn btn-default" style="display:none;">
-            <i class="fa fa-pen" aria-hidden="true"></i> Update
-          </button>
-        <?php endif; ?>
-        <?php if (userHasPermission('network', 'delete')): ?>
-          <button type="button" id="deleteNodeBtn" class="btn btn-danger" style="display:none;">
-            <i class="fa fa-trash" aria-hidden="true"></i> Delete
-          </button>
-        <?php endif; ?>
+      <div class="ipb-premium-stat">
+        <span class="ipb-premium-stat-icon is-offline"><i class="fa fa-circle-xmark" aria-hidden="true"></i></span>
+        <div>
+          <div class="ipb-premium-stat-label">Offline ONU</div>
+          <div class="ipb-premium-stat-value is-offline" id="stat-offline-onus">0</div>
+        </div>
       </div>
     </div>
 
-    <div class="ipb-net-canvas-card">
-      <div class="ipb-net-canvas-head">
-        <h3><i class="fa fa-diagram-project" aria-hidden="true"></i> Topology</h3>
-        <p class="ipb-net-hint" id="ipbNetHint">Click a node to edit or delete it.</p>
+    <div class="ipb-premium-toolbar">
+      <div class="ipb-premium-field">
+        <label for="filter-olt">OLT</label>
+        <select id="filter-olt" class="form-control">
+          <?php if (!$hasOlts): ?>
+            <option value="">No OLT configured</option>
+          <?php else: ?>
+            <?php foreach ($olts as $o): ?>
+              <option value="<?= (int) ($o['id'] ?? 0); ?>"><?= esc(($o['olt_name'] ?? 'OLT') . ' (' . strtoupper((string) ($o['brand'] ?? '')) . ')'); ?></option>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </select>
       </div>
-      <div id="network" role="img" aria-label="Network topology diagram"></div>
+      <div class="ipb-premium-field">
+        <label for="filter-pon">PON Port</label>
+        <select id="filter-pon" class="form-control">
+          <option value="All">All Ports</option>
+        </select>
+      </div>
+      <div class="ipb-premium-field">
+        <label for="filter-zone">Zone</label>
+        <select id="filter-zone" class="form-control">
+          <option value="All">All Zones</option>
+          <?php foreach ($areas as $a): ?>
+            <?php
+              $areaId = is_object($a) ? ($a->id ?? '') : ($a['id'] ?? '');
+              $areaName = is_object($a) ? ($a->area_name ?? '') : ($a['area_name'] ?? '');
+            ?>
+            <option value="<?= esc((string) $areaId); ?>"><?= esc((string) $areaName); ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="ipb-premium-field">
+        <label for="filter-search">Search ONU</label>
+        <input type="text" id="filter-search" class="form-control" placeholder="MAC, description…">
+      </div>
+      <div class="ipb-premium-actions">
+        <button type="button" id="btn-sync" class="btn btn-primary" <?= $hasOlts ? '' : 'disabled'; ?>>
+          <i class="fa fa-sync-alt" aria-hidden="true"></i> Refresh Sync
+        </button>
+        <button type="button" id="btn-auto-refresh" class="btn btn-default" <?= $hasOlts ? '' : 'disabled'; ?>>
+          <i class="fa fa-clock" aria-hidden="true"></i> Auto Refresh
+        </button>
+        <button type="button" id="btn-view-diagram" class="btn btn-dark">
+          <i class="fa fa-sitemap" aria-hidden="true"></i> Diagram
+        </button>
+        <button type="button" id="btn-view-map" class="btn btn-default">
+          <i class="fa fa-map" aria-hidden="true"></i> Map View
+        </button>
+      </div>
+    </div>
+
+    <div class="ipb-premium-layout">
+      <div class="ipb-premium-canvas" id="canvas-outer">
+        <div class="ipb-premium-zoom zoom-controls">
+          <button type="button" class="btn btn-default zoom-btn" id="zoom-in" title="Zoom In"><i class="fa fa-plus" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-default zoom-btn" id="zoom-out" title="Zoom Out"><i class="fa fa-minus" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-default zoom-btn" id="zoom-fit" title="Fit to Screen"><i class="fa fa-expand" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-default zoom-btn" id="btn-expand-all" title="Expand All"><i class="fa fa-sitemap" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-default zoom-btn" id="btn-reset-layout" title="Reset Card Positions"><i class="fa fa-rotate-left" aria-hidden="true"></i></button>
+        </div>
+
+        <div class="ipb-premium-canvas-inner canvas-inner" id="canvas-inner">
+          <div id="diagram-scale-wrapper">
+            <svg id="tree-connections-svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:visible;"></svg>
+            <div id="tree-root-container" style="position:relative;z-index:1;">
+              <?php if (!$hasOlts): ?>
+                <div class="loading-state">
+                  <i class="fa fa-server fa-2x" aria-hidden="true"></i>
+                  <div><strong>No OLT devices found</strong></div>
+                  <div>Add an OLT first, then sync topology here.</div>
+                </div>
+              <?php else: ?>
+                <div class="loading-state">
+                  <div class="spinner" aria-hidden="true"></div>
+                  <div>Loading network topology…</div>
+                </div>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+
+        <div id="map-view-container">
+          <div id="main-map" role="img" aria-label="Network map view"></div>
+        </div>
+
+        <div class="ipb-premium-legend diagram-legend">
+          <span class="ipb-premium-legend-item"><span class="ipb-premium-legend-dot" style="background:#2563eb"></span> OLT</span>
+          <span class="ipb-premium-legend-item"><span class="ipb-premium-legend-dot" style="background:#7c3aed"></span> PON Port</span>
+          <span class="ipb-premium-legend-item"><span class="ipb-premium-legend-dot" style="background:#d97706"></span> Splitter</span>
+          <span class="ipb-premium-legend-item"><span class="ipb-premium-legend-dot" style="background:#16a34a"></span> Online ONU</span>
+          <span class="ipb-premium-legend-item"><span class="ipb-premium-legend-dot" style="background:#dc2626"></span> Offline ONU</span>
+          <span id="zoom-level-label">100%</span>
+        </div>
+      </div>
+
+      <aside class="ipb-premium-details details-sidebar" id="node-details-sidebar" aria-live="polite">
+        <div class="ipb-premium-details-head sidebar-title">
+          <span id="sidebar-type-label"><i class="fa fa-info-circle" aria-hidden="true"></i> Details</span>
+          <button type="button" class="btn btn-default btn-sm" id="btn-close-details" aria-label="Close details">✕</button>
+        </div>
+        <div id="sidebar-content"></div>
+      </aside>
     </div>
   </section>
 </div>
-
 <?= $this->endSection('content'); ?>
 
 <?= $this->section('script'); ?>
-<script src="<?= base_url('assets/vis/vis-network.min.js'); ?>"></script>
+<script src="<?= base_url('assets/map/leaflet.js'); ?>"></script>
 <script>
-  let selectedNodeId = null;
-  let nodesArray = [];
+(function () {
+    function bootPremiumDiagram() {
+        if (typeof window.jQuery === 'undefined') {
+            setTimeout(bootPremiumDiagram, 40);
+            return;
+        }
 
-  const nodes = new vis.DataSet();
-  const edges = new vis.DataSet();
-  const container = document.getElementById('network');
-  let data = { nodes, edges };
-  let network = null;
+    function initApp($) {
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
-  const options = {
-    layout: {
-      hierarchical: {
-        enabled: true,
-        direction: 'LR',
-        nodeSpacing: 200,
-        levelSeparation: 150,
-        sortMethod: 'directed'
-      }
-    },
-    edges: {
-      smooth: {
-        type: 'cubicBezier',
-        forceDirection: 'horizontal',
-        roundness: 0.5
-      },
-      color: { color: '#cbd5e1', highlight: '#f75803' },
-      width: 1.5
-    },
-    nodes: {
-      shape: 'box',
-      margin: 10,
-      borderWidth: 1,
-      font: {
-        color: '#0f172a',
-        face: 'Satoshi, system-ui, sans-serif',
-        size: 13
-      },
-      shadow: {
-        enabled: true,
-        color: 'rgba(15,23,42,0.08)',
-        size: 6,
-        x: 0,
-        y: 2
-      }
-    },
-    interaction: {
-      hover: true,
-      tooltipDelay: 120
-    },
-    physics: false
-  };
+        let mapInstance = null;
+        let autoRefreshInterval = null;
+        let currentOltId = $('#filter-olt').val();
+        let topologyCache = null;
+        let zoomLevel = 1;
 
-  function setHint(text, active) {
-    const el = document.getElementById('ipbNetHint');
-    if (!el) return;
-    el.textContent = text;
-    el.classList.toggle('is-active', !!active);
-  }
-
-  function renderNetwork() {
-    if (network) network.destroy();
-    network = new vis.Network(container, data, options);
-    bindClickEvents();
-  }
-
-  function getRandomColor() {
-    const hue = Math.floor(Math.random() * 360);
-    return `hsl(${hue}, 70%, 75%)`;
-  }
-
-  function calculateLevels(array) {
-    const levels = {};
-    function setLevel(id, currentLevel) {
-      levels[id] = currentLevel;
-      array.filter(n => n.parent_id == id)
-        .forEach(child => setLevel(child.id, currentLevel + 1));
-    }
-    array.filter(n => !n.parent_id || n.parent_id == 0)
-      .forEach(root => setLevel(root.id, 0));
-    return levels;
-  }
-
-  function fetchNetworkData() {
-    $.ajax({
-      url: '<?= route_to("network.index"); ?>',
-      method: 'GET',
-      dataType: 'json',
-      beforeSend: function (req) {
-        req.setRequestHeader('<?= csrf_header() ?>', '<?= csrf_hash() ?>');
-      },
-      success: function (dataRes) {
-        nodes.clear();
-        edges.clear();
-        $('#parentNode').html('<option value="0">Select parent (optional)</option>');
-
-        nodesArray = dataRes;
-        const levels = calculateLevels(nodesArray);
-
-        nodesArray.forEach(n => {
-          nodes.add({
-            id: parseInt(n.id),
-            label: n.label,
-            shape: 'box',
-            widthConstraint: { maximum: 120 },
-            color: {
-              background: n.color,
-              border: '#94a3b8',
-              highlight: { background: '#ffedd5', border: '#f75803' },
-              hover: { background: n.color, border: '#f75803' }
-            },
-            font: { color: '#0f172a', size: 13 },
-            parent_id: n.parent_id,
-            level: levels[n.id] ?? 0,
-            lat: n.latitude,
-            lng: n.longitude
-          });
-
-          if (n.parent_id && n.id !== n.parent_id) {
-            edges.add({ from: parseInt(n.parent_id), to: parseInt(n.id) });
-          }
-
-          $('#parentNode').append($('<option>', { value: n.id, text: n.label }));
+        (window.IpbPageTeardown = window.IpbPageTeardown || []).push(function () {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            $(document).off('click.tree click.splitter click.user');
+            if (mapInstance) {
+                try { mapInstance.remove(); } catch (e) {}
+                mapInstance = null;
+            }
         });
 
-        renderNetwork();
-        setHint(nodesArray.length ? 'Click a node to edit or delete it.' : 'No nodes yet. Add the first node above.', false);
-      },
-      error: () => alert('Error loading nodes')
-    });
-  }
+        // ---
+        if (currentOltId) {
+            loadPonPorts(currentOltId);
+            loadTopology(currentOltId);
+        }
 
-  function bindClickEvents() {
-    network.on('click', function (params) {
-      if (params.nodes.length === 1) {
-        selectedNodeId = params.nodes[0];
-        const node = nodes.get(selectedNodeId);
+        // ---
+        $('#filter-olt').on('change', function() {
+            currentOltId = $(this).val();
+            loadPonPorts(currentOltId);
+            loadTopology(currentOltId);   // load cached data immediately
+            doSync();                     // sync fresh data in background
+        });
 
-        $('#editNodeBtn').show();
-        $('#deleteNodeBtn').show();
-        $('#childNode').val(node.label);
-        $('#latitude').val(node.lat || '');
-        $('#longitude').val(node.lng || '');
-        $('#parentNode').val(node.id || '0');
-        setHint('Selected: ' + (node.label || 'node') + ' — update fields then save.', true);
-      } else {
-        selectedNodeId = null;
-        $('#editNodeBtn').hide();
-        $('#deleteNodeBtn').hide();
-        $('#childNode, #latitude, #longitude').val('');
-        $('#parentNode').val('0');
-        setHint('Click a node to edit or delete it.', false);
-      }
-    });
-  }
+        // ---
+        $('#filter-pon, #filter-zone').on('change', function() {
+            if (topologyCache) renderTopology(topologyCache);
+        });
+        $('#filter-search').on('keyup', function() {
+            if (topologyCache) renderTopology(topologyCache);
+        });
 
-  $('#addNodeBtn').on('click', function () {
-    const parent = $('#parentNode').val();
-    const label = $('#childNode').val().trim();
-    const lat = $('#latitude').val().trim();
-    const lng = $('#longitude').val().trim();
+        // ---
+        function doSync(showFeedback) {
+            if (!currentOltId) return;
+            var syncUrl = '<?= base_url('network_sync/') ?>' + currentOltId;
+            $.ajax({
+                type: 'POST',
+                url: syncUrl,
+                data: {},
+                dataType: 'json',
+                timeout: 90000,
+                success: function(res) {
+                    if (res.status === 'success') {
+                        if (showFeedback) tata.success('Synced!', res.message || 'Data synchronized.', {duration: 3000});
+                        loadTopology(currentOltId);
+                    } else {
+                        if (showFeedback) tata.error('Sync Failed', res.message || 'OLT returned an error.', {duration: 5000});
+                    }
+                },
+                error: function(xhr, status) {
+                    if (showFeedback) {
+                        var msg = status === 'timeout' ? 'OLT timed out.' : (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Failed to connect to OLT.');
+                        tata.error('Sync Error', msg, {duration: 6000});
+                    }
+                }
+            });
+        }
 
-    if (!label) return alert('Please enter a node name');
-    if (!lat || !lng) return alert('Please enter latitude and longitude');
+        // ---
+        $('#btn-sync').on('click', function() {
+            if (!currentOltId) return;
+            const btn = $(this);
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Syncing...');
+            var syncUrl = '<?= base_url('network_sync/') ?>' + currentOltId;
+            $.ajax({
+                type: 'POST',
+                url: syncUrl,
+                data: {},
+                dataType: 'json',
+                timeout: 90000,
+                success: function(res) {
+                    btn.prop('disabled', false).html('<i class="fa fa-sync-alt"></i> Refresh Sync');
+                    if (res.status === 'success') {
+                        tata.success('Synced!', res.message, {duration: 3000});
+                        loadTopology(currentOltId);
+                    } else {
+                        tata.error('Sync Failed', res.message, {duration: 5000});
+                    }
+                },
+                error: function(xhr, status) {
+                    btn.prop('disabled', false).html('<i class="fa fa-sync-alt"></i> Refresh Sync');
+                    var msg = status === 'timeout' ? 'Request timed out. OLT may be slow or unreachable.' : (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Connection to OLT failed.');
+                    tata.error('Sync Error', msg, {duration: 5000});
+                }
+            });
+        });
 
-    const color = getRandomColor();
+        // ---
+        $('#btn-auto-refresh').on('click', function() {
+            const btn = $(this);
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                btn.removeClass('btn-success').addClass('btn-outline-secondary').html('<i class="fa fa-clock"></i> Auto Refresh');
+            } else {
+                doSync(false); // sync immediately when enabling auto
+                autoRefreshInterval = setInterval(function() {
+                    doSync(false);
+                }, 60000); // every 60 seconds
+                btn.removeClass('btn-outline-secondary').addClass('btn-success').html('<i class="fa fa-clock"></i> Auto: ON');
+            }
+        });
 
-    $.post('<?= route_to("network.addNode"); ?>', {
-      parent_id: parent !== '0' ? parent : null,
-      label: label,
-      color: color,
-      latitude: lat,
-      longitude: lng,
-      '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
-    }, function (res) {
-      if (res.status === 'success') {
-        fetchNetworkData();
-      } else {
-        alert('Failed to add node');
-      }
-    }).fail(() => alert('Error adding node'));
-  });
+        // ---
+        $('#btn-close-details').on('click', function () {
+            $('#node-details-sidebar').hide();
+        });
 
-  $('#editNodeBtn').on('click', function () {
-    if (!selectedNodeId) return alert('No node selected.');
-    const newLabel = $('#childNode').val().trim();
-    const lat = $('#latitude').val().trim();
-    const lng = $('#longitude').val().trim();
+        $('#btn-view-diagram').on('click', function() {
+            $('#canvas-inner').show();
+            $('.zoom-controls, .diagram-legend').show();
+            $('#map-view-container').hide();
+            $(this).addClass('btn-dark').removeClass('btn-outline-secondary');
+            $('#btn-view-map').removeClass('btn-dark').addClass('btn-outline-secondary');
+        });
+        $('#btn-view-map').on('click', function() {
+            $('#canvas-inner').hide();
+            $('.zoom-controls, .diagram-legend').hide();
+            $('#map-view-container').show();
+            $(this).addClass('btn-dark').removeClass('btn-outline-secondary');
+            $('#btn-view-diagram').removeClass('btn-dark').addClass('btn-outline-secondary');
+            initMapView();
+        });
 
-    if (!newLabel) return alert('Please enter a node name.');
-    if (!lat || !lng) return alert('Please enter latitude and longitude.');
-    if (!confirm('Are you sure you want to update this node?')) return;
+        // ---
+        function applyZoom(level) {
+            zoomLevel = Math.min(Math.max(level, 0.3), 2);
+            $('#diagram-scale-wrapper').css('transform', 'scale(' + zoomLevel + ')');
+            $('#zoom-level-label').text(Math.round(zoomLevel * 100) + '%');
+            setTimeout(drawTreeConnections, 20);
+        }
+        $('#zoom-in').on('click', function() { applyZoom(zoomLevel + 0.15); });
+        $('#zoom-out').on('click', function() { applyZoom(zoomLevel - 0.15); });
+        $('#zoom-fit').on('click', function() { applyZoom(1); });
+        $('#btn-expand-all').on('click', function() {
+            $('.tree-children.collapsed').removeClass('collapsed');
+            $('.node-card').addClass('expanded');
+            setTimeout(drawTreeConnections, 20);
+        });
+        $('#btn-reset-layout').on('click', function() {
+            $('.node-card').css('transform', '').removeData('drag-x drag-y drag-temp-x drag-temp-y was-dragged');
+            if (typeof tata !== 'undefined') {
+                tata.info('Layout Reset', 'Card positions reset to default tree layout.', {duration: 2500});
+            }
+            setTimeout(drawTreeConnections, 20);
+        });
+        $(window).on('resize.treeconn', function() {
+            drawTreeConnections();
+        });
 
-    $.post('<?= route_to("network.editNode"); ?>', {
-      id: selectedNodeId,
-      label: newLabel,
-      latitude: lat,
-      longitude: lng,
-      '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
-    }, function (res) {
-      if (res.status === 'success') {
-        fetchNetworkData();
-        alert('Node updated.');
-      } else {
-        alert('Failed to update node');
-      }
-    }).fail(() => alert('Error updating node'));
-  });
+        // Mouse wheel zoom on canvas
+        $('#canvas-outer').on('wheel', function(e) {
+            if (e.originalEvent.ctrlKey) {
+                e.preventDefault();
+                const delta = e.originalEvent.deltaY > 0 ? -0.1 : 0.1;
+                applyZoom(zoomLevel + delta);
+            }
+        });
 
-  $('#deleteNodeBtn').on('click', function () {
-    if (!selectedNodeId) return alert('No node selected.');
-    if (!confirm('Are you sure you want to delete this node and all its children?')) return;
+        // ---
+        function loadPonPorts(oltId) {
+            $.get('<?= route_to("network.ports", 0); ?>'.replace('/0', '/' + oltId), function(res) {
+                if (res.status === 'success') {
+                    let html = '<option value="All">All Ports</option>';
+                    res.ports.forEach(function(port) {
+                        html += '<option value="' + port + '">' + port + '</option>';
+                    });
+                    $('#filter-pon').html(html);
+                }
+            });
+        }
 
-    $.post('<?= route_to("network.deleteNode"); ?>', {
-      id: selectedNodeId,
-      '<?= csrf_token() ?>': '<?= csrf_hash() ?>'
-    }, function (res) {
-      if (res.status === 'success') {
-        fetchNetworkData();
-        alert('Node and its subnodes deleted.');
-      } else {
-        alert('Failed to delete node');
-      }
-    }).fail(() => alert('Error deleting node'));
-  });
+        // ---
+        function loadTopology(oltId) {
+            const pon = $('#filter-pon').val() || 'All';
+            const zone = $('#filter-zone').val() || 'All';
+            const search = $('#filter-search').val() || '';
 
-  fetchNetworkData();
+            $('#tree-root-container').html('<div class="loading-state"><div class="spinner"></div><div>Loading network topology...</div></div>');
+            $('#node-details-sidebar').hide();
 
-  (window.IpbPageTeardown = window.IpbPageTeardown || []).push(function () {
-    try {
-      if (network) {
-        network.destroy();
-        network = null;
-      }
-    } catch (e) {}
-  });
+            $.get('<?= route_to("network.topology", 0); ?>'.replace('/0', '/' + oltId), {
+                pon_port: pon, zone: zone, search: search
+            }, function(res) {
+                if (res.status === 'success') {
+                    topologyCache = res;
+                    $('#stat-total-onus').text(res.stats.total_onus);
+                    $('#stat-online-onus').text(res.stats.online);
+                    $('#stat-offline-onus').text(res.stats.offline);
+                    renderTopology(res);
+                } else {
+                    $('#tree-root-container').html('<div class="loading-state"><i class="fa fa-triangle-exclamation fa-2x text-warning"></i><div>' + (res.message || 'No data found') + '</div></div>');
+                }
+            }).fail(function() {
+                $('#tree-root-container').html('<div class="loading-state"><i class="fa fa-triangle-exclamation fa-2x text-danger"></i><div>Failed to load topology.</div></div>');
+            });
+        }
+
+        // ---
+        function renderTopology(res) {
+            if (!res || !res.tree || res.tree.length === 0) {
+                $('#tree-root-container').html('<div class="loading-state"><i class="fa fa-diagram-project fa-2x" style="color:#cbd5e1;"></i><div style="color:#94a3b8;">No data. Click <b>Refresh Sync</b> to load from OLT.</div></div>');
+                return;
+            }
+
+            const selPon = $('#filter-pon').val() || 'All';
+            const olt = res.olt;
+
+            // -- OLT Card --
+            let html = `
+            <div class="tree-row">
+                <div class="tree-node" style="position:relative;">
+                    <div class="node-card olt-card expanded" data-type="olt" data-toggle-target="olt-children">
+                        <div class="card-header">
+                            <div class="card-icon c-blue"><i class="fa fa-server"></i></div>
+                            <span class="card-tag tag-blue">${escapeHtml(olt.brand)}</span>
+                            <span class="toggle-arrow">▶</span>
+                        </div>
+                        <div class="card-name">${escapeHtml(olt.name)}</div>
+                        <div class="card-meta">IP: ${escapeHtml(olt.ip)}:${escapeHtml(olt.port)}</div>
+                        <div class="card-meta">PON Ports: ${olt.total_pon}</div>
+                        <div class="card-stats">
+                            <span class="s-online"><i class="fa fa-circle" style="font-size:8px;"></i> ${res.stats.online} Online</span>
+                            <span class="s-offline"><i class="fa fa-circle" style="font-size:8px;"></i> ${res.stats.offline} Offline</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tree-children" id="olt-children">`;
+
+            res.tree.forEach(function(pon, pi) {
+                if (selPon !== 'All' && pon.name !== selPon) return;
+
+                const ponId = 'pon-' + pi;
+                html += `
+                    <div class="tree-node">
+                        <div class="node-card pon-card" data-type="pon" data-toggle-target="${ponId}" data-pon="${escapeHtml(pon.name)}">
+                            <div class="card-header">
+                                <div class="card-icon c-purple"><i class="fa fa-plug-circle-plus"></i></div>
+                                <span class="card-tag tag-purple">Port</span>
+                                <span class="toggle-arrow">▶</span>
+                            </div>
+                            <div class="card-name">${escapeHtml(pon.name)}</div>
+                            <div class="card-meta">Capacity: ${escapeHtml(pon.capacity)}</div>
+                            <div class="card-meta">ONUs: ${pon.total}</div>
+                            <div class="card-stats">
+                                <span class="s-online"><i class="fa fa-circle" style="font-size:8px;"></i> ${pon.online}</span>
+                                <span class="s-offline"><i class="fa fa-circle" style="font-size:8px;"></i> ${pon.offline}</span>
+                            </div>
+                        </div>
+                        <div class="tree-children collapsed" id="${ponId}">`;
+
+                Object.values(pon.splitters).forEach(function(splitter, si) {
+                    const spId = ponId + '-sp-' + si;
+                    html += `
+                            <div class="tree-node">
+                                <div class="node-card splitter-card" data-type="splitter" data-toggle-target="${spId}" data-pon="${escapeHtml(pon.name)}" data-name="${escapeHtml(splitter.name)}">
+                                    <div class="card-header">
+                                        <div class="card-icon c-orange"><i class="fa fa-share-nodes"></i></div>
+                                        <span class="card-tag tag-orange">Splitter</span>
+                                        <span class="toggle-arrow">▶</span>
+                                    </div>
+                                    <div class="card-name">${escapeHtml(splitter.name)}</div>
+                                    <div class="card-meta">Users: ${splitter.total}</div>
+                                    <div class="card-stats">
+                                        <span class="s-online"><i class="fa fa-circle" style="font-size:8px;"></i> ${splitter.online}</span>
+                                        <span class="s-offline"><i class="fa fa-circle" style="font-size:8px;"></i> ${splitter.offline}</span>
+                                    </div>
+                                </div>
+                                <div class="tree-children collapsed" id="${spId}">`;
+
+                    splitter.users.forEach(function(user, ui) {
+                        const isOnline = user.status.toLowerCase() === 'online';
+                        const rx = parseFloat(user.rx_power) || 0;
+                        let signalClass = 'good';
+                        if (rx < -28) signalClass = 'medium';
+                        if (rx < -31) signalClass = 'poor';
+
+                        html += `
+                                    <div class="tree-node">
+                                        <div class="node-card user-card ${isOnline ? '' : 'offline'}" data-type="user"
+                                            data-id="${user.id}" data-mac="${escapeHtml(user.mac)}"
+                                            data-status="${escapeHtml(user.status)}" data-rx="${escapeHtml(user.rx_power)}"
+                                            data-index="${escapeHtml(user.onu_index)}" data-label="${escapeHtml(user.label)}"
+                                            data-pon="${escapeHtml(pon.name)}" data-splitter="${escapeHtml(splitter.name)}"
+                                            data-company_name="${escapeHtml(user.company_name)}"
+                                            data-customer_name="${escapeHtml(user.customer_name)}"
+                                            data-address="${escapeHtml(user.address)}"
+                                            data-mobile="${escapeHtml(user.mobile)}"
+                                            data-pppoe_id="${escapeHtml(user.pppoe_id)}"
+                                            data-distance="${user.distance}"
+                                            data-voltage="${user.voltage}"
+                                            data-temp="${user.temp}"
+                                            data-vendor="${escapeHtml(user.vendor)}"
+                                            data-bias="${user.bias}"
+                                            data-tx_power="${user.tx_power}">
+                                            <div class="card-header">
+                                                <div class="card-icon ${isOnline ? 'c-green' : 'c-red'}"><i class="fa fa-user"></i></div>
+                                                <span class="card-tag ${isOnline ? 'tag-green' : 'tag-red'}">${escapeHtml(user.status)}</span>
+                                            </div>
+                                            <div class="card-name" style="font-size:12px;">${escapeHtml(user.label || user.mac)}</div>
+                                            <div class="card-meta">ONU: ${escapeHtml(user.onu_index)}</div>
+                                            <div class="card-meta">Rx: <span class="${isOnline ? 's-online' : 's-offline'}">${escapeHtml(user.rx_power)} dBm</span></div>
+                                        </div>
+                                    </div>`;
+                    });
+
+                    html += `
+                                </div><!-- end splitter children -->
+                            </div><!-- end splitter node -->`;
+                });
+
+                html += `
+                        </div><!-- end pon children -->
+                    </div><!-- end pon node -->`;
+            });
+
+            html += `
+                </div><!-- end olt-children -->
+            </div><!-- end tree-row -->`;
+
+            $('#tree-root-container').html(html);
+            bindCardEvents();
+        }
+
+        // ---
+        function drawTreeConnections() {
+            const $svg = $('#tree-connections-svg');
+            if (!$svg.length) return;
+
+            const $wrapper = $('#diagram-scale-wrapper');
+            if (!$wrapper.length) return;
+
+            const wrapperElem = $wrapper[0];
+            const wrapperRect = wrapperElem.getBoundingClientRect();
+
+            let pathHtml = '';
+
+            $('.node-card[data-toggle-target]').each(function() {
+                const $parentCard = $(this);
+                const targetId = $parentCard.data('toggle-target');
+                const $childrenContainer = $('#' + targetId);
+
+                if (!$childrenContainer.length || $childrenContainer.hasClass('collapsed')) return;
+
+                const $childCards = $childrenContainer.children('.tree-node').children('.node-card');
+                if (!$childCards.length) return;
+
+                const parentRect = $parentCard[0].getBoundingClientRect();
+                const x1 = (parentRect.right - wrapperRect.left) / zoomLevel;
+                const y1 = (parentRect.top + parentRect.height / 2 - wrapperRect.top) / zoomLevel;
+
+                const cardType = $parentCard.data('type');
+                let strokeColor = '#94a3b8';
+                if (cardType === 'olt') strokeColor = '#2563eb';
+                else if (cardType === 'pon') strokeColor = '#7c3aed';
+                else if (cardType === 'splitter') strokeColor = '#d97706';
+
+                $childCards.each(function() {
+                    const childRect = this.getBoundingClientRect();
+                    const x2 = (childRect.left - wrapperRect.left) / zoomLevel;
+                    const y2 = (childRect.top + childRect.height / 2 - wrapperRect.top) / zoomLevel;
+
+                    const dx = Math.max(24, Math.abs(x2 - x1) * 0.45);
+                    const d = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+
+                    pathHtml += `<path d="${d}" stroke="${strokeColor}" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.85"/>`;
+                });
+            });
+
+            $svg.html(pathHtml);
+        }
+
+        // ---
+        function bindCardEvents() {
+            // Toggle collapse for PON and OLT cards
+            $(document).off('click.tree').on('click.tree', '.node-card[data-toggle-target]:not([data-type="splitter"])', function(e) {
+                if ($(this).data('was-dragged')) return;
+                e.stopPropagation();
+                const targetId = $(this).data('toggle-target');
+                const $children = $('#' + targetId);
+                const isCollapsed = $children.hasClass('collapsed');
+                if (isCollapsed) {
+                    $children.removeClass('collapsed');
+                    $(this).addClass('expanded');
+                } else {
+                    $children.addClass('collapsed');
+                    $(this).removeClass('expanded');
+                }
+                setTimeout(drawTreeConnections, 20);
+            });
+
+            // Splitter: toggle children AND show details sidebar
+            $(document).off('click.splitter').on('click.splitter', '.node-card[data-type="splitter"]', function(e) {
+                if ($(this).data('was-dragged')) return;
+                e.stopPropagation();
+                const targetId = $(this).data('toggle-target');
+                const $children = $('#' + targetId);
+                const isCollapsed = $children.hasClass('collapsed');
+                if (isCollapsed) {
+                    $children.removeClass('collapsed');
+                    $(this).addClass('expanded');
+                } else {
+                    $children.addClass('collapsed');
+                    $(this).removeClass('expanded');
+                }
+                // Also show splitter details in sidebar
+                $('.node-card').removeClass('selected');
+                $(this).addClass('selected');
+                const name = $(this).data('name');
+                const pon = $(this).data('pon');
+                showSplitterDetails(name, pon);
+                setTimeout(drawTreeConnections, 20);
+            });
+
+            // Show details on user card click
+            $(document).off('click.user').on('click.user', '.node-card[data-type="user"]', function(e) {
+                if ($(this).data('was-dragged')) return;
+                e.stopPropagation();
+                $('.node-card').removeClass('selected');
+                $(this).addClass('selected');
+                showUserDetails($(this).data());
+            });
+
+            bindDraggableCards();
+            bindCanvasPanning();
+            setTimeout(drawTreeConnections, 40);
+        }
+
+        // ---
+        function bindDraggableCards() {
+            $(document).off('pointerdown.carddrag').on('pointerdown.carddrag', '.node-card', function(e) {
+                if ($(e.target).closest('button, input, select, a').length) return;
+
+                const $card = $(this);
+                const cardElem = $card[0];
+                
+                const pointerId = e.pointerId;
+                const startX = e.clientX;
+                const startY = e.clientY;
+
+                let currentX = parseFloat($card.data('drag-x')) || 0;
+                let currentY = parseFloat($card.data('drag-y')) || 0;
+
+                let hasMoved = false;
+
+                $card.addClass('is-dragging');
+                if (cardElem.setPointerCapture) {
+                    try { cardElem.setPointerCapture(pointerId); } catch(err) {}
+                }
+
+                function onPointerMove(ev) {
+                    const dx = (ev.clientX - startX) / (zoomLevel || 1);
+                    const dy = (ev.clientY - startY) / (zoomLevel || 1);
+
+                    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+                        hasMoved = true;
+                    }
+
+                    const newX = currentX + dx;
+                    const newY = currentY + dy;
+
+                    $card.css('transform', `translate3d(${newX}px, ${newY}px, 0)`);
+                    $card.data('drag-temp-x', newX);
+                    $card.data('drag-temp-y', newY);
+                    drawTreeConnections();
+                }
+
+                function onPointerUp(ev) {
+                    $card.removeClass('is-dragging');
+                    
+                    if ($card.data('drag-temp-x') !== undefined) {
+                        $card.data('drag-x', $card.data('drag-temp-x'));
+                        $card.data('drag-y', $card.data('drag-temp-y'));
+                    }
+
+                    if (cardElem.releasePointerCapture) {
+                        try { cardElem.releasePointerCapture(pointerId); } catch(err) {}
+                    }
+
+                    $(window).off(`pointermove.carddrag_${pointerId} pointerup.carddrag_${pointerId} pointercancel.carddrag_${pointerId}`);
+
+                    if (hasMoved) {
+                        $card.data('was-dragged', true);
+                        setTimeout(function() {
+                            $card.data('was-dragged', false);
+                        }, 120);
+                    }
+                    drawTreeConnections();
+                }
+
+                $(window).on(`pointermove.carddrag_${pointerId}`, onPointerMove);
+                $(window).on(`pointerup.carddrag_${pointerId} pointercancel.carddrag_${pointerId}`, onPointerUp);
+            });
+        }
+
+        // ---
+        function bindCanvasPanning() {
+            const $canvasInner = $('#canvas-inner');
+            let isPanning = false;
+            let startX = 0, startY = 0;
+            let scrollLeft = 0, scrollTop = 0;
+
+            $canvasInner.off('pointerdown.canvaspan').on('pointerdown.canvaspan', function(e) {
+                if ($(e.target).closest('.node-card, .zoom-controls, .diagram-legend, button, input, select, a').length) return;
+                isPanning = true;
+                $canvasInner.addClass('is-panning');
+                startX = e.clientX;
+                startY = e.clientY;
+                scrollLeft = $canvasInner.scrollLeft();
+                scrollTop = $canvasInner.scrollTop();
+            });
+
+            $(window).off('pointermove.canvaspan pointerup.canvaspan pointercancel.canvaspan')
+                     .on('pointermove.canvaspan', function(e) {
+                         if (!isPanning) return;
+                         const dx = e.clientX - startX;
+                         const dy = e.clientY - startY;
+                         $canvasInner.scrollLeft(scrollLeft - dx);
+                         $canvasInner.scrollTop(scrollTop - dy);
+                     })
+                     .on('pointerup.canvaspan pointercancel.canvaspan', function() {
+                         if (isPanning) {
+                             isPanning = false;
+                             $canvasInner.removeClass('is-panning');
+                         }
+                     });
+        }
+
+        // ---
+        function showUserDetails(d) {
+            const isOnline = d.status.toLowerCase() === 'online';
+            const rx = parseFloat(d.rx) || 0;
+            let signalClass = 'good', signalLevel = 4;
+            if (rx < -25) { signalClass = 'medium'; signalLevel = 3; }
+            if (rx < -28) { signalClass = 'medium'; signalLevel = 2; }
+            if (rx < -31) { signalClass = 'poor'; signalLevel = 1; }
+
+            const bars = [1,2,3,4].map(i =>
+                `<span style="height:${i*4+4}px;${i <= signalLevel ? 'background:'+(isOnline?'#10b981':'#ef4444') : ''}"></span>`
+            ).join('');
+
+            $('#sidebar-type-label').html('<i class="fa fa-user"></i> ONU Details');
+            $('#sidebar-content').html(`
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                    <div style="width:40px;height:40px;border-radius:10px;background:${isOnline?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.1)'};display:flex;align-items:center;justify-content:center;font-size:18px;color:${isOnline?'#10b981':'#ef4444'};">
+                        <i class="fa fa-user"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:14px;">${escapeHtml(d.customer_name || d.label || d.mac)}</div>
+                        <div style="font-size:11px;color:${isOnline?'#10b981':'#ef4444'};">
+                            <i class="fa fa-circle" style="font-size:8px;"></i> ${escapeHtml(d.status)}
+                        </div>
+                    </div>
+                </div>
+                ${d.company_name ? `<div class="detail-row"><span class="lbl">Company / Reseller</span><span class="val" style="font-weight:600;">${escapeHtml(d.company_name)}</span></div>` : ''}
+                ${d.pppoe_id ? `<div class="detail-row"><span class="lbl">PPPoE ID</span><span class="val" style="font-weight:600;">${escapeHtml(d.pppoe_id)}</span></div>` : ''}
+                ${d.mobile ? `<div class="detail-row"><span class="lbl">Mobile</span><span class="val">${escapeHtml(d.mobile)}</span></div>` : ''}
+                ${d.address ? `<div class="detail-row"><span class="lbl">House / Address</span><span class="val">${escapeHtml(d.address)}</span></div>` : ''}
+                <div class="detail-row"><span class="lbl">ONU Index</span><span class="val">${escapeHtml(d.index)}</span></div>
+                <div class="detail-row"><span class="lbl">MAC Address</span><span class="val" style="font-size:11px;">${escapeHtml(d.mac)}</span></div>
+                <div class="detail-row"><span class="lbl">PON Port</span><span class="val">${escapeHtml(d.pon)}</span></div>
+                <div class="detail-row"><span class="lbl">Splitter</span><span class="val">${escapeHtml(d.splitter)}</span></div>
+                <div class="detail-row"><span class="lbl">Distance</span><span class="val">${d.distance || 0} meters</span></div>
+                ${d.vendor ? `<div class="detail-row"><span class="lbl">Vendor</span><span class="val">${escapeHtml(d.vendor)}</span></div>` : ''}
+                ${d.voltage ? `<div class="detail-row"><span class="lbl">Operating Voltage</span><span class="val">${escapeHtml(d.voltage)} V</span></div>` : ''}
+                ${d.temp ? `<div class="detail-row"><span class="lbl">Temperature</span><span class="val">${escapeHtml(d.temp)} °C</span></div>` : ''}
+                ${(d.bias || d.tx_power || d.txPower) ? `<div class="detail-row"><span class="lbl">Transmit Bias</span><span class="val">${escapeHtml(d.bias || '')} mA</span></div>` : ''}
+                ${(d.tx_power || d.txPower) ? `<div class="detail-row"><span class="lbl">Transmit Power</span><span class="val">${escapeHtml(d.tx_power || d.txPower)} dBm</span></div>` : ''}
+                <div class="detail-row">
+                    <span class="lbl">Rx Power</span>
+                    <span class="val ${isOnline ? 's-online' : 's-offline'}">${escapeHtml(d.rx)} dBm</span>
+                </div>
+                <div class="detail-row">
+                    <span class="lbl">Signal</span>
+                    <span class="val">
+                        <span class="signal-bar ${signalClass}">${bars}</span>
+                    </span>
+                </div>
+            `);
+            $('#node-details-sidebar').css('display','flex');
+        }
+
+        // ---
+        function showSplitterDetails(name, pon) {
+            if (!topologyCache) return;
+            const ponData = topologyCache.tree.find(p => p.name === pon);
+            if (!ponData) return;
+            const splitter = ponData.splitters[name] || Object.values(ponData.splitters).find(s => s.name === name);
+            if (!splitter) return;
+
+            const utilPct = splitter.total > 0 ? Math.round((splitter.online / splitter.total) * 100) : 0;
+
+            $('#sidebar-type-label').html('<i class="fa fa-share-nodes"></i> Splitter Details');
+            $('#sidebar-content').html(`
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;color:#f59e0b;">
+                        <i class="fa fa-share-nodes"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:14px;">${escapeHtml(name)}</div>
+                        <div style="font-size:11px;color:var(--text-muted);">PON: ${escapeHtml(pon)}</div>
+                    </div>
+                </div>
+                <div class="detail-row"><span class="lbl">PON Port</span><span class="val">${pon}</span></div>
+                <div class="detail-row"><span class="lbl">Total Users</span><span class="val">${splitter.total}</span></div>
+                <div class="detail-row"><span class="lbl">Online</span><span class="val s-online">${splitter.online}</span></div>
+                <div class="detail-row"><span class="lbl">Offline</span><span class="val s-offline">${splitter.offline}</span></div>
+                <div class="detail-row"><span class="lbl">Online Rate</span><span class="val">${utilPct}%</span></div>
+                <div style="margin-top:10px;">
+                    <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;">Utilization</div>
+                    <div style="background:#e2e8f0;border-radius:5px;height:8px;overflow:hidden;">
+                        <div style="width:${utilPct}%;background:#10b981;height:100%;transition:width 0.4s;"></div>
+                    </div>
+                </div>
+            `);
+            $('#node-details-sidebar').css('display','flex');
+        }
+
+        // ---
+        function initMapView() {
+            if (mapInstance) { mapInstance.invalidateSize(); return; }
+            if (typeof L === 'undefined') return;
+            mapInstance = L.map('main-map').setView([23.810331, 90.412487], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapInstance);
+        }
+
+    } // end initApp
+
+        initApp(window.jQuery);
+    }
+
+    if (window.IpbReady) window.IpbReady(bootPremiumDiagram);
+    else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootPremiumDiagram);
+    else bootPremiumDiagram();
+})();
 </script>
 <?= $this->endSection('script'); ?>
