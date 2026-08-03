@@ -1,0 +1,11 @@
+services:
+  web:
+    image: ghcr.io/${IMAGE_NAME}:latest
+    container_name: isp-web-app
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./writable:/var/www/html/writable
+    environment:
+      - CI_ENVIRONMENT=production
